@@ -1,31 +1,51 @@
+#!/usr/bin/python
+
 __author__ = 'morganlnance'
 
 
-# import Rosetta modules
-print "Importing modules..."
-from rosetta import init, pose_from_pdb, \
+
+#####################
+#### ALL IMPORTS ####
+#####################
+
+if __name__ == "__main__":
+    print "Importing modules..."
+else:
+    print "Importing modules from %s..." %__name__
+
+# bread and butter Rosetta imports
+from rosetta import init, pose_from_file, \
     standard_packer_task, change_cys_state, \
     Pose, MoveMap, RotamerTrialsMover, MinMover, \
     PyMOL_Mover, AtomID, aa_from_oneletter_code, \
     FoldTree, get_fa_scorefxn, Vector1
 from rosetta.utility import vector1_bool
 from rosetta.numeric import xyzVector_Real
-from rosetta.core.scoring import score_type_from_name, CA_rmsd
-from rosetta.core.scoring.func import HarmonicFunc, CircularHarmonicFunc
+from rosetta.core.chemical import VariantType
+from rosetta.core.pose import remove_variant_type_from_pose_residue
 from rosetta.core.scoring.constraints import AtomPairConstraint, AngleConstraint
 from toolbox import mutate_residue, get_hbonds
 
+# for sugar work
+from rosetta.protocols.carbohydrates import GlycanRelaxMover
+
 # for loop work
-from rosetta import Loop, Loops
+from rosetta import Loop, Loops, add_single_cutpoint_variant
 from rosetta.protocols.loops.loop_closure.ccd import CCDLoopClosureMover
 
+# for extra scoring functionality
+from rosetta.core.scoring import score_type_from_name, CA_rmsd
+from rosetta.core.scoring.func import HarmonicFunc, CircularHarmonicFunc
+from rosetta.protocols.analysis import InterfaceAnalyzerMover as IAM
 
 # import extras
 import os
 import sys
 try:
     import pandas as pd
+    pandas_on = True
 except ImportError:
+    pandas_on = False
     print "Skipping Pandas import - consider downloading it! Who doesn't love Pandas??"
 
 
@@ -47,7 +67,7 @@ kT = 0.7  # used in MonteCarlo and small and shear movers
 
 
 # define the residue numbers that comprise the CH2 and CH3 domains, loop regions, and the sugars ( pose numbering )
-# these are only relevant to 3AY4
+# these are only relevant to the PDB 3ay4
 # DOESNT DO ANYTHING  --  more for reference, hence commented out
 '''
 CH2_A_domain = range( 1, 108 + 1 )  # from CYS at linker region to right before loop A
@@ -67,8 +87,7 @@ receptor_sugars.append( ii for ii in range( 616, 618 + 1 ) )  # the small glycan
 # define the sugar chains as well
 chain_A_sug = [ 'D', 'E' ]
 chain_B_sug = [ 'F', 'G' ]
-receptor_main_sug = [ 'H', 'I', 'J' ]
-# leaving out chain K sugar because it's not that important...
+receptor_main_sug = [ 'H', 'I', 'J', 'K' ]
 '''
 
 
@@ -91,13 +110,9 @@ FoldTree.new_loops = _new_loops
 
 
 
-
-####################
-# WORKER FUNCTIONS #
-####################
-
-
-
+##########################
+#### WORKER FUNCTIONS ####
+##########################
 
 def initialize_rosetta():
     # called when this file is imported rather than ran directly
@@ -116,7 +131,12 @@ def load_pose( pose_filename ):
     """
     # create Pose object from filename
     print "Loading pose"
-    pose = pose_from_pdb( pose_filename )
+    pose = pose_from_file( pose_filename )
+    
+    # clean up the name of the pose
+    pose_name = pose.pdb_info().name()
+    pose_name = pose_name.split( '/' )[-1]
+    pose.pdb_info().name( pose_name )
 
     # store the original FoldTree and add empty loops for use later
     pose.orig_fold_tree = FoldTree( pose.fold_tree() )
@@ -253,6 +273,33 @@ def get_residue_score_by_scoretype( sf, input_scoretype, seq_pos, pose, weight =
 
 
 
+def get_sugar_bb_only_sf( weight = None ):
+    """
+    Creates and returns a ScoreFunction with only the sugar_bb term as a non-zero. Can specify weight with <weight> param
+    :param weight: int( or float( weight of the sugar_bb term in the sf ) ). Default = None = standard weight
+    :return: ScoreFunction
+    """
+    # instantiate a fa ScoreFunction
+    sugar_sf = get_fa_scorefxn()
+    
+    # list of all ScoreTypes in string form
+    score_types = [ "fa_atr", "fa_rep", "fa_sol", "fa_intra_rep", "fa_elec", "pro_close", "hbond_sc", "hbond_sr_bb", "hbond_lr_bb", "hbond_bb_sc", "dslf_fa13", "rama", "omega", "fa_dun", "p_aa_pp", "ref" ]
+    
+    # set all non sugar_bb ScoreTypes to zero
+    for score_string in score_types:
+        score_type = score_type_from_name( score_string )
+        sugar_sf.set_weight( score_type, 0 )
+        
+    # set the sugar_bb ScoreType to the specified <weight>, if any
+    if weight is not None:
+        sugar_bb = score_type_from_name( "sugar_bb" )
+        sugar_sf.set_weight( sugar_bb, weight )
+    
+    # return the sf
+    return sugar_sf
+
+
+
 def apply_sugar_constraints_to_sf( sf, pose, weight = 1.0, verbose = False ):
     """
     Applies bond distance and bond angle constraints to sugar branch points within <pose> with a weight of <weight>
@@ -323,7 +370,7 @@ def apply_sugar_constraints_to_sf( sf, pose, weight = 1.0, verbose = False ):
 
 
 
-def make_packer_task( sf, pose, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
+def make_pack_rotamers_mover( sf, pose, apply_sf_sugar_constraints = True, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
     """
     Returns a standard pack_rotamers_mover restricted to repacking and allows for sampling of current residue conformations for the <pose>
     IMPORTANT: DON'T USE for a Pose you JUST mutated  --  it's not setup to handle mutations
@@ -331,6 +378,7 @@ def make_packer_task( sf, pose, pack_branch_points = True, residue_range = None,
     If you have one or more residues of interest where you want to pack within a radius around each residue, set <use_pack_radius> to True, give a <pack_radius> (or use default), and set <residue_range> to the residue sequence positions of interest
     :param sf: ScoreFunction
     :param pose: Pose
+    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param pack_branch_points: bool( allow packing at branch points? ). Default = True
     :param residue_range: list( of int( valid residue sequence positions ) )
     :param use_pack_radius: bool( Do you want to pack residues within a certain <pack_radius> around residues specified in <residue_range>? ). Default = False
@@ -339,7 +387,7 @@ def make_packer_task( sf, pose, pack_branch_points = True, residue_range = None,
     :return: a pack_rotamers_mover object
     """
     if verbose:
-        print "Making a packer task"
+        print "Making a pack rotamers mover"
 
     # check to make sure <residue_range> is a list of valid residue numbers
     if residue_range is not None:
@@ -356,8 +404,9 @@ def make_packer_task( sf, pose, pack_branch_points = True, residue_range = None,
             print "I'm not sure what you gave me. <residue_range> is of type", type( residue_range ), "and I needed a list. Even if it's just one residue (sorry). Exiting"
             sys.exit()
 
-    # apply sugar branch point constraints to sf
-    apply_sugar_constraints_to_sf( sf, pose )
+    # apply sugar branch point constraints to sf if desired
+    if apply_sf_sugar_constraints:
+        apply_sugar_constraints_to_sf( sf, pose )
 
     # make the packer task
     task = standard_packer_task( pose )
@@ -365,7 +414,8 @@ def make_packer_task( sf, pose, pack_branch_points = True, residue_range = None,
     task.restrict_to_repacking()
 
     # if specified, turn off packing for each branch point residue
-    if pack_branch_points == False:
+    if pack_branch_points is False:
+        print "  Turning off packing for branch points"
         for res_num in range( 1, pose.n_residue() + 1 ):
             if pose.residue( res_num ).is_branch_point():
                 task.nonconst_residue_task( res_num ).prevent_repacking()
@@ -412,14 +462,12 @@ def make_packer_task( sf, pose, pack_branch_points = True, residue_range = None,
                     counter += 1
 
         if verbose:
-            print "Preventing", counter, "residues from repacking in this packer task"
+            print "  Preventing", counter, "residues from repacking in this packer task"
 
         # turn off repacking for the residues not in the <pack_radius>
         for res_num in res_nums_outside_pack_radius:
             task.nonconst_residue_task( res_num ).prevent_repacking()
             
-        print task
-
     # else, if no <pack_radius> given, but a <residue_range> was given, prevent repacking for the other residues
     else:
         if residue_range is not None:
@@ -435,7 +483,7 @@ def make_packer_task( sf, pose, pack_branch_points = True, residue_range = None,
 
 
 
-def make_min_mover( sf, pose, jumps = None, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
+def make_min_mover( sf, pose, apply_sf_sugar_constraints = True, jumps = None, allow_sugar_chi = False, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
     """
     Returns a min_mover object suitable for glycosylated proteins (turns off carbohydrate chi for now)
     IMPORTANT: If using a specific type of minimization, <minimization_type>, it DOES NOT check beforehand if the type you gave is valid, so any string actually will work. It will break when used
@@ -443,7 +491,9 @@ def make_min_mover( sf, pose, jumps = None, minimization_type = "dfpmin_strong_w
     Prints error message and exits if there was a problem
     :param sf: ScoreFunction
     :param pose: Pose
+    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param jumps: list( Jump numbers of Jump(s) to be minimized ). Default = None (ie. all Jumps) (Give empty list for no Jumps)
+    :param allow_sugar_chi: bool( allow the chi angles of sugars to be minimized ). Default = False
     :param minimization_type: str( the type of minimization you want to use ). Default = "dfpmin_strong_wolfe"
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: min_mover object
@@ -451,8 +501,9 @@ def make_min_mover( sf, pose, jumps = None, minimization_type = "dfpmin_strong_w
     if verbose:
         print "Making a min mover"
 
-    # apply sugar branch point constraints to sf
-    apply_sugar_constraints_to_sf( sf, pose )
+    # apply sugar branch point constraints to sf, if desired
+    if apply_sf_sugar_constraints:
+        apply_sugar_constraints_to_sf( sf, pose )
 
     # instantiate a MoveMap
     mm = MoveMap()
@@ -460,7 +511,7 @@ def make_min_mover( sf, pose, jumps = None, minimization_type = "dfpmin_strong_w
     # set all Jumps to True if <jumps> is None
     if jumps is None:
         if verbose:
-            print "Setting all Jumps to be minimized"
+            print "  Setting all Jumps to be minimized"
         for ii in range( 1, pose.num_jump() + 1 ):
             mm.set_jump( ii, True )
 
@@ -470,7 +521,7 @@ def make_min_mover( sf, pose, jumps = None, minimization_type = "dfpmin_strong_w
         if isinstance( jumps, list ):
             for ii in jumps:
                 if verbose:
-                    print "Setting only", jumps, "to be minimized"
+                    print "  Setting only", jumps, "to be minimized"
                 # ensure <jumps> only contains valid Jumps for the <pose>
                 if 0 < ii <= pose.num_jump():
                     mm.set_jump( ii, True )
@@ -486,12 +537,19 @@ def make_min_mover( sf, pose, jumps = None, minimization_type = "dfpmin_strong_w
     # set backbone angles to be minimized for both protein and sugar residues
     mm.set_bb( True )
 
-    # turn off chi for sugar residues only
-    if verbose:
-        print "Turning off chi angle mobility to the sugar residues"
-    for residue in pose:
-        if not residue.is_carbohydrate():
+    # turn on chi angle minimization for all amino acids
+    # turn on or off chi angle minimization for sugars based on user input
+    if allow_sugar_chi:
+        if verbose:
+            print "  Turning on chi angle mobility for all residues"
+        for residue in pose:
             mm.set_chi( residue.seqpos(), True )
+    else:
+        if verbose:
+            print "  Turning on chi angle mobility only for protein residues"
+        for residue in pose:
+            if not residue.is_carbohydrate():
+                mm.set_chi( residue.seqpos(), True )
 
     # create a MinMover with options
     min_mover = MinMover( mm, sf, minimization_type, 0.01, True )
@@ -565,7 +623,7 @@ def make_movemap_for_jumps( jump_numbers, verbose = False ):
 
 
 
-def do_min_with_this_mm( mm, sf, pose, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
+def do_min_with_this_mm( mm, sf, pose, apply_sf_sugar_constraints = True, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
     """
     Minimizes a given Pose using dfpmin_strong_wolfe and the user-supplied ScoreFunction <sf> and MoveMap <mm>
     IMPORTANT: If using a specific type of minimization, <minimization_type>, it DOES NOT check beforehand if the type you gave is valid, so any string actually will work. It will break when used
@@ -573,12 +631,14 @@ def do_min_with_this_mm( mm, sf, pose, minimization_type = "dfpmin_strong_wolfe"
     :param mm: finished MoveMap
     :param sf: ScoreFunction
     :param pose:  Pose
+    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param minimization_type: str( the type of minimization you want to use ). Default = "dfpmin_strong_wolfe"
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: minimized Pose
     """
-    # apply sugar branch point constraints to sf, just in case
-    apply_sugar_constraints_to_sf( sf, pose )
+    # apply sugar branch point constraints to sf, if desired
+    if apply_sf_sugar_constraints:
+        apply_sugar_constraints_to_sf( sf, pose )
 
     # create a MinMover with options
     min_mover = MinMover( mm, sf, minimization_type, 0.01, True )
@@ -594,7 +654,7 @@ def do_min_with_this_mm( mm, sf, pose, minimization_type = "dfpmin_strong_wolfe"
 
 
 
-def do_pack_min( sf, pose, residue_range = None, jumps = None, pack_branch_points = True, use_pack_radius = False, pack_radius = PACK_RADIUS, minimization_type = "dfpmin_strong_wolfe", verbose = False, pmm = None ):
+def do_pack_min( sf, pose, apply_sf_sugar_constraints = True, residue_range = None, jumps = None, pack_branch_points = True, use_pack_radius = False, pack_radius = PACK_RADIUS, minimization_type = "dfpmin_strong_wolfe", verbose = False, pmm = None ):
     """
     Makes and applies a packer task and basic min mover to <pose> using the supplied ScoreFunction <sf>
     IMPORTANT: If using a specific type of minimization, <minimization_type>, it DOES NOT check beforehand if the type you gave is valid, so any string actually will work. It will break when used
@@ -605,6 +665,7 @@ def do_pack_min( sf, pose, residue_range = None, jumps = None, pack_branch_point
     If you have one or more residues of interest where you want to pack within a certain radius around each residue, set <use_pack_radius> to True, give a <pack_radius> (or use default value), and set <residue_range> to the residue sequence positions of interest
     :param sf: ScoreFunction
     :param pose: Pose
+    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param residue_range: list( of int( valid residue sequence positions ) )
     :param jumps = list( valid Jump numbers to be minimized if not all Jumps should be minimized). Default = None (ie. all jumps minimized) (Give empty list for no Jumps)
     :param pack_branch_points: bool( allow packing at branch points? ). Default = True
@@ -630,13 +691,13 @@ def do_pack_min( sf, pose, residue_range = None, jumps = None, pack_branch_point
             pass
 
     # make and apply the pack_rotamers_mover
-    pack_rotamers_mover = make_packer_task( sf, pose, pack_branch_points = pack_branch_points, residue_range = residue_range, use_pack_radius = use_pack_radius, pack_radius = pack_radius, verbose = verbose )
+    pack_rotamers_mover = make_pack_rotamers_mover( sf, pose, apply_sf_sugar_constraints = apply_sf_sugar_constraints, pack_branch_points = pack_branch_points, residue_range = residue_range, use_pack_radius = use_pack_radius, pack_radius = pack_radius, verbose = verbose )
     pack_rotamers_mover.apply( pose )
     if pmm is not None and pmm_worked:
         pmm.apply( pose )
 
     # make and apply the min_mover
-    min_mover = make_min_mover( sf, pose, jumps = jumps, minimization_type = minimization_type, verbose = verbose )
+    min_mover = make_min_mover( sf, pose, apply_sf_sugar_constraints = apply_sf_sugar_constraints, jumps = jumps, minimization_type = minimization_type, verbose = verbose )
     min_mover.apply( pose )
     if pmm is not None and pmm_worked:
         pmm.apply( pose )
@@ -1010,10 +1071,7 @@ def analyze_interface( jump_num, pose, pack_separated = True ):
         print jump_num, "is an invalid Jump number. Exiting"
         sys.exit()
 
-    # import InterfaceAnalyzer
-    from rosetta.protocols.analysis import InterfaceAnalyzerMover as IAM
-
-    # instantiate an IA mover
+    # instantiate an InterfaceAnalyzer mover
     IAmover = IAM()
 
     # set the interface jump to the jump number passed in
@@ -1172,11 +1230,12 @@ def compare_these_poses_by_score( sf, pose1, pose2, compare_using_this_scoretype
 
 
 # TODO-see how many inner and outer trials are actually necessary to hit a decent minimum
-def get_best_structure_based_on_score( sf, pose, outer_trials = 3, inner_trials = 3, compare_using_this_scoretype = None, dump_best_pose = False, dump_pose_name = None, dump_dir = None, verbose = False, pmm = None ):
+def get_best_structure_based_on_score( sf, pose, apply_sf_sugar_constraints = True, outer_trials = 3, inner_trials = 3, compare_using_this_scoretype = None, dump_best_pose = False, dump_pose_name = None, dump_dir = None, verbose = False, pmm = None ):
     """
     Packs and minimizes a <pose> <inner_trials> times, then uses the best Pose based on total score to pack and minimize again <outer_trials> times using the ScoreFunction <sf>
     :param sf: ScoreFunction
     :param pose: Pose
+    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param outer_trials: int( number of times to run <inner_trials> ). Default = 3
     :param inner_trials: int( number of times to pack and minimize before calling that the temporary "best" structure ). Default = 3
     :param compare_using_this_scoretype: str( what specific ScoreType do you want to use for comparison? ). Default = None = total_energy
@@ -1206,8 +1265,9 @@ def get_best_structure_based_on_score( sf, pose, outer_trials = 3, inner_trials 
             print "Something was wrong with your PyMOL_Mover -- continuing without watching"
             pass
 
-    # apply sugar branch point constraints to sf
-    apply_sugar_constraints_to_sf( sf, pose )
+    # apply sugar branch point constraints to sf, if desired
+    if apply_sf_sugar_constraints:
+        apply_sugar_constraints_to_sf( sf, pose )
 
     # make a dummy best pose - will be replaced as a new best pose is found
     best_pose = Pose()
@@ -1238,7 +1298,7 @@ def get_best_structure_based_on_score( sf, pose, outer_trials = 3, inner_trials 
                 pmm.apply( temp_pose )
                 
             # pack and minimize
-            temp_pose.assign( do_pack_min( sf, temp_pose ) )
+            temp_pose.assign( do_pack_min( sf, temp_pose, apply_sf_sugar_constraints = apply_sf_sugar_constraints ) )
             if pmm is not None and pmm_worked:
                 pmm.apply( temp_pose )
             best_pose.assign( compare_these_poses_by_score( sf, best_pose, temp_pose, compare_using_this_scoretype, verbose = verbose ) )
@@ -1282,12 +1342,9 @@ def get_best_structure_based_on_score( sf, pose, outer_trials = 3, inner_trials 
 
 
 
-
-##############
-# LOOPS CODE #
-##############
-
-
+####################
+#### LOOPS CODE ####
+####################
 
 
 def make_loop( start, stop, cut = None ):
@@ -1528,7 +1585,6 @@ def add_cutpoint_variants( loops, pose ):
     :param pose: Pose
     :return: Pose( <pose> with <loops> that are cutpoint_variants )
     """
-    from rosetta import add_single_cutpoint_variant
 
     # for every Loop in the Loops object, add it as a cutpoint variant to the <pose>
     for loop_num in range( 1, loops.num_loop() + 1 ):
@@ -1538,13 +1594,9 @@ def add_cutpoint_variants( loops, pose ):
 
 
 
-
-##################
-# FOLD TREE CODE #
-##################
-
-
-
+########################
+#### FOLD TREE CODE ####
+########################
 
 def foldtree_to_string_and_stripped( pose, verbose = False ):
     """
@@ -1894,6 +1946,7 @@ def hard_code_fold_tree( orig_loops, pose, verbose = False ):
         sys.exit()
 
 
+
 def setup_new_fold_tree( loops_file, pose, PDB_numbering = False, anchor_loops = True, add_cutpoints = True, verbose = False ):
     """
     Creates a FoldTree given a <loops_file> and the <pose>'s current FoldTree and then gives it to <pose>
@@ -1959,10 +2012,6 @@ def restore_original_fold_tree( pose, verbose = False ):
         if verbose:
             print "Returning the Pose's FoldTree back to its original one by removing the cutpoint variants added and then applying the original FoldTree stored from from the load_pose function"
 
-        # import the necessary Rosetta modules
-        from rosetta.core.chemical import VariantType
-        from rosetta.core.pose import remove_variant_type_from_pose_residue
-
         ## IMPORTANT: have to get the loops again because the fold tree thinks the sugars are cutpoints - will mess it up
         loops = pose.loops
         if verbose:
@@ -1996,13 +2045,9 @@ def restore_original_fold_tree( pose, verbose = False ):
 
 
 
-
-###############################
-# MUTATIONAL WORKER FUNCTIONS #
-###############################
-
-
-
+#####################################
+#### MUTATIONAL WORKER FUNCTIONS ####
+#####################################
 
 def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK_RADIUS ):
     """
@@ -2041,7 +2086,7 @@ def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK
 
 
 
-def do_mutation_pack_min( seq_pos, amino_acid, sf, mutated_pose, pack_radius = PACK_RADIUS ):
+def do_mutation_pack( seq_pos, amino_acid, sf, mutated_pose, pack_radius = PACK_RADIUS ):
     """
     Returns a packed and minimized <pose> that has a SINGLE mutation of <amino_acid> at <seq_pos>
     :param seq_pos: int( sequence position of the mutated residue _
@@ -2049,42 +2094,34 @@ def do_mutation_pack_min( seq_pos, amino_acid, sf, mutated_pose, pack_radius = P
     :param sf: ScoreFunction
     :param mutated_pose: Pose with the SINGLE mutation
     :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 10
-    :return: packed and minimized Pose with the SINGLE mutation
+    :return: Pose packed around the SINGLE mutation
     """
     # pack the <mutated_pose>
-    print "Packing around mutation..."
     pack_rotamers_mover = make_mutation_packer_task( amino_acid, seq_pos, sf, mutated_pose, pack_radius )
     pack_rotamers_mover.apply( mutated_pose )
-
-    # minimize the <mutated_pose>
-    print "Minimizing mutant pose..."
-    min_mover = make_min_mover( sf, mutated_pose )
-    min_mover.apply( mutated_pose )
 
     return mutated_pose
 
 
 
+###################################
+#### MAIN MUTANT POSE CREATION ####
+###################################
 
-#############################
-# MAIN MUTANT POSE CREATION #
-#############################
-
-
-
-
-def get_best_mutant_of_20( seq_pos, sf, pose, rounds = 1, pack_radius = PACK_RADIUS ):
+def get_best_mutant_of_20( seq_pos, sf, pose, apply_sf_sugar_constraints = True, rounds = 1, pack_radius = PACK_RADIUS ):
     """
     For a single position <seq_pos>, mutated to all 20 amino acids, pack and minimize over the given number of <rounds>, and return the best mutant pose
     :param seq_pos: int( the residue position that will be mutated )
     :param sf: ScoreFunction
     :param pose: Pose
+    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param rounds: int( the number of times to pack and minimize the <pose> after the mutation ). Default = 1
     :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 10
     :return: the mutated Pose of the lowest total score out of the twenty mutations
     """
-    # apply sugar branch point constraints to sf
-    apply_sugar_constraints_to_sf( sf, pose )
+    # apply sugar branch point constraints to sf, if desired
+    if apply_sf_sugar_constraints:
+        apply_sugar_constraints_to_sf( sf, pose )
 
     # talk to user
     orig_amino_acid = pose.residue( seq_pos ).name1()
@@ -2097,7 +2134,7 @@ def get_best_mutant_of_20( seq_pos, sf, pose, rounds = 1, pack_radius = PACK_RAD
         mutant_pose = mutate_residue( pose, seq_pos, amino_acid )
 
         # do one round of packmin to get rid of clashes and prepare for comparison
-        mutant_pose = do_mutation_pack_min( seq_pos, amino_acid, sf, mutant_pose, pack_radius )
+        mutant_pose = do_mutation_pack( seq_pos, amino_acid, sf, mutant_pose, pack_radius )
 
         # do mutation packmin as many times as specified, saving the best scored one
         for ii in range( rounds ):
@@ -2106,7 +2143,7 @@ def get_best_mutant_of_20( seq_pos, sf, pose, rounds = 1, pack_radius = PACK_RAD
             temp_pose.assign( mutant_pose )
 
             # packmin the temp pose
-            temp_pose = do_mutation_pack_min( seq_pos, amino_acid, sf, temp_pose )
+            temp_pose = do_mutation_pack( seq_pos, amino_acid, sf, temp_pose )
 
             # (re)-assign best pose to whichever packmin pose is better (temp or orig)
             best_mutant = compare_pose_energy_per_residue( sf, mutant_pose, temp_pose )
@@ -2115,7 +2152,7 @@ def get_best_mutant_of_20( seq_pos, sf, pose, rounds = 1, pack_radius = PACK_RAD
 
 
 
-def make_all_mutations( sf, orig_pose, mutant_list_file, dump_dir = None ):
+def make_all_mutations( sf, orig_pose_file, mutant_list_file, pack_around_mut = True, dump_pose = False, dump_dir = None ):
     # ensure the mutation list filename is accurate and can be opened
     try:
         mutant_list = []
@@ -2123,15 +2160,22 @@ def make_all_mutations( sf, orig_pose, mutant_list_file, dump_dir = None ):
         lines = f.readlines()
         for line in lines:
             line = line.rstrip()
-            if line != '':
-                if line[0] != '#':
-                    mutant_list.append( line )
+            if line != '' and line[0] != '#':
+                mutant_list.append( line )
     except IOError:
         print mutant_list_file, "didn't work. Check your input"
         sys.exit()
     except:
         print "Unexpected error"
         raise
+    
+    # ensure the validity of the orig_pose_file path
+    if os.path.isfile( orig_pose_file ):
+        orig_pose = load_pose( orig_pose_file )
+    else:
+        print orig_pose_file, "is not a valid file path"
+        print "Exiting"
+        sys.exit()
     
     # if no dump directory was given, use the current working directory
     if dump_dir is None:
@@ -2142,35 +2186,61 @@ def make_all_mutations( sf, orig_pose, mutant_list_file, dump_dir = None ):
         if not os.path.isdir( dump_dir ):
             os.mkdir( dump_dir )
 
-    # for each mutation in list, run the mutation function
-    for mut in mutant_list:
-        print mut
-        make_my_new_antibody( mut, sf, orig_pose, dump_dir )
+    # for each mutation in list, run the mutation function given sym or asym designation
+    for mut_line_full in mutant_list:
+        mut_line = mut_line_full.split( ' ' )
+        mut = mut_line[0]
+        symmetry = mut_line[1]
+        if symmetry == '' or symmetry == "sym":
+            print "Symmetrical", mut
+            make_my_new_symmetric_antibody( mut, sf, orig_pose, 
+                                            pack_around_mut = pack_around_mut, 
+                                            dump_pose = dump_pose, dump_dir = dump_dir )
+        elif symmetry == "asym":
+            print "Asymmetrical", mut
+            make_my_new_asymmetric_antibody( mut, sf, orig_pose, 
+                                             pack_around_mut = pack_around_mut, 
+                                             dump_pose = dump_pose, dump_dir = dump_dir )
+        else:
+            print "'%s'" %symmetry, "isn't a valid a symmetrical designation. Please put 'sym' or 'asym'"
+            print "Exiting"
+            sys.exit()
+    
+    return True
 
 
 
-def make_my_new_antibody( mutation_string, sf, pose, dump_dir = None ):
+def make_my_new_symmetric_antibody( mutation_string, sf, input_pose, apply_sf_sugar_constraints = True, pack_around_mut = True, dump_pose = False, dump_dir = None, verbose = False ):
     """
-    Turn <pose> into a mutant with mutations specified by <mutation_string>. If specified, dump mutant into <dump_dir>
+    Turn <input_pose> into a mutant with mutations specified by <mutation_string>. If specified, dump mutant into <dump_dir>
     IMPORTANT: Since the Fc region of antibodies are symmetric, this code automatically takes the mutation from chain A and mutates its equivalent in chain B
-    Example format for mutationa_string ( 1 mutation A245F. Multiple mutations A245F_L98K_S600Q )
+    Example format for mutation_string ( 1 mutation A245F. Multiple mutations A245F_L98K_S600Q )
     Mutant <pose> will not be packed and minimized as it cannot handle multiple mutations. Instead, take dumped Pose and do it then
-    :param mutation_string: format str( <single letter code of original amino acid><pose sequence position><single letter code of new amino acid> ). Split multiple mutations using '_'
+    :param mutation_string: format str( <single letter code of original amino acid><PDB sequence position><single letter code of new amino acid> ). Split multiple mutations using '_'
     :param sf: ScoreFunction
-    :param pose: Pose
+    :param input_pose: Pose
+    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
+    :param pack_around_mut: bool( do you want to pack around the mutation(s) made? ). Default = True = Yes
+    :param dump_pose: bool( do you want to dump your mutated pose? ). Default = False = No
     :param dump_dir: str( /path/to/dump/directory/for/pose ). Default = None = current working directory
     :return: newly mutated Pose
     """
     # no pack min to get best structure!! do that yourself with the dumped pose
 
-    # apply sugar branch point constraints to sf
-    apply_sugar_constraints_to_sf( sf, pose )
+    # print out the mutation string to be created
+    if verbose:
+        print "Adding the following mutations to your pose:", mutation_string
+    
+    # move the passed pose into a separate Pose object
+    pose = Pose()
+    pose.assign( input_pose )
+
+    # apply sugar branch point constraints to sf, if desired
+    if apply_sf_sugar_constraints:
+        apply_sugar_constraints_to_sf( sf, pose )
 
     # get list of mutations to make
     mutations = mutation_string.split( '_' )
-
-    # make the empty mutated pose
-    mut_pose = Pose()
 
     # mutate all residues in chain A and chain B
     # mutate first residue in chain A and chain B so the rest can be a loop
@@ -2188,45 +2258,119 @@ def make_my_new_antibody( mutation_string, sf, pose, dump_dir = None ):
         # ensure that the original amino acid the user specified is actually there
         if pose.residue( pose_A_pos ).name1() != orig_amino_acid and pose.residue( pose_B_pos ).name1() != orig_amino_acid:
             print "Hold up! What you said was the original amino acid is actually incorrect!!"
-            print orig_amino_acid, "at", pdb_seq_pos, "is not", pose.pdb_info().name()
+            print "You told me there was originally a", orig_amino_acid, "at position", pdb_seq_pos, "but there actually was a", pose.residue( pose_A_pos ).name1(), ". Exiting."
             sys.exit()
 
         # make mutation with no pack or min (doing our own packing just to get rid of clashes for each point mutation)
-        # for chain A pos
-        # if this is the first (or only mutation) use the starting pose first
-        if len( mutations ) == 1 or mut == mutations[0]:
-            mut_pose.assign( mutate_residue( pose, pose_A_pos, new_amino_acid ) )
+        # for chain A mutation
+        pose.assign( mutate_residue( pose, pose_A_pos, new_amino_acid ) )
+
+        # for chain B mutation
+        pose.assign( mutate_residue( pose, pose_B_pos, new_amino_acid ) )
+        
+        # pack around mutations, if desired
+        if pack_around_mut:
+            pose.assign( do_mutation_pack( pose_A_pos, new_amino_acid, sf, pose ) )
+            pose.assign( do_mutation_pack( pose_B_pos, new_amino_acid, sf, pose ) )
+        
+    # dump the new pose if desired
+    if dump_pose:
+        pose.pdb_info().name( mutation_string )
+        if dump_dir is None:
+            filename = mutation_string + ".pdb"
+            pose.dump_pdb( filename )
+            return pose
         else:
-            mut_pose.assign( mutate_residue( mut_pose, pose_A_pos, new_amino_acid ) )
-        mut_pose.assign( do_mutation_pack_min( pose_A_pos, new_amino_acid, sf, mut_pose ) )
-
-        # for chain B pos
-        mut_pose.assign( mutate_residue( mut_pose, pose_B_pos, new_amino_acid ) )
-        mut_pose.assign( do_mutation_pack_min( pose_B_pos, new_amino_acid, sf, mut_pose ) )
-
-    # dump the new pose!
-    mut_pose.pdb_info().name( mutation_string )
-    if dump_dir is None:
-        filename = mutation_string + ".pdb"
-        mut_pose.dump_pdb( filename )
-        return mut_pose
-    else:
-        # add a slash to the end of the directory name if there wasn't already one there
-        if dump_dir[-1] != '/':
-            dump_dir += '/'
-        filename = dump_dir + mutation_string + ".pdb"
-        mut_pose.dump_pdb( filename )
-        return mut_pose
+            # add a slash to the end of the directory name if there wasn't already one there
+            if not dump_dir.endswith( '/' ):
+                dump_dir += '/'
+            filename = dump_dir + mutation_string + ".pdb"
+            pose.dump_pdb( filename )
+            return pose
+    
+    return pose
 
 
 
+def make_my_new_asymmetric_antibody( mutation_string, sf, input_pose, apply_sf_sugar_constraints = True, pack_around_mut = True, dump_pose = False, dump_dir = None, verbose = False ):
+    """
+    Turn <input_pose> into an asymmetric mutant with mutations specified by <mutation_string>. If specified, dump mutant into <dump_dir>
+    Mutant <pose> will not be packed and minimized as it cannot handle multiple mutations. Instead, take dumped Pose and do it then
+    :param mutation_string: format str( <single letter code of original amino acid><PDB sequence position><single letter code of new amino acid>_<chain id> ). Split multiple mutations using '+'
+    :param sf: ScoreFunction
+    :param input_pose: Pose
+    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
+    :param pack_around_mut: bool( do you want to pack around the mutation(s) made? ). Default = True = Yes
+    :param dump_pose: bool( do you want to dump your mutated pose? ). Default = False = No
+    :param dump_dir: str( /path/to/dump/directory/for/pose ). Default = None = current working directory
+    :return: newly mutated Pose
+    """
+    # no pack min to get best structure!! do that yourself with the dumped pose
 
-###################
-# EXTRA FUNCTIONS #
-###################
+    # print out the mutation string to be created
+    if verbose:
+        print "Adding the following mutations to your pose:", mutation_string
+    
+    # move the passed pose into a separate Pose object
+    pose = Pose()
+    pose.assign( input_pose )
+
+    # apply sugar branch point constraints to sf, if desired
+    if apply_sf_sugar_constraints:
+        apply_sugar_constraints_to_sf( sf, pose )
+
+    # get list of mutations to make
+    mutations = mutation_string.split( '+' )
+
+    # mutate all residues in chain A and chain B
+    # mutate first residue in chain A and chain B so the rest can be a loop
+    for mut in mutations:
+        chain_id = mut.split( '_' )[ -1 ]
+        mut_string = mut.split( '_' )[ 0 ]
+        orig_amino_acid = mut_string[ 0 ]
+        new_amino_acid = mut_string[ -1 ]
+
+        # seq pos is always from 1 to one minus however many characters are in the mutation string
+        pdb_seq_pos = mut_string[ 1:( len( mut_string ) - 1 ) ]
+
+        # get pose position of residue
+        pose_pos = pose.pdb_info().pdb2pose( chain_id, int( pdb_seq_pos ) )
+
+        # ensure that the original amino acid the user specified is actually there
+        if pose.residue( pose_pos ).name1() != orig_amino_acid:
+            print "Hold up! What you said was the original amino acid is actually incorrect!!"
+            print "You told me there was originally a", orig_amino_acid, "at position", pdb_seq_pos, "but there actually was a", pose.residue( pose_pos ).name1(), ". Exiting."
+            sys.exit()
+
+        # make the point mutation
+        pose.assign( mutate_residue( pose, pose_pos, new_amino_acid ) )
+        
+        # pack the mutation, if desired
+        if pack_around_mut:
+            pose.assign( do_mutation_pack( pose_pos, new_amino_acid, sf, pose ) )
+        
+    # dump the new pose if desired
+    if dump_pose:
+        pose.pdb_info().name( mutation_string )
+        if dump_dir is None:
+            filename = mutation_string + ".pdb"
+            pose.dump_pdb( filename )
+            return pose
+        else:
+            # add a slash to the end of the directory name if there wasn't already one there
+            if not dump_dir.endswith( '/' ):
+                dump_dir += '/'
+            filename = dump_dir + mutation_string + ".pdb"
+            pose.dump_pdb( filename )
+            return pose
+        
+    return pose
 
 
 
+########################
+#### DATA FUNCTIONS ####
+########################
 
 def determine_amino_acid_composition( pose ):
     """
@@ -2235,19 +2379,9 @@ def determine_amino_acid_composition( pose ):
     :param pose: Pose
     :return: a DataFrame or dictionary of the data, depending on if Pandas can be imported
     """
-    # try to import Pandas DataFrame, else, initialize a dictionary for the data
-    pandas_on = False
+    # initialize a dictionary for the data
+    # won't be used if Pandas import worked
     data_dict = {}
-    try:
-        import pandas
-        pandas_on = True
-    except ImportError:
-        print
-        print "Importing of Pandas was not successful - working with a dictionary for the data instead"
-    except:
-        print
-        print "Something I don't understand happened. Raising the error."
-        raise
 
     # build lists for pandas DataFrame
     res_count = []
@@ -2261,22 +2395,24 @@ def determine_amino_acid_composition( pose ):
         res_count.append( count )
         percentage.append( round( ( count / res_total * 100 ), 2 ) )
 
-    # if Pandas import was successful, create a DataFrame
+    # if global Pandas import was successful, create a DataFrame
     if pandas_on:
         df_AA_composition = pd.DataFrame()
         df_AA_composition["Res_Type"] = AA_list
         df_AA_composition["Count"] = res_count
         df_AA_composition["Percentage"] = percentage
+        
     # else create a dictionary
     else:
         data_dict["Res_Type"] = AA_list
         data_dict["Count"] = res_count
         data_dict["Percentage"] = percentage
-
+        
+    # print out relevant data
     print
     print "This protein has..."
     if pandas_on:
-        print df_AA_composition.sort( "Percentage", ascending=False )
+        print df_AA_composition.sort( "Percentage", ascending = False )
         return df_AA_composition
     else:
         print data_dict
@@ -2299,20 +2435,6 @@ def compare_all_rotamers( pose1, pose2, E_diff = 5 ):
         print
         print "Check your poses, they don't have the same number of residues. Exiting"
         sys.exit()
-
-    # try to import Pandas DataFrame, else, initialize a dictionary for the data
-    pandas_on = False
-    data_dict = {}
-    try:
-        import pandas
-        pandas_on = True
-    except ImportError:
-        print
-        print "Importing of Pandas was not successful - working with a dictionary for the data instead"
-    except:
-        print
-        print "Something I don't understand happened. Raising the error."
-        raise
 
     # get the absolute value of the <E_diff>, and also get its negation
     E_diff = abs( E_diff )
@@ -2347,25 +2469,62 @@ def compare_all_rotamers( pose1, pose2, E_diff = 5 ):
                                     resi_chain.append( pose1.pdb_info().pose2pdb( ii )[ -2:len( pose1.pdb_info().pose2pdb( ii ) ) ] )
                                     resi_name.append( res1.name1() )
 
-    # make and return Pandas DataFrame if Pandas can be imported
+    # make and return Pandas DataFrame if Pandas was imported
     if pandas_on:
         df = pd.DataFrame()
         df["Pose Num"] = resi_num_pose
         df["Chain"] = resi_chain
         df["AA"] = resi_name
+        
         return df
-    # else, Pandas can't be imported, so make and return a dictionary of the data
+    
+    # if Pandas wasn't imported, make and return a dictionary of the data
     else:
+        # initialize a dictionary for the data
+        data_dict = {}
+        
+        # append data
         data_dict["Pose Num"] = resi_num_pose
         data_dict["Chain"] = resi_chain
         data_dict["AA"] = resi_name
+        
         return data_dict
 
 
 
+def check_E_per_residue( sf, pose, energy_cutoff = 1.5, verbose = False ):
+    """
+    Returns a list of the residues with a total energy value greater than <energy_cutoff>
+    :param sf: ScoreFunction
+    :param pose: Pose
+    :param energy_cutoff: int( or float( residue energy cutoff where residues of interest have a greater energy value ) ). Default = 1.5
+    :param verbose: bool( if you want the function to print out the high-energy residues, set to True ). Default = False
+    :return: list( Residue objects of residues with total energy above <energy_cutoff> )
+    """
+    # get the absolute value of the passed energy_cutoff
+    abs_cutoff = abs( energy_cutoff )
+    
+    # score the pose to get access to its energy data
+    sf( pose )
+    
+    # iterate through each residue in pose looking at its energy
+    high_E_residues = []
+    for residue in pose:
+        energy = pose.energies().residue_total_energy( residue.seqpos() )
+        if energy > abs_cutoff:
+            if verbose:
+                print residue.name(), '\t', pose.pdb_info().pose2pdb( residue.seqpos() ), '\t', energy
+            high_E_residues.append( residue )
+            
+    return high_E_residues
 
 
-### INITIALIZE ROSETTA ###
+
+
+
+############################
+#### INITIALIZE ROSETTA ####
+############################
 
 if __name__ == '__main__':
     # initialize rosetta with sugar flags
@@ -2376,5 +2535,6 @@ if __name__ == '__main__':
 else:
     initialize_rosetta()
 
-
-### INITIALIZE ROSETTA ###
+############################
+#### INITIALIZE ROSETTA ####
+############################

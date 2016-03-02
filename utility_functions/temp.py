@@ -5,8 +5,8 @@ from antibody_protocols import *
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
 
 native_pose_filename = "pdb_copies_dont_touch/native_crystal_struct_3ay4_Fc_FcgRIII.pdb"
-#pose_filename = "pdb_copies_dont_touch/crystal_struct_3ay4_Fc_FcgRIII_no_Fc_glycan.pdb"
-pose_filename = "just_ASN.pdb"
+pose_filename = "pdb_copies_dont_touch/crystal_struct_3ay4_Fc_FcgRIII_no_Fc_glycan.pdb"
+#pose_filename = "just_ASN.pdb"
 
 loops_filename = "3ay4_interface_loops.txt"
 
@@ -36,19 +36,50 @@ pmm.apply( pose )
 
 #glyco_file = "/Users/Research/pyrosetta_dr/database/chemical/carbohydrates/common_glycans/bisected_fucosylated_N-glycan_core.iupac"
 #glyco_file = "/Users/Research/pyrosetta_dir/database/chemical/carbohydrates/common_glycans/N-glycan_core.iupac"
-glyco_file = "/Users/Research/pyrosetta_dir/database/chemical/carbohydrates/common_glycans/bisected_N-glycan_core.iupac"
+glyco_file = "/Users/Research/pyrosetta_dir/database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac"
 #glyco_file = "/Users/Research/pyrosetta_dir/database/chemical/carbohydrates/common_glycans/2_6-NSCT_CW_Lin.iupac"
 #glyco_file = "/Users/Research/pyrosetta_dir/database/chemical/carbohydrates/common_glycans/G4_CW_Lin.iupac"
 
-#glycosylate_pose_by_file( pose, 69, "ND2", glyco_file )
-#glycosylate_pose_by_file( pose, 284, "ND2", glyco_file )
-glycosylate_pose_by_file( pose, 1, "ND2", glyco_file )
+glycosylate_pose_by_file( pose, 69, "ND2", glyco_file )
+glycosylate_pose_by_file( pose, 284, "ND2", glyco_file )
+#glycosylate_pose_by_file( pose, 1, "ND2", glyco_file )
 
 #pose.pdb_info().name( "glycosylated" )
 pose.pdb_info().name( pose_name )
 pmm.apply( pose )
 print "After glycosylation", sf( pose )
 print
+
+n_res_Fc_glycan = pose.n_residue()
+num_sugars_added = n_res_Fc_glycan - n_res_no_Fc_glycan
+size_of_one_glycan = num_sugars_added / 2
+A_core_GlcNAc = n_res_no_Fc_glycan + 1
+B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1
+
+
+# reset the A and B core GlcNAc
+# FYI - below pose numbers relevant to 3ay4 PDB
+# A core GlcNAc = 216, B core GlcNAc = 440
+A_phi = -102.659710797
+A_psi = 178.686597952
+A_omega = -154.56647992437044
+B_phi = -84.7881455098
+B_psi = 177.132547367
+B_omega = -162.5038699839906
+
+pose.set_phi( A_core_GlcNAc, A_phi )
+pose.set_psi( A_core_GlcNAc, A_psi )
+pose.set_omega( A_core_GlcNAc, A_omega )
+
+pose.set_phi( B_core_GlcNAc, B_phi )
+pose.set_psi( B_core_GlcNAc, B_psi )
+pose.set_omega( B_core_GlcNAc, B_omega )
+
+pose.pdb_info().name( pose_name )
+pmm.apply( pose )
+print "After core GlcNAc reset", sf( pose )
+print
+
 
 
 '''
@@ -100,6 +131,7 @@ print
 '''
 
 
+
 grm = GlycanRelaxMover()
 grm.apply( pose )
 pmm.apply( pose )
@@ -107,37 +139,24 @@ print "After GRM", sf( pose )
 print
 
 
-'''
-# get res numbers of carbohydrates
-carb_res_nums = []
-for res in pose:
-    if res.is_carbohydrate():
-        carb_res_nums.append( res.seqpos() )
 
-
-# get res numbers of carbohydrates in native
-native_carb_res_nums = []
-for res in native_pose:
-    if res.is_carbohydrate():
-        native_carb_res_nums.append( res.seqpos() )
-
-
-## native to new dictionaries
-# native to N-glycan_core.iupac on crystal
-native_to_N_glycan_core = { 216: 603, 217: 604, 218: 605, 219: 606, 221: 607, 440: 608, 441: 609, 442: 610, 443: 611, 445: 612 }
-
-
-# reset the phi and psi values
-dictionary = native_to_N_glycan_core
-
-for key in dictionary:
-    pose.set_phi( native_to_N_glycan_core[ key ], native_pose.phi( key ) )
-    pose.set_psi( native_to_N_glycan_core[ key ], native_pose.psi( key ) )
-#pose.pdb_info().name( "reset_phi_psi" )
+# pack around the Fc sugars
+Fc_res_range = range( n_res_no_Fc_glycan + 1, n_res_Fc_glycan + 1 )
+pack_rotamers_mover = make_pack_rotamers_mover( sf, pose, False, True, Fc_res_range, True, PACK_RADIUS, True )
+pack_rotamers_mover.apply( pose )
 pmm.apply( pose )
-print "After phi and psi reset", sf( pose )
+print "After sugar pack min", sf( pose )
+print
+
+
+'''
+# make base pack and min pose
+pose = make_base_pack_min_pose( sf, pose, 1, 1 )
+pmm.apply( pose )
+print "After base pack min", sf( pose )
 print
 '''
+
 
 '''
 # pack everything except branch points

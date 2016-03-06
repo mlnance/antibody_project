@@ -186,4 +186,3 @@ for mutation in short_mut_filenames:
     lowest_E_mutant_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 5 )
 
 # done!
-return True

@@ -2190,8 +2190,14 @@ def make_all_mutations( sf, orig_pose_file, mutant_list_file, pack_around_mut = 
     for mut_line_full in mutant_list:
         mut_line = mut_line_full.split( ' ' )
         mut = mut_line[0]
-        symmetry = mut_line[1]
-        if symmetry == '' or symmetry == "sym":
+        try:
+            symmetry = mut_line[1]
+        except IndexError:
+            # no symmetry marked, assume "sym"
+            symmetry = "sym"
+            
+        # make a new antibody given the symmetry specified
+        if symmetry == "sym":
             print "Symmetrical", mut
             make_my_new_symmetric_antibody( mut, sf, orig_pose, 
                                             pack_around_mut = pack_around_mut, 

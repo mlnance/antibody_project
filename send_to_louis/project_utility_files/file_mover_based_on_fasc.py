@@ -5,6 +5,7 @@
 def main( fasc_file, low_e_dir, return_this_many_structures ):
     import os
     import sys
+    sys.path.append( "/home/mlnance/project_utility_files" )
     from fasc_reader import read_fasc
     
     # get current directory

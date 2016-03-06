@@ -5,10 +5,11 @@
 def main( fasc_file, low_e_dir, return_this_many_structures ):
     import os
     import sys
+    sys.path.append( "/home/mlnance/project_utility_files" )
     from fasc_reader import read_fasc
     
     # get current directory
-    cur_dir = os.getcwd()
+    working_dir = os.getcwd()
     
     # check the validity of the directory and file
     if not os.path.isdir( low_e_dir ):
@@ -25,7 +26,7 @@ def main( fasc_file, low_e_dir, return_this_many_structures ):
     # get the absolute paths to everything
     os.chdir( low_e_dir )
     low_e_dir = os.path.abspath( os.getcwd() ) + '/'
-    os.chdir( cur_dir )
+    os.chdir( working_dir )
     
     # use fasc_reader.py to get the relevant file paths
     fasc_files = read_fasc( fasc_file, return_this_many_structures )
@@ -61,7 +62,7 @@ def main( fasc_file, low_e_dir, return_this_many_structures ):
     os.chdir( all_lowest_E_structs )
     cmd = "cp %s %s" %( lowest_e_file, all_lowest_E_structs )
     os.popen( cmd )
-    os.chdir( cur_dir )
+    os.chdir( working_dir )
     
     # for each file name given, move it to the specified directory
     os.chdir( dump_dir )
@@ -69,7 +70,7 @@ def main( fasc_file, low_e_dir, return_this_many_structures ):
         # copy over the files
         cmd = "cp %s %s" %( f, dump_dir )
         os.popen( cmd )
-    os.chdir( cur_dir )
+    os.chdir( working_dir )
     
     # if this is an imported function, return the path to the lowest E pose
     if __name__ != "__main__":

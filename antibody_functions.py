@@ -9,8 +9,10 @@ __author__ = 'morganlnance'
 #####################
 
 if __name__ == "__main__":
+    print
     print "Importing modules..."
 else:
+    print
     print "Importing modules from %s..." %__name__
 
 # bread and butter Rosetta imports
@@ -28,6 +30,7 @@ from toolbox import mutate_residue, get_hbonds
 
 # for sugar work
 from rosetta.protocols.carbohydrates import GlycanRelaxMover
+from rosetta.protocols.carbohydrates import LinkageConformerMover
 
 # for loop work
 from rosetta import Loop, Loops, add_single_cutpoint_variant
@@ -47,6 +50,7 @@ try:
 except ImportError:
     pandas_on = False
     print "Skipping Pandas import - consider downloading it! Who doesn't love Pandas??"
+    pass
 
 
 
@@ -58,8 +62,8 @@ pmm = PyMOL_Mover()
 data_dir = "/Users/Research/pyrosetta_git_repo/mutational_data/"
 
 # global variables
-AA_list = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
-all_letters_list = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+AA_list = [ 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y' ]
+all_letters_list = [ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' ]
 CUTOFF_DISTANCE = 5.0  # used when calculating the number of residue contacts at the interface
 PACK_RADIUS = 10.0  # used when making mutations to structures, repacks in this area
 kT = 0.7  # used in MonteCarlo and small and shear movers
@@ -147,6 +151,152 @@ def load_pose( pose_filename ):
 
 
 
+def get_fa_scorefxn_with_given_weights( scoretypes, weights, verbose = False ):
+    """
+    Return an sf from get_fa_scoretype but with adjusted weights <scoretypes> with given <weights>
+    NOTE: if altering more than 1 ScoreType, the <scoretypes> and <weights> arguments should BOTH be lists with each value of weights corresponding to the corresponding index in <scoretypes>. See below for example inputs
+    If <input_scoretype> is not already part of the <sf>, this function will add it to <sf> with a weight of <weight>, and then get the score
+    Will exit if the string( <input_scoretype> ) is not a valid ScoreType
+    Example input: [ "fa_atr", "fa_rep" ], [ 1.5, 0.5 ]  -->  ( fa_atr = 1.5, fa_rep = 0.5 )
+    Example input: [ "fa_atr", ScoreType( fa_rep ) ], [ 1.5, 0.5 ]  -->  ( fa_atr = 1.5, fa_rep = 0.5 )
+    Example input: ScoreType( fa_elec ), 0.75  -->  ( fa_elec = 0.75 )
+    Example input: "fa_intra_rep", 1  -->  ( fa_intra_rep = 1 )
+    :param scoretypes: list( or str( or ScoreType( can be a list or a single name or object of a valid ScoreType  ) ) )
+    :param weights: int( or float( weight of the desired ScoreType ) )
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    "return: ScoreFunction( fa_scorefxn with adjusted <weights> of given <scoretypes> )
+    """
+    # argument check - if one argument is a list, ensure the other is as well
+    if isinstance( scoretypes, list ) and not isinstance( weights, list ):
+        print "You gave me a list for <scoretypes> but not for <weights>, I can't handle this situation. Please give me both lists. Exiting"
+        sys.exit()
+            
+    # check the same case ( that they're both strings ), but the opposite way
+    if isinstance( weights, list ) and not isinstance( scoretypes, list ):
+        print "You gave me a list for <weights> but not for <scoretypes>, I can't handle this situation. Please give me both lists. Exiting"
+        sys.exit()
+        
+    # if they're both lists, ensure that they're the same size lists
+    if isinstance( scoretypes, list ) and isinstance( weights, list ):
+        if len( scoretypes ) != len( weights ):
+            print "You passed me lists for <scoretypes> and <weights> of unequal length. Check your input - each scoretype in <scoretypes> needs to have a corresponding weight in <weights>. Exiting."
+            sys.exit()
+            
+        
+    # get a standard fa_scorefxn to start with
+    sf = get_fa_scorefxn()
+    
+    # make a dummy ScoreType to use for isinstance() checking
+    fa_dun = score_type_from_name( "fa_dun" )
+    
+    # used for index referencing if user passed lists
+    corresponding_weight_index = 0
+    
+    ## next steps depend on the types of arguments the user passed
+    # if the user passed a list for <scoretypes>
+    if isinstance( scoretypes, list ):
+        # apply the new weights to each ScoreType given
+        for scoretype in scoretypes:
+            # if the argument is a string and a valid ScoreType name
+            if isinstance( scoretype, str ):
+                # turn the argument into a ScoreType object
+                try:
+                    scoretype = score_type_from_name( scoretype )
+                except:
+                    print
+                    print
+                    print "The string name:", scoretype, "does not appear to be a valid ScoreType. Exiting"
+                    sys.exit()
+                    
+                # grab the corresponding weight term from <weights>
+                weight = weights[ corresponding_weight_index ]
+                
+                # if the weight given is a float or an int
+                if isinstance( weight, float ) or isinstance( weight, int ):
+                    # adjust the weight in the scorefxn using the corresponding weight given
+                    sf.set_weight( scoretype, weight )
+                    
+                    # increase the corresponding_weight_index counter
+                    corresponding_weight_index += 1
+                    
+                # else, exit because it needs to be a float or an int
+                else:
+                    print "You gave me a non-float/non-int in your <weights> argument. Check your input. Exiting."
+                    sys.exit()
+                
+            # if the argument is a ScoreType object
+            elif isinstance( scoretype, type( fa_dun ) ):
+                # grab the corresponding weight term from <weights>
+                weight = weights[ corresponding_weight_index ]
+                
+                # if the weight given is a float or an int
+                if isinstance( weight, float ) or isinstance( weight, int ):
+                    # adjust the weight in the scorefxn using the corresponding weight given
+                    sf.set_weight( scoretype, weight )
+                    
+                    # increase the corresponding_weight_index counter
+                    corresponding_weight_index += 1
+                
+                # else, exit because it needs to be a float or an int
+                else:
+                    print "You gave me a non-float/non-int in your <weights> argument. Check your input. Exiting."
+                    sys.exit()
+                    
+            # else, I don't know what they gave me as a scoretype
+            else: 
+                print "I'm not sure what '%s' is from your <scoretypes> argument. Exiting" %scoretype
+                sys.exit()
+               
+    # if the user passed a str as the <scoretypes> argument
+    elif isinstance( scoretypes, str ):
+        # turn the argument into a ScoreType object
+        try:
+            scoretype = score_type_from_name( scoretypes )
+        except:
+            print
+            print
+            print "The string name:", scoretypes, "does not appear to be a valid ScoreType. Exiting"
+            sys.exit()
+        
+        # if the weight given is a float or an int
+        if isinstance( weights, float ) or isinstance( weights, int ):
+            # adjust the weight in the scorefxn using the corresponding weight given
+            sf.set_weight( scoretype, weights )
+            
+        # else, exit because it needs to be a float or an int
+        else:
+            print "You gave me a non-float/non-int in your <weights> argument. Check your input. Exiting."
+            sys.exit()
+            
+    # lastly, if the user passed a ScoreType object as the <scoretypes> argument
+    elif isinstance( scoretypes, type( fa_dun ) ):
+        # if the weight given is a float or an int
+        if isinstance( weights, float ) or isinstance( weights, int ):
+            # adjust the weight in the scorefxn using the corresponding weight given
+            sf.set_weight( scoretypes, weights )
+        
+        # else, exit because it needs to be a float or an int
+        else:
+            print "You gave me a non-float/non-int in your <weights> argument. Check your input. Exiting."
+            sys.exit()
+            
+    # print the new scorefxn using an Alanine if the user set verbose to True
+    if verbose:
+        # get a dummy pose to do the sf.show( pose ) functionality
+        from rosetta import pose_from_sequence
+        dummy_pose = pose_from_sequence( 'A' )
+        
+        # show the weights in the new scorefxn
+        print
+        print "Showing the score of an Alanine using an fa_scorefxn with the adjusted weights given"
+        print
+        sf.show( dummy_pose )
+    
+    # return the newly weighted fa_scorefxn
+    return sf
+
+
+
 def get_score_by_scoretype( sf, input_scoretype, pose, weight = 1.0, verbose = False ):
     """
     Return the specified <input_scoretype> value using <sf> on the <pose>
@@ -169,7 +319,9 @@ def get_score_by_scoretype( sf, input_scoretype, pose, weight = 1.0, verbose = F
     if isinstance( input_scoretype, str ):
         try:
             scoretype = score_type_from_name( input_scoretype )
-        except RuntimeError:
+        except:
+            print
+            print
             print "The string name:", input_scoretype, "does not appear to be a valid ScoreType. Exiting"
             sys.exit()
 
@@ -180,7 +332,7 @@ def get_score_by_scoretype( sf, input_scoretype, pose, weight = 1.0, verbose = F
 
     # else, I don't know what they gave me
     else:
-        print "I'm not sure what", input_scoretype, "is. Exiting"
+        print "I'm not sure what '%s'is. Exiting" %scoretype
         sys.exit()
 
     # tell user it was successful in turning str( <input_scoretype> ) to a ScoreType object
@@ -231,7 +383,9 @@ def get_residue_score_by_scoretype( sf, input_scoretype, seq_pos, pose, weight =
     if isinstance( input_scoretype, str ):
         try:
             scoretype = score_type_from_name( input_scoretype )
-        except RuntimeError:
+        except:
+            print
+            print
             print "The string name:", input_scoretype, "does not appear to be a valid ScoreType. Exiting"
             sys.exit()
 
@@ -268,34 +422,36 @@ def get_residue_score_by_scoretype( sf, input_scoretype, seq_pos, pose, weight =
 
     # get the <input_scoretype> score of the residue at <seq_pos>
     score_of_res_of_scoretype = pose.energies().residue_total_energies( seq_pos ).get( scoretype )
-
+    
+    
+    # return the score of the residue given the ScoreType given
     return score_of_res_of_scoretype
 
 
 
-def get_sugar_bb_only_sf( weight = None ):
+def get_sugar_bb_only_sf( weight = 1 ):
     """
     Creates and returns a ScoreFunction with only the sugar_bb term as a non-zero. Can specify weight with <weight> param
-    :param weight: int( or float( weight of the sugar_bb term in the sf ) ). Default = None = standard weight
+    :param weight: int( or float( weight of the sugar_bb term in the sf ) ). Default = 1
     :return: ScoreFunction
     """
     # instantiate a fa ScoreFunction
     sugar_sf = get_fa_scorefxn()
     
-    # list of all ScoreTypes in string form
-    score_types = [ "fa_atr", "fa_rep", "fa_sol", "fa_intra_rep", "fa_elec", "pro_close", "hbond_sc", "hbond_sr_bb", "hbond_lr_bb", "hbond_bb_sc", "dslf_fa13", "rama", "omega", "fa_dun", "p_aa_pp", "ref" ]
+    # get a list of all the ScoreTypes in the fa_scorefxn
+    scoretypes = sugar_sf.get_nonzero_weighted_scoretypes()
+
+    # set all ScoreTypes to 0
+    for scoretype in scoretypes:
+        sugar_sf.set_weight( scoretype, 0 )
+            
+    # set sugar_bb ScoreType to given <weight>
+    # doing this outside the loop in case "sugar_bb" stops becoming a part of fa_scorefxn
+    sugar_bb = score_type_from_name( "sugar_bb" )
+    sugar_sf.set_weight( sugar_bb, weight )
     
-    # set all non sugar_bb ScoreTypes to zero
-    for score_string in score_types:
-        score_type = score_type_from_name( score_string )
-        sugar_sf.set_weight( score_type, 0 )
-        
-    # set the sugar_bb ScoreType to the specified <weight>, if any
-    if weight is not None:
-        sugar_bb = score_type_from_name( "sugar_bb" )
-        sugar_sf.set_weight( sugar_bb, weight )
     
-    # return the sf
+    # return the sugar_sf that now only has the sugar_bb ScoreType as non-zero
     return sugar_sf
 
 
@@ -308,7 +464,7 @@ def apply_sugar_constraints_to_sf( sf, pose, weight = 1.0, verbose = False ):
     :param pose: Pose
     :param weight: int( or float( what do you want the weight to be for the bond distance and bond angle constraints? ). Default = 1.0
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    :return: sf( ScoreFunction including sugar constraints )
+    :return: ScoreFunction( sf including sugar constraints )
     """
     # get list of chemical edges ( marked as -2 in FoldTree f )
     edges = pose.fold_tree().get_chemical_edges()
@@ -569,6 +725,7 @@ def make_movemap_for_loop( loop, allow_bb_movement = True, allow_chi_movement = 
     """
     if verbose:
         print "Making a MoveMap for a Loop"
+    
     # instantiate a MoveMap
     mm = MoveMap()
 
@@ -611,7 +768,7 @@ def make_movemap_for_jumps( jump_numbers, verbose = False ):
 
         # set only the given Jumps to True
         for jump_num in jump_numbers:
-            mm.set_jump( jump_num )
+            mm.set_jump( jump_num, True )
 
     else:
         # I don't know what they gave me  -  I need an integer or a list
@@ -623,6 +780,75 @@ def make_movemap_for_jumps( jump_numbers, verbose = False ):
 
 
 
+def make_movemap_for_sugars( pose, allow_bb_movement = True, allow_chi_movement = False, verbose = False ):
+    """
+    Given a <pose> object, return a MoveMap allowing for bb and/or chi movement of only sugar residues.
+    :param pose: Pose( a Pose object )
+    :param allow_bb_movement: bool( Do you want to allow sugarback bone movement? ). Default = True
+    :param allow_chi_movement: bool( Do you want to allow sugarchi angle movement? ). Default = False
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :return: MoveMap for all sugar residues in <pose>
+    """
+    if verbose:
+        print "Making a MoveMap for a Loop"
+    
+    # instantiate a MoveMap
+    mm = MoveMap()
+
+    ## set movement for only sugar residues
+    # if BB is True
+    if allow_bb_movement:
+        for res in pose:
+            if res.is_carbohydrate():
+                mm.set_bb( res.seqpos(), True )
+
+    # if chi is True
+    if allow_chi_movement:
+        for res in pose:
+            if res.is_carbohydrate():
+                mm.set_chi( res.seqpos(), True )
+    
+    # return the sugar MoveMap
+    return mm
+
+
+
+def make_movemap_for_range( seqpos, allow_bb_movement = True, allow_chi_movement = True, verbose = False ):
+    """
+    Given a list of <seqpos>, return a MoveMap allowing for bb and/or chi movement of only the passed residues.
+    :param seqpos: list( int( a list of sequence positions for your pose ) )
+    :param allow_bb_movement: bool( Do you want to allow sugarback bone movement? ). Default = True
+    :param allow_chi_movement: bool( Do you want to allow sugarchi angle movement? ). Default = False
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :return: MoveMap for all sugar residues in <pose>
+    """
+    # check to make sure <seqpos> is a list
+    if not isinstance( seqpos, list ):
+        print "You didn't pass me a list for your <seqpos> argument. That's what I need to make your MoveMap. Exiting."
+        sys.exit()
+        
+    if verbose:
+        print "Making a MoveMap for the following residues:", seqpos
+    
+    # instantiate a MoveMap
+    mm = MoveMap()
+
+    # if BB is True
+    if allow_bb_movement:
+        for num in seqpos:
+            mm.set_bb( num, True )
+
+    # if chi is True
+    if allow_chi_movement:
+        for num in seqpos:
+            mm.set_chi( num, True )
+    
+    # return the MoveMap
+    return mm
+
+
+
+# TODO: Do I actually need this function?
 def do_min_with_this_mm( mm, sf, pose, apply_sf_sugar_constraints = True, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
     """
     Minimizes a given Pose using dfpmin_strong_wolfe and the user-supplied ScoreFunction <sf> and MoveMap <mm>
@@ -724,9 +950,11 @@ def ramp_score_weight( sf, score_type_str, target_weight, current_step, total_st
         score_type = score_type_from_name( score_type_str )
     except RuntimeError:
         print
+        print
         print score_type_str, "is not a valid score type, exiting"
         sys.exit()
     except:
+        print
         print
         print "I'm not sure what happened. Check your input to ramp_score_weight. Exiting"
         sys.exit()
@@ -1124,9 +1352,11 @@ def compare_pose_energy_per_residue( sf, pose1, pose2, diff_cutoff = 1.0, detail
         neg_diff_cutoff = diff_cutoff * -1
     except TypeError:
         print
+        print
         print "Did you mean to give me a number for the diff_cutoff? Exiting"
         sys.exit()
     except:
+        print
         print
         print "Something I don't understand happened. Raising the error."
         raise
@@ -1439,10 +1669,12 @@ def make_loops_from_file( loops_file, pose, PDB_numbering = False, anchor_loops 
     except IOError:
         # if it's not a valid path, print an error message and exit
         print
+        print
         print loops_file, "does not appear to be a valid path. Exiting"
         sys.exit()
     except:
         # if something else happened, print an error message and exit
+        print
         print
         print "Something I don't understand happened. Raising the error."
         raise
@@ -1498,6 +1730,7 @@ def make_loops_from_file( loops_file, pose, PDB_numbering = False, anchor_loops 
                 chain = str( columns[3] )
                 if chain not in all_letters_list:
                     print
+                    print
                     print "I'm not sure what this is:", "'%s'" %chain, " -  I was expecting a letter from A through Z. Check your file. sys.exit()"
                     sys.exit()
 
@@ -1509,11 +1742,13 @@ def make_loops_from_file( loops_file, pose, PDB_numbering = False, anchor_loops 
                 # chain ID doesn't exist in this case, exit if user set <PDB_numbering> to True. They need to have added a chain here
                 if PDB_numbering:
                     print
+                    print
                     print "You set PDB_numbering to True, but did not add a chain ID after the stop residue. Exiting"
                     sys.exit()
 
             # otherwise, something weird happened
             except:
+                print
                 print
                 print "Something I don't understand happened. Raising the error."
                 raise
@@ -1529,11 +1764,13 @@ def make_loops_from_file( loops_file, pose, PDB_numbering = False, anchor_loops 
                 # if there is nothing there, exit because <PDB_numbering> is True, thus we need a chain ID
                 except IndexError:
                     print
+                    print
                     print "You set PDB_numbering to True, but did not add a chain ID after the cut residue. Exiting"
                     sys.exit()
 
                 # if something weird happened, exit
                 except:
+                    print
                     print
                     print "Something I don't understand happened. Raising the error."
                     raise
@@ -2163,9 +2400,13 @@ def make_all_mutations( sf, orig_pose_file, mutant_list_file, pack_around_mut = 
             if line != '' and line[0] != '#':
                 mutant_list.append( line )
     except IOError:
+        print
+        print
         print mutant_list_file, "didn't work. Check your input"
         sys.exit()
     except:
+        print
+        print
         print "Unexpected error"
         raise
     
@@ -2190,14 +2431,8 @@ def make_all_mutations( sf, orig_pose_file, mutant_list_file, pack_around_mut = 
     for mut_line_full in mutant_list:
         mut_line = mut_line_full.split( ' ' )
         mut = mut_line[0]
-        try:
-            symmetry = mut_line[1]
-        except IndexError:
-            # no symmetry marked, assume "sym"
-            symmetry = "sym"
-            
-        # make a new antibody given the symmetry specified
-        if symmetry == "sym":
+        symmetry = mut_line[1]
+        if symmetry == '' or symmetry == "sym":
             print "Symmetrical", mut
             make_my_new_symmetric_antibody( mut, sf, orig_pose, 
                                             pack_around_mut = pack_around_mut, 

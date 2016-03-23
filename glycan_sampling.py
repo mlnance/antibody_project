@@ -96,24 +96,22 @@ print "After glycosylation:\t\t", sf( working_pose )
 print
 
 
-# reset the chibose core ( GlcNAc1 and 2 and Man 3, 4, and 5 )
-# don't do reset for G9 and bisecting 2,6-NSCT because wouldn't be as relevant
+# reset the 1st GlcNAc on the ASN in the chibose core
 n_res_Fc_glycan = working_pose.n_residue()
 num_sugars_added = n_res_Fc_glycan - n_res_no_Fc_glycan
 size_of_one_glycan = num_sugars_added / 2
 A_core_GlcNAc = n_res_no_Fc_glycan + 1
 B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1
 
-# numbers collected from NATIVE 3ay4 PDB
-# off a bit from the low energy structure given, but that's because I'm sure I'll make more of those
-A_phi = -102.659710797
-A_psi = 178.686597952
-A_omega = -154.56647992437044
-B_phi = -84.7881455098
-B_psi = 177.132547367
-B_omega = -162.5038699839906
+# numbers collected from the lowest_E decoy of 3ay4 PDB after just a total pack/min
+A_phi = -102.58846630984607
+A_psi = 178.68359502878405
+A_omega = -153.94141254167278
+B_phi = -84.79653728190505
+B_psi = 177.12713080144076
+B_omega = -156.4554337951647
 
-# reset the core sugar residues of the glycosylated working_pose
+# reset both of the core GlcNAc residue of the glycosylated working_pose
 working_pose.set_phi( A_core_GlcNAc, A_phi )
 working_pose.set_psi( A_core_GlcNAc, A_psi )
 working_pose.set_omega( A_core_GlcNAc, A_omega )
@@ -125,7 +123,7 @@ working_pose.set_omega( B_core_GlcNAc, B_omega )
 #working_pose.pdb_info().name( "core_sugar_reset" )
 working_pose.pdb_info().name( working_pose_name )
 pmm.apply( working_pose )
-print "After 3-core sugar reset:\t", sf( working_pose )
+print "After reseting the core GlcNAc:\t", sf( working_pose )
 print
 
 
@@ -193,7 +191,7 @@ print
 '''
 
 
-
+'''
 # do a regular pack and minimization round
 working_pose = do_pack_min( sf, working_pose, 
                             apply_sf_sugar_constraints = False, 
@@ -204,3 +202,4 @@ working_pose = do_pack_min( sf, working_pose,
 pmm.apply( working_pose )
 print "After total pack/min\t\t", sf( working_pose )
 print
+'''

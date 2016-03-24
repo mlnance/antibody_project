@@ -20,7 +20,6 @@ import argparse
 
 # parse and store input arguments
 parser = argparse.ArgumentParser(description="Use PyRosetta to glycosylate a pose and find a low E structure")
-# NATIVE SHOULD JUST BE 3AY4 STRAIGHT FROM PDB
 parser.add_argument("native_pdb_file", type=str, help="the filename of the native PDB structure.")
 parser.add_argument("working_pdb_file", type=str, help="the filename of the PDB structure to be glycosylated.")
 parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan file to be used.")
@@ -32,9 +31,12 @@ input_args = parser.parse_args()
 #################
 
 from antibody_functions import *
-#from antibody_protocols import *
+from rosetta import MonteCarlo
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
-#GlycanRelaxMover, LinkageConformerMover
+from rosetta.protocols.carbohydrates import GlycanRelaxMover, LinkageConformerMover
+import os, sys
+sys.path.append( "utility_functions" )
+from nearby_residues_to_pickle_file import main as get_nearby_residues
 
 
 ##############################
@@ -96,6 +98,7 @@ print "After glycosylation:\t\t", sf( working_pose )
 print
 
 
+
 # reset the 1st GlcNAc on the ASN in the chibose core
 n_res_Fc_glycan = working_pose.n_residue()
 num_sugars_added = n_res_Fc_glycan - n_res_no_Fc_glycan
@@ -123,29 +126,13 @@ working_pose.set_omega( B_core_GlcNAc, B_omega )
 #working_pose.pdb_info().name( "core_sugar_reset" )
 working_pose.pdb_info().name( working_pose_name )
 pmm.apply( working_pose )
-print "After reseting the core GlcNAc:\t", sf( working_pose )
+print "After reseting the"
+print "core GlcNAc:\t\t\t", sf( working_pose )
 print
 
 
 
-'''
-# minimize using a sf with only the sugar_bb term on
-sugar_bb_sf = get_sugar_bb_only_sf()
-mm = MoveMap()
-for residue in working_pose:
-    if residue.is_carbohydrate():
-        mm.set_bb( residue.seqpos(), True )
-min_mover = MinMover( mm, sugar_bb_sf, "dfpmin_strong_wolfe", 0.01, True )
-min_mover.apply( working_pose )
-pmm.apply( working_pose )
-print "After min:\t\t", sf( working_pose )
-print
-'''
-
-
-
-## use the LinkageConformerMover to find a local sugar minima
-# first get the sequence positions of the newly glycosylated Fc sugars and their branch points
+# get the res nums of the Fc sugars added
 Fc_sugar_nums = []
 Fc_branch_point_nums = []
 for res in working_pose:
@@ -155,24 +142,71 @@ for res in working_pose:
     if res.is_branch_point():
         if res.seqpos() not in FcR_branch_point_nums:
             Fc_branch_point_nums.append( res.seqpos() )
-        
+# get a list of the Fc sugars discluding the core GlcNAc residues
+Fc_sugar_nums_except_core_GlcNAc = []
+for res in Fc_sugar_nums:
+    if res != A_core_GlcNAc and res != B_core_GlcNAc:
+        Fc_sugar_nums_except_core_GlcNAc.append( res )
+
+
+
+
+# pack the Fc sugars and around them within 10 Angstroms
+pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose, 
+                                                apply_sf_sugar_constraints = False, 
+                                                pack_branch_points = True, 
+                                                residue_range = Fc_sugar_nums, 
+                                                use_pack_radius = True, 
+                                                pack_radius = PACK_RADIUS )
+pack_rotamers_mover.apply( working_pose )
+pmm.apply( working_pose )
+print "After Fc sugar and 10"
+print "Angstrom sphere pack:\t\t", sf( working_pose )
+print
+
+
+
+## use the LinkageConformerMover to find a local sugar minima        
 # make a MoveMap for these Fc sugars allowing only bb movement
-mm = make_movemap_for_range( Fc_sugar_nums, allow_bb_movement = True, allow_chi_movement = False )
+mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, allow_bb_movement = True, allow_chi_movement = False )
 
 # add in the branch points myself
 for branch_point in Fc_branch_point_nums:
     mm.set_branches( branch_point, True )
 
-            
-# TODO: uhhh this LCM thing isn't working in general
+# make an appropriate MonteCarlo object
+# kT is 0.7 - from antibody_functions.py
+mc = MonteCarlo( working_pose, sugar_sf, kT )
+
+# make an appropriate LinkageConformerMover
 lcm = LinkageConformerMover()
 lcm.set_movemap( mm )
-# TODO: give it an sf with the fa_intra_rep set to .440 (not .004)
-# lcm.set_scorefunction( sugar_sf ) ???????
-lcm.apply( working_pose )
+lcm.set_x_standard_deviations( 2.3 )
+
+# run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
+num_accept = 0
+for ii in range( 50 ):
+    # apply the LCM
+    lcm.apply( working_pose )
+    
+    # accept or reject the move using the MonteCarlo object
+    if mc.boltzmann( working_pose ):
+        num_accept += 1
+        pmm.apply( working_pose )
+
+# pack the Fc sugars and around them within 10 Angstroms
+pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose, 
+                                                apply_sf_sugar_constraints = False, 
+                                                pack_branch_points = True, 
+                                                residue_range = Fc_sugar_nums, 
+                                                use_pack_radius = True, 
+                                                pack_radius = PACK_RADIUS )
+pack_rotamers_mover.apply( working_pose )
 pmm.apply( working_pose )
-print "After LCM:\t\t\t", sf( working_pose )
+print "After LCM and a 10 Ang" 
+print "sphere pack/min:\t\t", sf( working_pose )
 print
+
 
 
 '''
@@ -189,6 +223,7 @@ print "After Fc sugar and 10"
 print "Angstrom sphere pack:\t\t", sf( working_pose )
 print
 '''
+
 
 
 '''

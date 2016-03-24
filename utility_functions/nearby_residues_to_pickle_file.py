@@ -1,38 +1,42 @@
 #!/usr/bin/python
 __author__ = "morganlnance"
 
-import argparse
-
-# parse and store input arguments
-parser = argparse.ArgumentParser(description="Use PyRosetta to glycosylate a pose and find a low E structure")
-parser.add_argument("pdb_file", type=str, help="/path/to/the PDB file to be used.")
-parser.add_argument("Angstroms_around", type=float, help="how many Angstroms around defines your neighest neighbors?")
-parser.add_argument("--pickle_dir", type=str, default=None, help="/path/to/dir where you would like a pickle file to be dumped.")
-input_args = parser.parse_args()
-
 
 
 # import needed functions
 if __name__ == "__main__":
     print
     print "Importing modules..."
-else:
-    print
-    print "Importing modules from %s..." %__name__
 from rosetta import init, pose_from_file
 import os, sys
 
 
 
 # main function
-def main( pdb_file, Angstroms_around, pickle_dir ):
+def main( pose_obj_or_file, Angstroms_around, pickle_dir = None ):
     # load in the pose
     try:
-        init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )    
-        pose = pose_from_file( pdb_file )
+        if __name__ == "__main__":
+            init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
+            
+            # load the pose from the filename
+            pose = pose_from_file( pose_obj_or_file )
+            
+        # else it's an imported function, so load the pose
+        else:
+            # if the pose object passed is a str, import the pose
+            if isinstance( pose_obj_or_file, str ):
+                try:
+                    pose = pose_from_file( pose_obj_or_file )
+                except:
+                    init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
+                    pose = pose_from_file( pose_obj_or_file )
+
+            else:
+                pose = pose_obj_or_file
     except:
         print
-        print "There was something wrong with the PDB file you gave me:", pdb_file, "Please check your input. Exiting"
+        print "There was something wrong with the PDB file you gave me:", pose_obj_or_file, "Please check your input. Exiting"
         raise
     
     # instantiate a dictionary to store the data
@@ -87,8 +91,20 @@ def main( pdb_file, Angstroms_around, pickle_dir ):
         pickle.dump( res_nums_around_res_given_X_cutoff, open( pickle_filename, "wb" ) )
     # else, this program was imported, so return the dictionary
     else:
-        print "Here is your dictionary where each key is a residue in the pose and each value is a residue within", Angstroms_around, "Angstroms around the corresponding residue."
         return res_nums_around_res_given_X_cutoff
 
 
-main( input_args.pdb_file, input_args.Angstroms_around, input_args.pickle_dir )
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    # parse and store input arguments
+    parser = argparse.ArgumentParser(description="Use PyRosetta to glycosylate a pose and find a low E structure")
+    parser.add_argument("pose_obj_or_file", type=str, help="/path/to/the PDB file to be used.")
+    parser.add_argument("Angstroms_around", type=float, help="how many Angstroms around defines your neighest neighbors?")
+    parser.add_argument("--pickle_dir", type=str, default=None, help="/path/to/dir where you would like a pickle file to be dumped.")
+    input_args = parser.parse_args()
+
+
+    main( input_args.pose_obj_or_file, input_args.Angstroms_around, input_args.pickle_dir )

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#author=morganlnance
+__author__ = "morganlnance"
 
 '''
 Plans for this code:
@@ -14,6 +14,7 @@ Plans for this code:
 # this takes a pose and runs through only pack and minimization rounds to make a low-energy structure
 # using this to take the native crystal structure of 3ay4 and do nstruct of 1000 to get a low energy structure
 # this low energy structure will then be the base structure to make mutations, and then this protocol will be run on all of the mutations
+
 import argparse
 
 # parse and store args
@@ -85,7 +86,6 @@ print "Mutant structures directory", mut_structs_dir
 
 # good to go, import needed functions
 from antibody_protocols import *
-sys.path.append( "project_utility_files" )
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
 from rosetta import PyJobDistributor
 
@@ -151,42 +151,40 @@ os.chdir( mut_structs_dir )
 short_mut_filenames = os.listdir( os.getcwd() )
 mut_file_paths = {}
 for f in short_mut_filenames:
-    # ensure it's a .pdb file and not some other random thing in there
-    if f.endswith( ".pdb" ):
-        mut_file_paths[ f ] = mut_structs_dir + f
+    mut_file_paths[ f ] = mut_structs_dir + f
 
 # for each filename, make mut_nstruct decoys by pack and minimization
 for mutation in short_mut_filenames:
-    if mutation.endswith( ".pdb" ):
-        # update user of process
-        print "Working on", mutation
-        
-        # make the directory for the mutant PDB in the base_structs_dir
-        structure_dir = base_structs_dir + mutation.split( ".pdb" )[0]
-        if not os.path.isdir( structure_dir ):
-            os.mkdir( structure_dir )
-        mut_decoy_pdb_name = structure_dir + '/' + mutation.split( ".pdb" )[0]
+    # update user of process
+    print "Working on", mutation
     
-        # sets up the mutant PDB as being the base pose
-        mut_file_path = mut_file_paths[ mutation ]
-        native_pose = load_pose( mut_file_path )
-        working_pose = load_pose( mut_file_path )
-        
-        # make the necessary score function
-        sf = get_fa_scorefxn()
-        sf = apply_sugar_constraints_to_sf( sf, working_pose )
-        
-        # create and use the PyJobDistributor
-        jd = PyJobDistributor( mut_decoy_pdb_name, input_args.mut_nstruct, sf )
-        jd.native_pose = native_pose
-        
-        # make mut_nstruct of the native doing one pack and minimization to get a standard low E structure
-        while not jd.job_complete:
-            working_pose = make_base_pack_min_pose( sf, working_pose, outer_trials = 1, inner_trials = 1, verbose = True )    
-            jd.output_decoy( working_pose )
-            
-        # move the lowest E pack and minimized mutant structure into the lowest_E_structs dir
-        fasc_filename = mut_decoy_pdb_name + ".fasc"
-        lowest_E_mutant_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 5 )
+    # make the directory for the mutant PDB in the base_structs_dir
+    structure_dir = base_structs_dir + mutation.split( ".pdb" )[0]
+    if not os.path.isdir( structure_dir ):
+        os.mkdir( structure_dir )
+    mut_decoy_pdb_name = structure_dir + '/' + mutation.split( ".pdb" )[0]
+    
+    # sets up the mutant PDB as being the base pose
+    mut_file_path = mut_file_paths[ mutation ]
+    native_pose = load_pose( mut_file_path )
+    working_pose = load_pose( mut_file_path )
+    
+    # make the necessary score function
+    sf = get_fa_scorefxn()
+    sf = apply_sugar_constraints_to_sf( sf, working_pose )
+    
+    # create and use the PyJobDistributor
+    jd = PyJobDistributor( mut_decoy_pdb_name, input_args.mut_nstruct, sf )
+    jd.native_pose = native_pose
+    
+    # make mut_nstruct of the native doing one pack and minimization to get a standard low E structure
+    while not jd.job_complete:
+        working_pose = make_base_pack_min_pose( sf, working_pose, outer_trials = 1, inner_trials = 1, verbose = True )    
+        jd.output_decoy( working_pose )
+
+    # move the lowest E pack and minimized mutant structure into the lowest_E_structs dir
+    fasc_filename = mut_decoy_pdb_name + ".fasc"
+    lowest_E_mutant_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 5 )
 
 # done!
+return True

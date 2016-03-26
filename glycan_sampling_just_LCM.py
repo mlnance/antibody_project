@@ -1,4 +1,5 @@
 #!/usr/bin/python
+__author__ = "morganlnance"
 
 '''
 NOTES
@@ -140,6 +141,10 @@ print
 
 
 
+#################################
+#### Fc GLYCAN AREA PACK/MIN ####
+#################################
+
 # get the res nums of the Fc sugars added
 Fc_sugar_nums = []
 Fc_branch_point_nums = []
@@ -150,13 +155,12 @@ for res in working_pose:
     if res.is_branch_point():
         if res.seqpos() not in FcR_branch_point_nums:
             Fc_branch_point_nums.append( res.seqpos() )
+
 # get a list of the Fc sugars discluding the core GlcNAc residues
 Fc_sugar_nums_except_core_GlcNAc = []
 for res in Fc_sugar_nums:
     if res != A_core_GlcNAc and res != B_core_GlcNAc:
         Fc_sugar_nums_except_core_GlcNAc.append( res )
-
-
 
 
 # pack the Fc sugars and around them within 10 Angstroms

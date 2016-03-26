@@ -86,6 +86,10 @@ pmm.apply( working_pose )
 
 
 
+##########################
+#### GLYCOSYLATE POSE ####
+##########################
+
 # glycosylate the given working pose
 # 69 and 284 are the two ASN297 residues from 3ay4
 glycosylate_pose_by_file( working_pose, 69, "ND2", input_args.glyco_file )
@@ -98,6 +102,10 @@ print "After glycosylation:\t\t", sf( working_pose )
 print
 
 
+
+###########################
+#### CORE GlcNAc RESET ####
+###########################
 
 # reset the 1st GlcNAc on the ASN in the chibose core
 n_res_Fc_glycan = working_pose.n_residue()
@@ -157,14 +165,18 @@ pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose,
                                                 pack_branch_points = True, 
                                                 residue_range = Fc_sugar_nums, 
                                                 use_pack_radius = True, 
-                                                pack_radius = PACK_RADIUS )
+                                                pack_radius = 20 )
 pack_rotamers_mover.apply( working_pose )
 pmm.apply( working_pose )
-print "After Fc sugar and 10"
+print "After Fc sugar and 20"
 print "Angstrom sphere pack:\t\t", sf( working_pose )
 print
 
 
+
+################################# 
+#### LINKAGE CONFORMER MOVER ####
+#################################
 
 ## use the LinkageConformerMover to find a local sugar minima        
 # make a MoveMap for these Fc sugars allowing only bb movement
@@ -203,10 +215,10 @@ pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose,
                                                 pack_branch_points = True, 
                                                 residue_range = Fc_sugar_nums, 
                                                 use_pack_radius = True, 
-                                                pack_radius = PACK_RADIUS )
+                                                pack_radius = 20 )
 pack_rotamers_mover.apply( working_pose )
 pmm.apply( working_pose )
-print "After LCM and a 10 Ang" 
+print "After LCM and a 20 Ang" 
 print "sphere pack/min:\t\t", sf( working_pose )
 print
 

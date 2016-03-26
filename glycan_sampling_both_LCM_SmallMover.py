@@ -188,7 +188,7 @@ lcm.set_x_standard_deviations( 2 )
 
 # run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
 num_lcm_accept = 0
-for ii in range( 10 ):
+for ii in range( 50 ):
     # apply the LCM
     lcm.apply( working_pose )
     
@@ -223,7 +223,7 @@ mc = MonteCarlo( working_pose, sugar_sf, kT )
 
 # run the SM 10-100 times using a MonteCarlo object to accept or reject the move
 num_sm_accept = 0
-for ii in range( 10 ):
+for ii in range( 50 ):
     # apply the SM
     sm.apply( working_pose )
     

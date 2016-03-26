@@ -33,7 +33,6 @@ input_args = parser.parse_args()
 from antibody_functions import *
 from rosetta import MonteCarlo, SmallMover
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
-from rosetta.protocols.carbohydrates import GlycanRelaxMover, LinkageConformerMover
 import os, sys
 sys.path.append( "utility_functions" )
 from nearby_residues_to_pickle_file import main as get_nearby_residues
@@ -177,53 +176,18 @@ for branch_point in Fc_branch_point_nums:
     mm.set_branches( branch_point, True )
 '''
 
-# make an appropriate MonteCarlo object
-# kT is 0.7 - from antibody_functions.py
-mc = MonteCarlo( working_pose, sugar_sf, kT )
-
-# make an appropriate LinkageConformerMover
-lcm = LinkageConformerMover()
-lcm.set_movemap( mm )
-lcm.set_x_standard_deviations( 2 )
-
-# run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
-num_lcm_accept = 0
-for ii in range( 10 ):
-    # apply the LCM
-    lcm.apply( working_pose )
-    
-    # accept or reject the move using the MonteCarlo object
-    if mc.boltzmann( working_pose ):
-        num_lcm_accept += 1
-        pmm.apply( working_pose )
-
-# pack the Fc sugars and around them within 10 Angstroms
-pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose, 
-                                                apply_sf_sugar_constraints = False, 
-                                                pack_branch_points = True, 
-                                                residue_range = Fc_sugar_nums, 
-                                                use_pack_radius = True, 
-                                                pack_radius = PACK_RADIUS )
-pack_rotamers_mover.apply( working_pose )
-pmm.apply( working_pose )
-print "After LCM and a 10 Ang" 
-print "sphere pack/min:\t\t", sf( working_pose )
-print
-
-
-
 # make an appropriate SmallMover object using the prior MoveMap and sugar ScoreFunction
 # args: MoveMap in, Temperature in, and num moves in
 sm = SmallMover( mm, kT, 5 )
 sm.scorefxn( sugar_sf )
 
-# make another appropriate MonteCarlo object
+# make an appropriate MonteCarlo object
 # kT is 0.7 - from antibody_functions.py
 mc = MonteCarlo( working_pose, sugar_sf, kT )
 
 # run the SM 10-100 times using a MonteCarlo object to accept or reject the move
 num_sm_accept = 0
-for ii in range( 10 ):
+for ii in range( 100 ):
     # apply the SM
     sm.apply( working_pose )
     

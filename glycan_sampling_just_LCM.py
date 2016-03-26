@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling.py pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac
+run glycan_sampling.py pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac 3 /Users/Research/pyrosetta_dir/test_pdb_dir
 '''
 
 
@@ -24,6 +24,8 @@ parser = argparse.ArgumentParser(description="Use PyRosetta to glycosylate a pos
 parser.add_argument("native_pdb_file", type=str, help="the filename of the native PDB structure.")
 parser.add_argument("working_pdb_file", type=str, help="the filename of the PDB structure to be glycosylated.")
 parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan file to be used.")
+parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
+parser.add_argument("pdb_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 input_args = parser.parse_args()
 
 
@@ -33,26 +35,60 @@ input_args = parser.parse_args()
 
 from antibody_functions import get_fa_scorefxn_with_given_weights, \
     make_pack_rotamers_mover, make_movemap_for_range
-from rosetta import pose_from_file, get_fa_scorefxn, PyMOL_Mover, MonteCarlo
+from rosetta import pose_from_file, get_fa_scorefxn, PyMOL_Mover, \
+    MonteCarlo, PyJobDistributor
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
 from rosetta.protocols.carbohydrates import LinkageConformerMover
 #from rosetta.protocols.carbohydrates import GlycanRelaxMover
+import sys, os
 
 
 ##############################
 #### PREPARE FOR PROTOCOL ####
 ##############################
 
+## check the validity of the passed arguments
+# make sure the pdb_dir passed is valid
+if os.path.isdir( input_args.pdb_dir ):
+    if not input_args.pdb_dir.endswith( '/' ):
+        pdb_dir = input_args.pdb_dir + '/'
+    else:
+        pdb_dir = input_args.pdb_dir
+else:
+    print
+    print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.pdb_dir
+    sys.exit()
+
+
 ## load up the poses given from the arguments passed
 # native pose ( for comparison, really )
 native_pose = pose_from_file( input_args.native_pdb_file )
+
+# get the full path of the native PDB name
+orig_pdb_filename_full_path = input_args.native_pdb_file
+orig_pdb_filename = orig_pdb_filename_full_path.split( '/' )[-1]
+orig_pdb_name = orig_pdb_filename.split( ".pdb" )[0]
+
+# change the name of the native PDB name
 native_pose_name = "native"
 native_pose.pdb_info().name( native_pose_name )
 
-# working pose
+
+# load up the working pose
 working_pose = pose_from_file( input_args.working_pdb_file )
+
+# get the full path of the working pose PDB name
+working_pdb_filename_full_path = input_args.working_pdb_file
+working_pdb_filename = working_pdb_filename_full_path.split( '/' )[-1]
+working_pdb_name = working_pdb_filename.split( ".pdb" )[0]
+
+# change the name of the working PDB name
 working_pose_name = "glycosylated_pose"
 working_pose.pdb_info().name( working_pose_name )
+
+# create the decoy name for the working pose from its full name
+working_pose_decoy_name = pdb_dir + working_pdb_name + "_glycosylated_then_just_LCM"
+
 
 ## get some numbers that will be used in pieces of this protocol
 # this number is used later for resetting the core glycan
@@ -201,29 +237,36 @@ lcm = LinkageConformerMover()
 lcm.set_movemap( mm )
 lcm.set_x_standard_deviations( 2 )
 
-# run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
-num_lcm_accept = 0
-for ii in range( 100 ):
-    # apply the LCM
-    lcm.apply( working_pose )
-    
-    # accept or reject the move using the MonteCarlo object
-    if mc.boltzmann( working_pose ):
-        num_lcm_accept += 1
-        pmm.apply( working_pose )
+# create and use the PyJobDistributor object
+jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, sugar_sf )
+jd.native_pose = native_pose
 
-# pack the Fc sugars and around them within 10 Angstroms
-pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose, 
-                                                apply_sf_sugar_constraints = False, 
-                                                pack_branch_points = True, 
-                                                residue_range = Fc_sugar_nums, 
-                                                use_pack_radius = True, 
-                                                pack_radius = 20 )
-pack_rotamers_mover.apply( working_pose )
-pmm.apply( working_pose )
-print "After LCM and a 20 Ang" 
-print "sphere pack/min:\t\t", sf( working_pose )
-print
+# TODO: Turn this into a function that is called - write it in antibody_protocols.py
+while not jd.job_complete:
+    num_lcm_accept = 0
+    
+    # run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
+    for ii in range( 100 ):
+        # apply the LCM
+        lcm.apply( working_pose )
+        
+        # accept or reject the move using the MonteCarlo object
+        if mc.boltzmann( working_pose ):
+            num_lcm_accept += 1
+            pmm.apply( working_pose )
+            
+    # pack the Fc sugars and around them within 10 Angstroms
+    pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose, 
+                                                    apply_sf_sugar_constraints = False, 
+                                                    pack_branch_points = True, 
+                                                    residue_range = Fc_sugar_nums, 
+                                                    use_pack_radius = True, 
+                                                    pack_radius = 20 )
+    pack_rotamers_mover.apply( working_pose )
+    pmm.apply( working_pose )
+    print "After LCM and a 20 Ang" 
+    print "sphere pack/min:\t\t", sf( working_pose )
+    print
 
 
 

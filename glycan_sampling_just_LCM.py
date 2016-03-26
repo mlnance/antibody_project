@@ -30,13 +30,12 @@ input_args = parser.parse_args()
 #### IMPORTS ####
 #################
 
-from antibody_functions import *
-from rosetta import MonteCarlo
+from antibody_functions import get_fa_scorefxn_with_given_weights, \
+    make_pack_rotamers_mover, make_movemap_for_range
+from rosetta import pose_from_file, get_fa_scorefxn, PyMOL_Mover, MonteCarlo
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
-from rosetta.protocols.carbohydrates import GlycanRelaxMover, LinkageConformerMover
-import os, sys
-sys.path.append( "utility_functions" )
-from nearby_residues_to_pickle_file import main as get_nearby_residues
+from rosetta.protocols.carbohydrates import LinkageConformerMover
+#from rosetta.protocols.carbohydrates import GlycanRelaxMover
 
 
 ##############################
@@ -45,12 +44,12 @@ from nearby_residues_to_pickle_file import main as get_nearby_residues
 
 ## load up the poses given from the arguments passed
 # native pose ( for comparison, really )
-native_pose = load_pose( input_args.native_pdb_file )
+native_pose = pose_from_file( input_args.native_pdb_file )
 native_pose_name = "native"
 native_pose.pdb_info().name( native_pose_name )
 
 # working pose
-working_pose = load_pose( input_args.working_pdb_file )
+working_pose = pose_from_file( input_args.working_pdb_file )
 working_pose_name = "glycosylated_pose"
 working_pose.pdb_info().name( working_pose_name )
 
@@ -80,6 +79,7 @@ print "Unmodified pose:\t\t", sf( working_pose )
 print
 
 # pymol stuff
+pmm = PyMOL_Mover()
 pmm.keep_history(True)
 pmm.apply( native_pose )
 pmm.apply( working_pose )
@@ -190,8 +190,7 @@ for branch_point in Fc_branch_point_nums:
 '''
 
 # make an appropriate MonteCarlo object
-# kT is 0.7 - from antibody_functions.py
-mc = MonteCarlo( working_pose, sugar_sf, kT )
+mc = MonteCarlo( working_pose, sugar_sf, 0.7 )
 
 # make an appropriate LinkageConformerMover
 lcm = LinkageConformerMover()

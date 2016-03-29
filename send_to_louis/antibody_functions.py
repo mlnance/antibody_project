@@ -1,6 +1,7 @@
 #!/usr/bin/python
-
 __author__ = 'morganlnance'
+
+# TODO: move imports to the functions where they actually are needed
 
 
 
@@ -29,8 +30,8 @@ from rosetta.core.scoring.constraints import AtomPairConstraint, AngleConstraint
 from toolbox import mutate_residue, get_hbonds
 
 # for sugar work
-from rosetta.protocols.carbohydrates import GlycanRelaxMover
-from rosetta.protocols.carbohydrates import LinkageConformerMover
+#from rosetta.protocols.carbohydrates import GlycanRelaxMover
+#from rosetta.protocols.carbohydrates import LinkageConformerMover
 
 # for loop work
 from rosetta import Loop, Loops, add_single_cutpoint_variant

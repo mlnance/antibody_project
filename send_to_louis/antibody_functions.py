@@ -134,9 +134,13 @@ def load_pose( pose_filename ):
     :param pose_filename: str( /path/to/pose/filename )
     :return: a Rosetta Pose
     """
+    # imports
+    from rosetta import Pose, pose_from_file
+    
     # create Pose object from filename
     print "Loading pose"
-    pose = pose_from_file( pose_filename )
+    pose = Pose()
+    pose_from_file( pose, pose_filename )
     
     # clean up the name of the pose
     pose_name = pose.pdb_info().name()

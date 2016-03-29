@@ -124,7 +124,7 @@ def initialize_rosetta():
     print "Initializing Rosetta with sugar flags"
 
     # makes Rosetta quiet and sugar I/O ready
-    init(extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records")
+    init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
 
 
 
@@ -134,9 +134,6 @@ def load_pose( pose_filename ):
     :param pose_filename: str( /path/to/pose/filename )
     :return: a Rosetta Pose
     """
-    # imports
-    from rosetta import Pose, pose_from_file
-    
     # create Pose object from filename
     print "Loading pose"
     pose = Pose()
@@ -2774,12 +2771,10 @@ def check_E_per_residue( sf, pose, energy_cutoff = 1.5, verbose = False ):
 
 if __name__ == '__main__':
     # initialize rosetta with sugar flags
+    from rosetta import init
+    
     print "Initializing Rosetta with sugar flags"
-    init(extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records")
-
-# else it's being loaded from a program, so run the initialize_rosetta function
-else:
-    initialize_rosetta()
+    init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
 
 ############################
 #### INITIALIZE ROSETTA ####

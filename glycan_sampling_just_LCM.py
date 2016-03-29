@@ -41,8 +41,9 @@ from rosetta.protocols.carbohydrates import LinkageConformerMover
 #from rosetta.protocols.carbohydrates import GlycanRelaxMover
 
 # Rosetta functions I wrote out
-from antibody_functions import get_fa_scorefxn_with_given_weights, \
-    make_pack_rotamers_mover, make_movemap_for_range
+from antibody_functions import initialize_rosetta, \
+    get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
+    make_movemap_for_range
 
 # Misc
 import sys, os
@@ -64,6 +65,8 @@ else:
     print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.pdb_dir
     sys.exit()
 
+# initialize Rosetta
+initialize_rosetta()
 
 ## load up the poses given from the arguments passed
 # native pose ( for comparison, really )

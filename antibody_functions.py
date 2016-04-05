@@ -66,7 +66,7 @@ data_dir = "/Users/Research/pyrosetta_git_repo/mutational_data/"
 AA_list = [ 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y' ]
 all_letters_list = [ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' ]
 CUTOFF_DISTANCE = 5.0  # used when calculating the number of residue contacts at the interface
-PACK_RADIUS = 10.0  # used when making mutations to structures, repacks in this area
+PACK_RADIUS = 20.0  # used when making mutations to structures, repacks in this area
 kT = 0.7  # used in MonteCarlo and small and shear movers
 
 
@@ -135,7 +135,7 @@ def load_pose( pose_filename ):
     :return: a Rosetta Pose
     """
     # create Pose object from filename
-    print "Loading pose"
+#    print "Loading pose"
     pose = Pose()
     pose_from_file( pose, pose_filename )
     
@@ -528,7 +528,7 @@ def apply_sugar_constraints_to_sf( sf, pose, weight = 1.0, verbose = False ):
 
 
 
-def make_pack_rotamers_mover( sf, pose, apply_sf_sugar_constraints = True, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
+def make_pack_rotamers_mover( sf, pose, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
     """
     Returns a standard pack_rotamers_mover restricted to repacking and allows for sampling of current residue conformations for the <pose>
     IMPORTANT: DON'T USE for a Pose you JUST mutated  --  it's not setup to handle mutations
@@ -536,7 +536,6 @@ def make_pack_rotamers_mover( sf, pose, apply_sf_sugar_constraints = True, pack_
     If you have one or more residues of interest where you want to pack within a radius around each residue, set <use_pack_radius> to True, give a <pack_radius> (or use default), and set <residue_range> to the residue sequence positions of interest
     :param sf: ScoreFunction
     :param pose: Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param pack_branch_points: bool( allow packing at branch points? ). Default = True
     :param residue_range: list( of int( valid residue sequence positions ) )
     :param use_pack_radius: bool( Do you want to pack residues within a certain <pack_radius> around residues specified in <residue_range>? ). Default = False
@@ -561,10 +560,6 @@ def make_pack_rotamers_mover( sf, pose, apply_sf_sugar_constraints = True, pack_
             print
             print "I'm not sure what you gave me. <residue_range> is of type", type( residue_range ), "and I needed a list. Even if it's just one residue (sorry). Exiting"
             sys.exit()
-
-    # apply sugar branch point constraints to sf if desired
-    if apply_sf_sugar_constraints:
-        apply_sugar_constraints_to_sf( sf, pose )
 
     # make the packer task
     task = standard_packer_task( pose )
@@ -641,7 +636,7 @@ def make_pack_rotamers_mover( sf, pose, apply_sf_sugar_constraints = True, pack_
 
 
 
-def make_min_mover( sf, pose, apply_sf_sugar_constraints = True, jumps = None, allow_sugar_chi = False, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
+def make_min_mover( sf, pose, jumps = None, allow_sugar_chi = False, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
     """
     Returns a min_mover object suitable for glycosylated proteins (turns off carbohydrate chi for now)
     IMPORTANT: If using a specific type of minimization, <minimization_type>, it DOES NOT check beforehand if the type you gave is valid, so any string actually will work. It will break when used
@@ -649,7 +644,6 @@ def make_min_mover( sf, pose, apply_sf_sugar_constraints = True, jumps = None, a
     Prints error message and exits if there was a problem
     :param sf: ScoreFunction
     :param pose: Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param jumps: list( Jump numbers of Jump(s) to be minimized ). Default = None (ie. all Jumps) (Give empty list for no Jumps)
     :param allow_sugar_chi: bool( allow the chi angles of sugars to be minimized ). Default = False
     :param minimization_type: str( the type of minimization you want to use ). Default = "dfpmin_strong_wolfe"
@@ -658,10 +652,6 @@ def make_min_mover( sf, pose, apply_sf_sugar_constraints = True, jumps = None, a
     """
     if verbose:
         print "Making a min mover"
-
-    # apply sugar branch point constraints to sf, if desired
-    if apply_sf_sugar_constraints:
-        apply_sugar_constraints_to_sf( sf, pose )
 
     # instantiate a MoveMap
     mm = MoveMap()
@@ -919,13 +909,25 @@ def do_pack_min( sf, pose, apply_sf_sugar_constraints = True, residue_range = No
             pass
 
     # make and apply the pack_rotamers_mover
-    pack_rotamers_mover = make_pack_rotamers_mover( sf, pose, apply_sf_sugar_constraints = apply_sf_sugar_constraints, pack_branch_points = pack_branch_points, residue_range = residue_range, use_pack_radius = use_pack_radius, pack_radius = pack_radius, verbose = verbose )
+    pack_rotamers_mover = make_pack_rotamers_mover( sf, 
+                                                    pose, 
+                                                    apply_sf_sugar_constraints = apply_sf_sugar_constraints, 
+                                                    pack_branch_points = pack_branch_points, 
+                                                    residue_range = residue_range, 
+                                                    use_pack_radius = use_pack_radius, 
+                                                    pack_radius = pack_radius, 
+                                                    verbose = verbose )
     pack_rotamers_mover.apply( pose )
     if pmm is not None and pmm_worked:
         pmm.apply( pose )
 
     # make and apply the min_mover
-    min_mover = make_min_mover( sf, pose, apply_sf_sugar_constraints = apply_sf_sugar_constraints, jumps = jumps, minimization_type = minimization_type, verbose = verbose )
+    min_mover = make_min_mover( sf, 
+                                pose, 
+                                apply_sf_sugar_constraints = apply_sf_sugar_constraints, 
+                                jumps = jumps, 
+                                minimization_type = minimization_type, 
+                                verbose = verbose )
     min_mover.apply( pose )
     if pmm is not None and pmm_worked:
         pmm.apply( pose )
@@ -2298,7 +2300,6 @@ def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK
     :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 10
     :return: packer_task ready to pack a Pose with a SINGLE mutation
     """
-
     # create a packer task handling a SINGLE mutated residue
     # tell packer task that only the current <amino_acid> should be allowed to be modified
     aa_bool = vector1_bool()
@@ -2335,11 +2336,14 @@ def do_mutation_pack( seq_pos, amino_acid, sf, mutated_pose, pack_radius = PACK_
     :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 10
     :return: Pose packed around the SINGLE mutation
     """
+    pose = Pose()
+    pose.assign( mutated_pose )
+    
     # pack the <mutated_pose>
-    pack_rotamers_mover = make_mutation_packer_task( amino_acid, seq_pos, sf, mutated_pose, pack_radius )
-    pack_rotamers_mover.apply( mutated_pose )
+    pack_rotamers_mover = make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius )
+    pack_rotamers_mover.apply( pose )
 
-    return mutated_pose
+    return pose
 
 
 
@@ -2414,7 +2418,8 @@ def make_all_mutations( sf, orig_pose_file, mutant_list_file, pack_around_mut = 
     
     # ensure the validity of the orig_pose_file path
     if os.path.isfile( orig_pose_file ):
-        orig_pose = load_pose( orig_pose_file )
+        orig_pose = Pose()
+        orig_pose.assign( load_pose( orig_pose_file ) )
     else:
         print orig_pose_file, "is not a valid file path"
         print "Exiting"
@@ -2432,18 +2437,20 @@ def make_all_mutations( sf, orig_pose_file, mutant_list_file, pack_around_mut = 
     # for each mutation in list, run the mutation function given sym or asym designation
     for mut_line_full in mutant_list:
         mut_line = mut_line_full.split( ' ' )
-        mut = mut_line[0]
-        symmetry = mut_line[1]
+        mut = mut_line[ 0 ]
+        symmetry = mut_line[ 1 ]
         if symmetry == '' or symmetry == "sym":
             print "Symmetrical", mut
             make_my_new_symmetric_antibody( mut, sf, orig_pose, 
                                             pack_around_mut = pack_around_mut, 
-                                            dump_pose = dump_pose, dump_dir = dump_dir )
+                                            dump_pose = dump_pose, 
+                                            dump_dir = dump_dir )
         elif symmetry == "asym":
             print "Asymmetrical", mut
             make_my_new_asymmetric_antibody( mut, sf, orig_pose, 
                                              pack_around_mut = pack_around_mut, 
-                                             dump_pose = dump_pose, dump_dir = dump_dir )
+                                             dump_pose = dump_pose, 
+                                             dump_dir = dump_dir )
         else:
             print "'%s'" %symmetry, "isn't a valid a symmetrical designation. Please put 'sym' or 'asym'"
             print "Exiting"
@@ -2488,8 +2495,8 @@ def make_my_new_symmetric_antibody( mutation_string, sf, input_pose, apply_sf_su
     # mutate all residues in chain A and chain B
     # mutate first residue in chain A and chain B so the rest can be a loop
     for mut in mutations:
-        orig_amino_acid = mut[0]
-        new_amino_acid = mut[-1]
+        orig_amino_acid = mut[ 0 ]
+        new_amino_acid = mut[ -1 ]
 
         # seq pos is always from 1 to one minus however many characters are in the string
         pdb_seq_pos = mut[ 1:( len( mut ) - 1 ) ]

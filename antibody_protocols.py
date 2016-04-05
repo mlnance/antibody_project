@@ -17,14 +17,12 @@ import random
 from antibody_functions import *
 
 
-def make_base_pack_min_pose( sf, pose, outer_trials = 2, inner_trials = 2, compare_using_this_scoretype = None, dump_best_pose = False, dump_pose_name = None, dump_dir = None, verbose = False, pmm = None):
+def make_base_pack_min_pose( sf, pose, trials = 2, dump_best_pose = False, dump_pose_name = None, dump_dir = None, verbose = False, pmm = None):
     """
     Take the given <pose>, pack and minimize it once to get a base, then get a low E structure using get_best_structure_based_on_pose
     :param sf: ScoreFunction                   
     :param pose: Pose                          
-    :param outer_trials: int( number of times to run <inner_trials> ). Default = 2
-    :param inner_trials: int( number of times to pack and minimize before calling that the temporary "best" structure ). Default = 2
-    :param compare_using_this_scoretype: str( what specific ScoreType do you want to use for comparison? ). Default = None = total_energy
+    :param trials: int( number of times to pack and minimize the pose ). Default = 2
     :param dump_best_pose: bool( after finding the lowest energy Pose, dump the structure into the current directory (or to <dump_dir>). Default = False
     :param dump_pose_name: bool( filename of the Pose to be dumped ). Default = None (ie. "Best_" + current Pose name)
     :param dump_dir: str( path/to/dir/where/pose/will/be/dumped ). Default = None (ie. current working directory)
@@ -32,10 +30,28 @@ def make_base_pack_min_pose( sf, pose, outer_trials = 2, inner_trials = 2, compa
     :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
     :return: Pose( the Pose with the lowest total score after the trials of packing and minimization )
     """
-    # do specified number of trials of packing and minimization and result the lowest scored structure
-    pose = get_best_structure_based_on_score( sf, pose, outer_trials = outer_trials, inner_trials = inner_trials, compare_using_this_scoretype = compare_using_this_scoretype, dump_best_pose = dump_best_pose, dump_pose_name = dump_pose_name, dump_dir = dump_dir, verbose = verbose, pmm = pmm ) 
+    working_pose = Pose()
+    working_pose.assign( pose )
+    
+    for ii in range( trials ):
+        # pack
+        pack_rotamers_mover = make_pack_rotamers_mover( sf,
+                                                        working_pose,
+                                                        pack_branch_points = True,
+                                                        residue_range = None,
+                                                        use_pack_radius = False,
+                                                        verbose = False )
+        pack_rotamers_mover.apply( working_pose )
+        
+        # minimize
+        min_mover = make_min_mover( sf,
+                                    working_pose,
+                                    # jumps = None actually means minimize all jumps
+                                    jumps = None,
+                                    allow_sugar_chi = False,
+                                    verbose = False )
 
-    return pose
+    return working_pose
 
 
 

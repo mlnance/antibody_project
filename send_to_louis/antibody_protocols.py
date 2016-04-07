@@ -50,6 +50,7 @@ def make_base_pack_min_pose( sf, pose, trials = 2, dump_best_pose = False, dump_
                                     jumps = None,
                                     allow_sugar_chi = False,
                                     verbose = False )
+        min_mover.apply( working_pose )
 
     return working_pose
 

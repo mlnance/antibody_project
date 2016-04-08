@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling_just_LCM.py pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac 2 /Users/Research/pyrosetta_dir/test_pdb_dir
+run glycan_sampling_just_LCM.py pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac 2 /Users/Research/pyrosetta_dir/test_pdb_dir
 '''
 
 
@@ -24,8 +24,8 @@ parser = argparse.ArgumentParser(description="Use PyRosetta to glycosylate a pos
 parser.add_argument("native_pdb_file", type=str, help="the filename of the native PDB structure.")
 parser.add_argument("working_pdb_file", type=str, help="the filename of the PDB structure to be glycosylated.")
 parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan file to be used.")
+parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
-parser.add_argument("pdb_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 input_args = parser.parse_args()
 
 
@@ -43,7 +43,7 @@ from rosetta.protocols.carbohydrates import LinkageConformerMover
 # Rosetta functions I wrote out
 from antibody_functions import initialize_rosetta, \
     get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
-    make_movemap_for_range
+    make_movemap_for_range, load_pose
 
 # Misc
 import sys, os
@@ -54,15 +54,15 @@ import sys, os
 ##############################
 
 ## check the validity of the passed arguments
-# make sure the pdb_dir passed is valid
-if os.path.isdir( input_args.pdb_dir ):
-    if not input_args.pdb_dir.endswith( '/' ):
-        pdb_dir = input_args.pdb_dir + '/'
+# make sure the structure_dir passed is valid
+if os.path.isdir( input_args.structure_dir ):
+    if not input_args.structure_dir.endswith( '/' ):
+        structure_dir = input_args.structure_dir + '/'
     else:
-        pdb_dir = input_args.pdb_dir
+        structure_dir = input_args.structure_dir
 else:
     print
-    print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.pdb_dir
+    print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
     sys.exit()
 
 # initialize Rosetta
@@ -71,7 +71,8 @@ initialize_rosetta()
 ## load up the poses given from the arguments passed
 # native pose ( for comparison, really )
 native_pose = Pose()
-pose_from_file( native_pose, input_args.native_pdb_file )
+native_pose.assign( load_pose( input_args.native_pdb_file ) )
+#pose_from_file( native_pose, input_args.native_pdb_file )
 
 # get the full path of the native PDB name
 native_pdb_filename_full_path = input_args.native_pdb_file
@@ -85,7 +86,8 @@ native_pose.pdb_info().name( native_pose_name )
 
 # load up the working pose
 working_pose = Pose()
-pose_from_file( working_pose, input_args.working_pdb_file )
+working_pose.assign( load_pose( input_args.working_pdb_file ) )
+#pose_from_file( working_pose, input_args.working_pdb_file )
 
 # get the full path of the working pose PDB name
 working_pdb_filename_full_path = input_args.working_pdb_file
@@ -97,7 +99,7 @@ working_pose_name = "working_pose"
 working_pose.pdb_info().name( working_pose_name )
 
 # create the decoy name for the working pose from its full name
-working_pose_decoy_name = pdb_dir + working_pdb_name + "_glycosylated_then_just_LCM"
+working_pose_decoy_name = structure_dir + working_pdb_name + "_glycosylated_then_just_LCM"
 
 
 # numbers collected from the lowest_E decoy of 3ay4 PDB after just a total pack/min
@@ -227,7 +229,7 @@ while not jd.job_complete:
             
     # pack the Fc sugars and around them within 20 Angstroms
     pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
-                                                    apply_sf_sugar_constraints = False, 
+                                                    apply_sf_sugar_constraints = False,
                                                     pack_branch_points = True, 
                                                     residue_range = Fc_sugar_nums, 
                                                     use_pack_radius = True, 
@@ -243,9 +245,11 @@ while not jd.job_complete:
 
     ## use the LinkageConformerMover to find a local sugar minima        
     # make a MoveMap for these Fc sugars allowing only bb movement
-    mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, allow_bb_movement = True, allow_chi_movement = False )
+    mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, 
+                                 allow_bb_movement = True, 
+                                 allow_chi_movement = False )
 
-    # add in the branch points myself
+    # add in the branch points myself ( does not include the two ASN residues )
     for branch_point in Fc_glycan_branch_point_nums:
         mm.set_branches( branch_point, True )
 
@@ -259,7 +263,7 @@ while not jd.job_complete:
     
     # run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
     num_lcm_accept = 0
-    for ii in range( 20 ):
+    for ii in range( 50 ):
         # apply the LCM
         lcm.apply( testing_pose )
         

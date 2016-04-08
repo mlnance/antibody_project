@@ -890,7 +890,7 @@ def do_min_with_this_mm( mm, sf, pose, apply_sf_sugar_constraints = True, minimi
 
 
 
-def do_pack_min( sf, pose, apply_sf_sugar_constraints = True, residue_range = None, jumps = None, pack_branch_points = True, use_pack_radius = False, pack_radius = PACK_RADIUS, minimization_type = "dfpmin_strong_wolfe", verbose = False, pmm = None ):
+def do_pack_min( sf, input_pose, apply_sf_sugar_constraints = True, residue_range = None, jumps = None, pack_branch_points = True, use_pack_radius = False, pack_radius = PACK_RADIUS, minimization_type = "dfpmin_strong_wolfe", verbose = False, pmm = None ):
     """
     Makes and applies a packer task and basic min mover to <pose> using the supplied ScoreFunction <sf>
     IMPORTANT: If using a specific type of minimization, <minimization_type>, it DOES NOT check beforehand if the type you gave is valid, so any string actually will work. It will break when used
@@ -900,7 +900,7 @@ def do_pack_min( sf, pose, apply_sf_sugar_constraints = True, residue_range = No
     If you want a packer task for a specific set of residues, set <residue_range> to a list of the residue sequence positions of interest
     If you have one or more residues of interest where you want to pack within a certain radius around each residue, set <use_pack_radius> to True, give a <pack_radius> (or use default value), and set <residue_range> to the residue sequence positions of interest
     :param sf: ScoreFunction
-    :param pose: Pose
+    :param input_pose: Pose
     :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param residue_range: list( of int( valid residue sequence positions ) )
     :param jumps = list( valid Jump numbers to be minimized if not all Jumps should be minimized). Default = None (ie. all jumps minimized) (Give empty list for no Jumps)
@@ -914,6 +914,10 @@ def do_pack_min( sf, pose, apply_sf_sugar_constraints = True, residue_range = No
     """
     if verbose:
         print "Packing and minimizing the Pose"
+        
+    # get a fresh copy of the input_pose
+    pose = Pose()
+    pose.assign( input_pose )
         
     # apply the PyMOL_Mover if passed
     if pmm is not None:

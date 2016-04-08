@@ -528,23 +528,28 @@ def apply_sugar_constraints_to_sf( sf, pose, weight = 1.0, verbose = False ):
 
 
 
-def make_pack_rotamers_mover( sf, pose, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
+def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
     """
     Returns a standard pack_rotamers_mover restricted to repacking and allows for sampling of current residue conformations for the <pose>
     IMPORTANT: DON'T USE for a Pose you JUST mutated  --  it's not setup to handle mutations
     If you want a packer task for a specific set of residues, set <residue_range> to a list of the residue sequence positions of interest
     If you have one or more residues of interest where you want to pack within a radius around each residue, set <use_pack_radius> to True, give a <pack_radius> (or use default), and set <residue_range> to the residue sequence positions of interest
     :param sf: ScoreFunction
-    :param pose: Pose
+    :param input_pose: Pose
+    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param pack_branch_points: bool( allow packing at branch points? ). Default = True
     :param residue_range: list( of int( valid residue sequence positions ) )
     :param use_pack_radius: bool( Do you want to pack residues within a certain <pack_radius> around residues specified in <residue_range>? ). Default = False
-    :param pack_radius: int( or float( the radius around which you want to pack additional residues around the residues from <residue_range>. MUST have <set use_pack_radius> to True to do this ). Default = PACK_RADIUS = 10.0 Angstroms
+    :param pack_radius: int( or float( the radius around which you want to pack additional residues around the residues from <residue_range>. MUST have <set use_pack_radius> to True to do this ). Default = PACK_RADIUS = 20.0 Angstroms
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: a pack_rotamers_mover object
     """
     if verbose:
         print "Making a pack rotamers mover"
+        
+    # copy a fresh pose
+    pose = Pose()
+    pose.assign( input_pose )
 
     # check to make sure <residue_range> is a list of valid residue numbers
     if residue_range is not None:
@@ -629,6 +634,10 @@ def make_pack_rotamers_mover( sf, pose, pack_branch_points = True, residue_range
                 if res_num not in residue_range:
                     task.nonconst_residue_task( res_num ).prevent_repacking()
 
+    # apply sugar branch point constraints to sf, if desired
+    if apply_sf_sugar_constraints:
+        apply_sugar_constraints_to_sf( sf, pose )
+
     # make the pack rotamers mover and return it
     pack_rotamers_mover = RotamerTrialsMover( sf, task )
 
@@ -636,14 +645,15 @@ def make_pack_rotamers_mover( sf, pose, pack_branch_points = True, residue_range
 
 
 
-def make_min_mover( sf, pose, jumps = None, allow_sugar_chi = False, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
+def make_min_mover( sf, input_pose, apply_sf_sugar_constraints = True, jumps = None, allow_sugar_chi = False, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
     """
     Returns a min_mover object suitable for glycosylated proteins (turns off carbohydrate chi for now)
     IMPORTANT: If using a specific type of minimization, <minimization_type>, it DOES NOT check beforehand if the type you gave is valid, so any string actually will work. It will break when used
     See 'https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/minimization-overview' for minimization type options
     Prints error message and exits if there was a problem
     :param sf: ScoreFunction
-    :param pose: Pose
+    :param input_pose: Pose
+    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param jumps: list( Jump numbers of Jump(s) to be minimized ). Default = None (ie. all Jumps) (Give empty list for no Jumps)
     :param allow_sugar_chi: bool( allow the chi angles of sugars to be minimized ). Default = False
     :param minimization_type: str( the type of minimization you want to use ). Default = "dfpmin_strong_wolfe"
@@ -652,6 +662,10 @@ def make_min_mover( sf, pose, jumps = None, allow_sugar_chi = False, minimizatio
     """
     if verbose:
         print "Making a min mover"
+        
+    # copy a fresh pose
+    pose = Pose()
+    pose.assign( input_pose )
 
     # instantiate a MoveMap
     mm = MoveMap()
@@ -698,6 +712,10 @@ def make_min_mover( sf, pose, jumps = None, allow_sugar_chi = False, minimizatio
         for residue in pose:
             if not residue.is_carbohydrate():
                 mm.set_chi( residue.seqpos(), True )
+
+    # apply sugar branch point constraints to sf, if desired
+    if apply_sf_sugar_constraints:
+        apply_sugar_constraints_to_sf( sf, pose )
 
     # create a MinMover with options
     min_mover = MinMover( mm, sf, minimization_type, 0.01, True )
@@ -888,7 +906,7 @@ def do_pack_min( sf, pose, apply_sf_sugar_constraints = True, residue_range = No
     :param jumps = list( valid Jump numbers to be minimized if not all Jumps should be minimized). Default = None (ie. all jumps minimized) (Give empty list for no Jumps)
     :param pack_branch_points: bool( allow packing at branch points? ). Default = True
     :param use_pack_radius: bool( Do you want to pack residues within a certain <pack_radius> around residues specified in <residue_range>? ). Default = False
-    :param pack_radius: int( or float( the radius around which you want to pack additional residues around the residues from <residue_range>. MUST have <set use_pack_radius> to True to do this ). Default = PACK_RADIUS = 10.0 Angstroms
+    :param pack_radius: int( or float( the radius around which you want to pack additional residues around the residues from <residue_range>. MUST have <set use_pack_radius> to True to do this ). Default = PACK_RADIUS = 20.0 Angstroms
     :param minimization_type: str( the type of minimization you want to use ). Default = "dfpmin_strong_wolfe"
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
@@ -2297,7 +2315,7 @@ def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK
     :param seq_pos: int( sequence position of the mutated residue )
     :param sf: ScoreFunction
     :param pose: Pose
-    :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 10
+    :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 20
     :return: packer_task ready to pack a Pose with a SINGLE mutation
     """
     # create a packer task handling a SINGLE mutated residue
@@ -2333,7 +2351,7 @@ def do_mutation_pack( seq_pos, amino_acid, sf, mutated_pose, pack_radius = PACK_
     :param amino_acid: str( ONE LETTER amino acid code for the SINGLE mutated residue )
     :param sf: ScoreFunction
     :param mutated_pose: Pose with the SINGLE mutation
-    :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 10
+    :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 20
     :return: Pose packed around the SINGLE mutation
     """
     pose = Pose()
@@ -2359,7 +2377,7 @@ def get_best_mutant_of_20( seq_pos, sf, pose, apply_sf_sugar_constraints = True,
     :param pose: Pose
     :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param rounds: int( the number of times to pack and minimize the <pose> after the mutation ). Default = 1
-    :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 10
+    :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 20
     :return: the mutated Pose of the lowest total score out of the twenty mutations
     """
     # apply sugar branch point constraints to sf, if desired
@@ -2621,6 +2639,21 @@ def make_my_new_asymmetric_antibody( mutation_string, sf, input_pose, apply_sf_s
 ########################
 #### DATA FUNCTIONS ####
 ########################
+
+def get_phi_psi_omega_of_res( pose, seqpos ):
+    """
+    Returns the phi, psi, and omega values of the passed residue <seqpos> in <pose>
+    :param pose: Pose
+    :param seqpos: int( the sequence position of the residue of interest )
+    :return: float( phi ), float( psi ), float( omega )
+    """
+    try:
+        return pose.phi( seqpos ), pose.psi( seqpos ), pose.omega( seqpos )
+    except:
+        print "%s does not seem to be a residue in the passed Pose. Check your input" %seqpos
+        return None
+        
+    
 
 def determine_amino_acid_composition( pose ):
     """

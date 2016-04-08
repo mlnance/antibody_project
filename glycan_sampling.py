@@ -1,4 +1,5 @@
 #!/usr/bin/python
+__author__ = "morganlnance"
 
 '''
 NOTES
@@ -7,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling.py pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac
+run glycan_sampling_just_LCM.py pdb_copies_dont_touch/native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ test_pdb_dir/ 5
 '''
 
 
@@ -23,6 +24,9 @@ parser = argparse.ArgumentParser(description="Use PyRosetta to glycosylate a pos
 parser.add_argument("native_pdb_file", type=str, help="the filename of the native PDB structure.")
 parser.add_argument("working_pdb_file", type=str, help="the filename of the PDB structure to be glycosylated.")
 parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan file to be used.")
+parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
+parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
+parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 input_args = parser.parse_args()
 
 
@@ -30,29 +34,109 @@ input_args = parser.parse_args()
 #### IMPORTS ####
 #################
 
-from antibody_functions import *
-from rosetta import MonteCarlo, SmallMover
+# Rosetta functions
+from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
+    PyMOL_Mover, MonteCarlo, PyJobDistributor
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
-from rosetta.protocols.carbohydrates import GlycanRelaxMover, LinkageConformerMover
-import os, sys
-sys.path.append( "utility_functions" )
-from nearby_residues_to_pickle_file import main as get_nearby_residues
+from rosetta.protocols.carbohydrates import LinkageConformerMover
+#from rosetta.protocols.carbohydrates import GlycanRelaxMover
+
+# Rosetta functions I wrote out
+from antibody_functions import initialize_rosetta, \
+    get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
+    make_movemap_for_range, load_pose, get_phi_psi_omega_of_res
+
+# Misc
+import sys, os
 
 
 ##############################
 #### PREPARE FOR PROTOCOL ####
 ##############################
 
+## check the validity of the passed arguments
+# make sure the structure_dir passed is valid
+if os.path.isdir( input_args.structure_dir ):
+    if not input_args.structure_dir.endswith( '/' ):
+        structure_dir = input_args.structure_dir + '/'
+    else:
+        structure_dir = input_args.structure_dir
+else:
+    print
+    print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
+    sys.exit()
+
+# check the utility directory
+if not os.path.isdir( input_args.utility_dir ):
+    print "Your argument", input_args.utility_dir, "for utility_directory is not a directory, exiting"
+    sys.exit()
+
+# add the utility directory to the system path for loading of modules
+sys.path.append( input_args.utility_dir )
+
+# make the needed directories if needed
+# base_structs and lowest_E_structs
+# input_args.structure_directory as the base directory
+base_structs_dir = structure_dir + "base_structs/"
+lowest_E_structs_dir = structure_dir + "lowest_E_structs/"
+
+if not os.path.isdir( base_structs_dir ):
+    os.mkdir( base_structs_dir )
+if not os.path.isdir( lowest_E_structs_dir ):
+    os.mkdir( lowest_E_structs_dir )
+
+# relay information to user
+print
+print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
+print "Main structure directory:\t", structure_dir
+print "Base structures directory:\t", base_structs_dir
+print "Lowest E structures directory:\t", lowest_E_structs_dir
+print
+
+
+
+################################
+#### INITIAL PROTOCOL SETUP ####
+################################
+
+# initialize Rosetta
+initialize_rosetta()
+
 ## load up the poses given from the arguments passed
 # native pose ( for comparison, really )
-native_pose = load_pose( input_args.native_pdb_file )
-native_pose_name = "native"
+native_pose = Pose()
+native_pose.assign( load_pose( input_args.native_pdb_file ) )
+
+# get the full path of the native PDB name
+native_pdb_filename_full_path = input_args.native_pdb_file
+native_pdb_filename = native_pdb_filename_full_path.split( '/' )[-1]
+native_pdb_name = native_pdb_filename.split( ".pdb" )[0]
+
+# change the name of the native PDB name
+native_pose_name = "native_pose"
 native_pose.pdb_info().name( native_pose_name )
 
-# working pose
-working_pose = load_pose( input_args.working_pdb_file )
-working_pose_name = "glycosylated_pose"
+
+# load up the working pose
+working_pose = Pose()
+working_pose.assign( load_pose( input_args.working_pdb_file ) )
+
+# get the full path of the working pose PDB name
+working_pdb_filename_full_path = input_args.working_pdb_file
+working_pdb_filename = working_pdb_filename_full_path.split( '/' )[-1]
+working_pdb_name = working_pdb_filename.split( ".pdb" )[0]
+
+# change the name of the working PDB name
+working_pose_name = "working_pose"
 working_pose.pdb_info().name( working_pose_name )
+
+# create the decoy name for the working pose from its full name
+working_pose_decoy_name = structure_dir + working_pdb_name + "_glycosylated_then_just_LCM"
+
+
+# collect the core GlcNAc values from the native pose
+A_phi, A_psi, A_omega = get_phi_psi_omega_of_res( native_pose, 216 )
+B_phi, B_psi, B_omega = get_phi_psi_omega_of_res( native_pose, 440 )
 
 ## get some numbers that will be used in pieces of this protocol
 # this number is used later for resetting the core glycan
@@ -68,194 +152,171 @@ for res in working_pose:
     if res.is_branch_point():
         FcR_branch_point_nums.append( res.seqpos() )
 
+
 # get a standard fa_scorefxn for protein stuff
 sf = get_fa_scorefxn()
 
 # adjust the standard fa_scorefxn for sugar stuff
 sugar_sf = get_fa_scorefxn_with_given_weights( "fa_intra_rep", 0.440 )
 
-# score the unmodified pose using the standard sf
-print
-print "Unmodified pose:\t\t", sf( working_pose )
-print
+
 
 # pymol stuff
-pmm.keep_history(True)
+pmm = PyMOL_Mover()
+pmm.keep_history( True )
 pmm.apply( native_pose )
 pmm.apply( working_pose )
 
 
 
-# glycosylate the given working pose
-# 69 and 284 are the two ASN297 residues from 3ay4
-glycosylate_pose_by_file( working_pose, 69, "ND2", input_args.glyco_file )
-glycosylate_pose_by_file( working_pose, 284, "ND2", input_args.glyco_file )
+#########################
+#### JOB DISTRIBUTOR ####
+#########################
 
-#working_pose.pdb_info().name( "glycosylated" )
-working_pose.pdb_info().name( working_pose_name )
-pmm.apply( working_pose )
-print "After glycosylation:\t\t", sf( working_pose )
-print
+# create and use the PyJobDistributor object
+jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, sugar_sf )
+jd.native_pose = native_pose
+cur_decoy_num = 0
 
+print "Running LCM PyJobDistributor..."
 
-
-# reset the 1st GlcNAc on the ASN in the chibose core
-n_res_Fc_glycan = working_pose.n_residue()
-num_sugars_added = n_res_Fc_glycan - n_res_no_Fc_glycan
-size_of_one_glycan = num_sugars_added / 2
-A_core_GlcNAc = n_res_no_Fc_glycan + 1
-B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1
-
-# numbers collected from the lowest_E decoy of 3ay4 PDB after just a total pack/min
-A_phi = -102.58846630984607
-A_psi = 178.68359502878405
-A_omega = -153.94141254167278
-B_phi = -84.79653728190505
-B_psi = 177.12713080144076
-B_omega = -156.4554337951647
-
-# reset both of the core GlcNAc residue of the glycosylated working_pose
-working_pose.set_phi( A_core_GlcNAc, A_phi )
-working_pose.set_psi( A_core_GlcNAc, A_psi )
-working_pose.set_omega( A_core_GlcNAc, A_omega )
-
-working_pose.set_phi( B_core_GlcNAc, B_phi )
-working_pose.set_psi( B_core_GlcNAc, B_psi )
-working_pose.set_omega( B_core_GlcNAc, B_omega )
-
-#working_pose.pdb_info().name( "core_sugar_reset" )
-working_pose.pdb_info().name( working_pose_name )
-pmm.apply( working_pose )
-print "After reseting the"
-print "core GlcNAc:\t\t\t", sf( working_pose )
-print
-
-
-
-# get the res nums of the Fc sugars added
-Fc_sugar_nums = []
-Fc_branch_point_nums = []
-for res in working_pose:
-    if res.is_carbohydrate():
-        if res.seqpos() not in FcR_seqpos_nums:
-            Fc_sugar_nums.append( res.seqpos() )
-    if res.is_branch_point():
-        if res.seqpos() not in FcR_branch_point_nums:
-            Fc_branch_point_nums.append( res.seqpos() )
-# get a list of the Fc sugars discluding the core GlcNAc residues
-Fc_sugar_nums_except_core_GlcNAc = []
-for res in Fc_sugar_nums:
-    if res != A_core_GlcNAc and res != B_core_GlcNAc:
-        Fc_sugar_nums_except_core_GlcNAc.append( res )
-
-
-
-
-# pack the Fc sugars and around them within 10 Angstroms
-pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose, 
-                                                apply_sf_sugar_constraints = False, 
-                                                pack_branch_points = True, 
-                                                residue_range = Fc_sugar_nums, 
-                                                use_pack_radius = True, 
-                                                pack_radius = PACK_RADIUS )
-pack_rotamers_mover.apply( working_pose )
-pmm.apply( working_pose )
-print "After Fc sugar and 10"
-print "Angstrom sphere pack:\t\t", sf( working_pose )
-print
-
-
-
-## use the LinkageConformerMover to find a local sugar minima        
-# make a MoveMap for these Fc sugars allowing only bb movement
-mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, allow_bb_movement = True, allow_chi_movement = False )
-
-# TODO: Ask Jason if I should allow branch point movement
-'''
-# add in the branch points myself
-for branch_point in Fc_branch_point_nums:
-    mm.set_branches( branch_point, True )
-'''
-
-# make an appropriate MonteCarlo object
-# kT is 0.7 - from antibody_functions.py
-mc = MonteCarlo( working_pose, sugar_sf, kT )
-
-# make an appropriate LinkageConformerMover
-lcm = LinkageConformerMover()
-lcm.set_movemap( mm )
-lcm.set_x_standard_deviations( 2 )
-
-# run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
-num_lcm_accept = 0
-for ii in range( 10 ):
-    # apply the LCM
-    lcm.apply( working_pose )
+while not jd.job_complete:
+    # get a fresh copy of the working pose to be used in this protocol
+    testing_pose = Pose()
+    testing_pose.assign( working_pose )
     
-    # accept or reject the move using the MonteCarlo object
-    if mc.boltzmann( working_pose ):
-        num_lcm_accept += 1
-        pmm.apply( working_pose )
-
-# pack the Fc sugars and around them within 10 Angstroms
-pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose, 
-                                                apply_sf_sugar_constraints = False, 
-                                                pack_branch_points = True, 
-                                                residue_range = Fc_sugar_nums, 
-                                                use_pack_radius = True, 
-                                                pack_radius = PACK_RADIUS )
-pack_rotamers_mover.apply( working_pose )
-pmm.apply( working_pose )
-print "After LCM and a 10 Ang" 
-print "sphere pack/min:\t\t", sf( working_pose )
-print
-
-
-
-# make an appropriate SmallMover object using the prior MoveMap and sugar ScoreFunction
-# args: MoveMap in, Temperature in, and num moves in
-sm = SmallMover( mm, kT, 5 )
-sm.scorefxn( sugar_sf )
-
-# make another appropriate MonteCarlo object
-# kT is 0.7 - from antibody_functions.py
-mc = MonteCarlo( working_pose, sugar_sf, kT )
-
-# run the SM 10-100 times using a MonteCarlo object to accept or reject the move
-num_sm_accept = 0
-for ii in range( 10 ):
-    # apply the SM
-    sm.apply( working_pose )
+    ##########################
+    #### GLYCOSYLATE POSE #### 
+    ##########################
     
-    # accept or reject the move using the MonteCarlo object
-    if mc.boltzmann( working_pose ):
-        num_sm_accept += 1
-        pmm.apply( working_pose )
+    # glycosylate the given testing_pose
+    # 69 and 284 are the two ASN297 residues from 3ay4 ( pose numbering system, not PDB )
+    glycosylate_these_ASN = [ 69, 284 ]
+    for ASN in glycosylate_these_ASN:
+        glycosylate_pose_by_file( testing_pose, ASN, "ND2", input_args.glyco_file )
 
-# pack the Fc sugars and around them within 10 Angstroms
-pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose, 
-                                                apply_sf_sugar_constraints = False, 
-                                                pack_branch_points = True, 
-                                                residue_range = Fc_sugar_nums, 
-                                                use_pack_radius = True, 
-                                                pack_radius = PACK_RADIUS )
-pack_rotamers_mover.apply( working_pose )
-pmm.apply( working_pose )
-print "After SmallMover and a 10 Ang" 
-print "sphere pack/min:\t\t", sf( working_pose )
-print
+    testing_pose.pdb_info().name( "decoy_num_" + str( cur_decoy_num ) )
+    pmm.apply( testing_pose )
+
+    
+    ###########################
+    #### CORE GlcNAc RESET ####
+    ###########################
+
+    # reset the 1st GlcNAc on the ASN in the chibose core
+    n_res_Fc_glycan = testing_pose.n_residue()
+    num_sugars_added = n_res_Fc_glycan - n_res_no_Fc_glycan
+    size_of_one_glycan = num_sugars_added / 2
+    A_core_GlcNAc = n_res_no_Fc_glycan + 1
+    B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1
+    
+    ## reset both of the core GlcNAc residue of the glycosylated testing_pose
+    # chain A
+    testing_pose.set_phi( A_core_GlcNAc, A_phi )
+    testing_pose.set_psi( A_core_GlcNAc, A_psi )
+    testing_pose.set_omega( A_core_GlcNAc, A_omega )
+    
+    # chain B
+    testing_pose.set_phi( B_core_GlcNAc, B_phi )
+    testing_pose.set_psi( B_core_GlcNAc, B_psi )
+    testing_pose.set_omega( B_core_GlcNAc, B_omega )
+    
+    pmm.apply( testing_pose )
+
+    
+    
+    #################################
+    #### Fc GLYCAN AREA PACK/MIN ####
+    #################################
+
+    # get the res nums and branch points of the Fc sugars added
+    Fc_sugar_nums = []
+    Fc_glycan_branch_point_nums = []
+    
+    for res in testing_pose:
+        # if the residue is a carbohydrate
+        if res.is_carbohydrate():
+            # if the residue number is not in the FcR
+            if res.seqpos() not in FcR_seqpos_nums:
+                Fc_sugar_nums.append( res.seqpos() )
+                
+            # if the residue is a branch point
+            if res.is_branch_point():
+                # if it's not a branch point found in the FcR
+                if res.seqpos() not in FcR_branch_point_nums:
+                    # if it's a branch point that is a sugar ( ie. not the linking ASN )
+                    if res.is_carbohydrate():
+                        Fc_glycan_branch_point_nums.append( res.seqpos() )
+
+    # get a list of the Fc sugars discluding the core GlcNAc residues
+    Fc_sugar_nums_except_core_GlcNAc = []
+    for res_num in Fc_sugar_nums:
+        if res_num != A_core_GlcNAc and res_num != B_core_GlcNAc:
+            Fc_sugar_nums_except_core_GlcNAc.append( res_num )
+            
+    # pack the Fc sugars and around them within 20 Angstroms
+    pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
+                                                    apply_sf_sugar_constraints = False,
+                                                    pack_branch_points = True, 
+                                                    residue_range = Fc_sugar_nums, 
+                                                    use_pack_radius = True, 
+                                                    pack_radius = 20 )
+    pack_rotamers_mover.apply( testing_pose )
+    pmm.apply( testing_pose )
+
+
+    
+    #################################
+    ####                         ####
+    #################################
+
+    ## use the LinkageConformerMover to find a local sugar minima        
+    # make a MoveMap for these Fc sugars allowing only bb movement
+    mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, 
+                                 allow_bb_movement = True, 
+                                 allow_chi_movement = False )
+
+    # add in the branch points myself ( does not include the two ASN residues )
+    for branch_point in Fc_glycan_branch_point_nums:
+        mm.set_branches( branch_point, True )
+
+    # make an appropriate MonteCarlo object
+    mc = MonteCarlo( testing_pose, sugar_sf, 0.7 )
+
+    # run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
+    num_lcm_accept = 0
+    for ii in range( 50 ):
+        # apply a move here
+        
+        # accept or reject the move using the MonteCarlo object
+        if mc.boltzmann( testing_pose ):
+            num_lcm_accept += 1
+            pmm.apply( testing_pose )
+    
+    # pack the just-moved Fc sugars and around them within 20 Angstroms
+    pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose,
+                                                    apply_sf_sugar_constraints = False,
+                                                    pack_branch_points = True,
+                                                    residue_range = Fc_sugar_nums,
+                                                    use_pack_radius = True,
+                                                    pack_radius = 20 )
+    pack_rotamers_mover.apply( testing_pose )
+    pmm.apply( testing_pose )
+    
+    # dump the decoy
+    jd.output_decoy( testing_pose )
+    cur_decoy_num += 1
+
+
 
 
 
 '''
 # do a regular pack and minimization round
-working_pose = do_pack_min( sf, working_pose, 
+testing_pose = do_pack_min( sf, testing_pose, 
                             apply_sf_sugar_constraints = False, 
                             pack_branch_points = True )
-#working_pose = do_pack_min( sf, working_pose, 
-#                            apply_sf_sugar_constraints = False, 
-#                            pack_branch_points = False )
-pmm.apply( working_pose )
-print "After total pack/min\t\t", sf( working_pose )
+pmm.apply( testing_pose )
+print "After total pack/min\t\t", sf( testing_pose )
 print
 '''

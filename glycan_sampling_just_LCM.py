@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling_just_LCM.py pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac 2 /Users/Research/pyrosetta_dir/test_pdb_dir
+run glycan_sampling_just_LCM.py pdb_copies_dont_touch/native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ test_pdb_dir/ 5
 '''
 
 
@@ -24,6 +24,7 @@ parser = argparse.ArgumentParser(description="Use PyRosetta to glycosylate a pos
 parser.add_argument("native_pdb_file", type=str, help="the filename of the native PDB structure.")
 parser.add_argument("working_pdb_file", type=str, help="the filename of the PDB structure to be glycosylated.")
 parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan file to be used.")
+parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 input_args = parser.parse_args()
@@ -43,7 +44,7 @@ from rosetta.protocols.carbohydrates import LinkageConformerMover
 # Rosetta functions I wrote out
 from antibody_functions import initialize_rosetta, \
     get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
-    make_movemap_for_range, load_pose
+    make_movemap_for_range, load_pose, get_phi_psi_omega_of_res
 
 # Misc
 import sys, os
@@ -65,6 +66,39 @@ else:
     print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
     sys.exit()
 
+# check the utility directory
+if not os.path.isdir( input_args.utility_dir ):
+    print "Your argument", input_args.utility_dir, "for utility_directory is not a directory, exiting"
+    sys.exit()
+
+# add the utility directory to the system path for loading of modules
+sys.path.append( input_args.utility_dir )
+
+# make the needed directories if needed
+# base_structs and lowest_E_structs
+# input_args.structure_directory as the base directory
+base_structs_dir = structure_dir + "base_structs/"
+lowest_E_structs_dir = structure_dir + "lowest_E_structs/"
+
+if not os.path.isdir( base_structs_dir ):
+    os.mkdir( base_structs_dir )
+if not os.path.isdir( lowest_E_structs_dir ):
+    os.mkdir( lowest_E_structs_dir )
+
+# relay information to user
+print
+print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
+print "Main structure directory:\t", structure_dir
+print "Base structures directory:\t", base_structs_dir
+print "Lowest E structures directory:\t", lowest_E_structs_dir
+print
+
+
+
+################################
+#### INITIAL PROTOCOL SETUP ####
+################################
+
 # initialize Rosetta
 initialize_rosetta()
 
@@ -72,7 +106,6 @@ initialize_rosetta()
 # native pose ( for comparison, really )
 native_pose = Pose()
 native_pose.assign( load_pose( input_args.native_pdb_file ) )
-#pose_from_file( native_pose, input_args.native_pdb_file )
 
 # get the full path of the native PDB name
 native_pdb_filename_full_path = input_args.native_pdb_file
@@ -87,7 +120,6 @@ native_pose.pdb_info().name( native_pose_name )
 # load up the working pose
 working_pose = Pose()
 working_pose.assign( load_pose( input_args.working_pdb_file ) )
-#pose_from_file( working_pose, input_args.working_pdb_file )
 
 # get the full path of the working pose PDB name
 working_pdb_filename_full_path = input_args.working_pdb_file
@@ -102,16 +134,9 @@ working_pose.pdb_info().name( working_pose_name )
 working_pose_decoy_name = structure_dir + working_pdb_name + "_glycosylated_then_just_LCM"
 
 
-# numbers collected from the lowest_E decoy of 3ay4 PDB after just a total pack/min
-# used for resetting the core GlcNAc residues of the newly added Fc glycan
-# TODO: automate this by pulling the numbers from the native PDB file passed in
-A_phi = -102.58846630984607
-A_psi = 178.68359502878405
-A_omega = -153.94141254167278
-B_phi = -84.79653728190505
-B_psi = 177.12713080144076
-B_omega = -156.4554337951647
-
+# collect the core GlcNAc values from the native pose
+A_phi, A_psi, A_omega = get_phi_psi_omega_of_res( native_pose, 216 )
+B_phi, B_psi, B_omega = get_phi_psi_omega_of_res( native_pose, 440 )
 
 ## get some numbers that will be used in pieces of this protocol
 # this number is used later for resetting the core glycan
@@ -152,6 +177,8 @@ pmm.apply( working_pose )
 jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, sugar_sf )
 jd.native_pose = native_pose
 cur_decoy_num = 0
+
+print "Running LCM PyJobDistributor..."
 
 while not jd.job_complete:
     # get a fresh copy of the working pose to be used in this protocol

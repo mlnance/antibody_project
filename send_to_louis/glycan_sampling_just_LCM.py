@@ -27,6 +27,7 @@ parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan fil
 parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
+parser.add_argument("num_LCM_trials", type=int, help="how many trials of the LCM mover do you want to use in the protocol?")
 input_args = parser.parse_args()
 
 
@@ -295,7 +296,7 @@ while not jd.job_complete:
     
     # run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
     num_lcm_accept = 0
-    for ii in range( 50 ):
+    for ii in range( input_args.num_LCM_trials ):
         # apply the LCM
         lcm.apply( testing_pose )
         

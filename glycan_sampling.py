@@ -30,37 +30,20 @@ parser.add_argument("nstruct", type=int, help="how many decoys do you want to ma
 input_args = parser.parse_args()
 
 
-#################
-#### IMPORTS ####
-#################
 
-# Rosetta functions
-from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
-    PyMOL_Mover, MonteCarlo, PyJobDistributor
-from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
-from rosetta.protocols.carbohydrates import LinkageConformerMover
-#from rosetta.protocols.carbohydrates import GlycanRelaxMover
+##########################
+#### CHECK ALL INPUTS ####
+##########################
 
-# Rosetta functions I wrote out
-from antibody_functions import initialize_rosetta, \
-    get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
-    make_movemap_for_range, load_pose, get_phi_psi_omega_of_res
-
-# Misc
-import sys, os
-
-
-##############################
-#### PREPARE FOR PROTOCOL ####
-##############################
+import os, sys
 
 ## check the validity of the passed arguments
 # make sure the structure_dir passed is valid
 if os.path.isdir( input_args.structure_dir ):
     if not input_args.structure_dir.endswith( '/' ):
-        structure_dir = input_args.structure_dir + '/'
+        main_structure_dir = input_args.structure_dir + '/'
     else:
-        structure_dir = input_args.structure_dir
+        main_structure_dir = input_args.structure_dir
 else:
     print
     print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
@@ -77,8 +60,8 @@ sys.path.append( input_args.utility_dir )
 # make the needed directories if needed
 # base_structs and lowest_E_structs
 # input_args.structure_directory as the base directory
-base_structs_dir = structure_dir + "base_structs/"
-lowest_E_structs_dir = structure_dir + "lowest_E_structs/"
+base_structs_dir = main_structure_dir + "base_structs/"
+lowest_E_structs_dir = main_structure_dir + "lowest_E_structs/"
 
 if not os.path.isdir( base_structs_dir ):
     os.mkdir( base_structs_dir )
@@ -88,10 +71,29 @@ if not os.path.isdir( lowest_E_structs_dir ):
 # relay information to user
 print
 print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
-print "Main structure directory:\t", structure_dir
+print "Main structure directory:\t", main_structure_dir
 print "Base structures directory:\t", base_structs_dir
 print "Lowest E structures directory:\t", lowest_E_structs_dir
 print
+
+
+
+#################
+#### IMPORTS ####
+#################
+
+# Rosetta functions
+from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
+    PyMOL_Mover, MonteCarlo, PyJobDistributor
+from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
+#from rosetta.protocols.carbohydrates import LinkageConformerMover
+#from rosetta.protocols.carbohydrates import GlycanRelaxMover
+
+# Rosetta functions I wrote out
+from antibody_functions import initialize_rosetta, \
+    get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
+    make_movemap_for_range, load_pose, get_phi_psi_omega_of_res
+from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
 
 
 
@@ -130,8 +132,11 @@ working_pdb_name = working_pdb_filename.split( ".pdb" )[0]
 working_pose_name = "working_pose"
 working_pose.pdb_info().name( working_pose_name )
 
-# create the decoy name for the working pose from its full name
-working_pose_decoy_name = structure_dir + working_pdb_name + "_glycosylated_then_just_LCM"
+# make the directory for the working PDBs in the base_structs_dir
+structure_dir = base_structs_dir + working_pdb_name
+if not os.path.isdir( structure_dir ):
+    os.mkdir( structure_dir )
+working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_50_LCM"
 
 
 # collect the core GlcNAc values from the native pose
@@ -263,51 +268,14 @@ while not jd.job_complete:
                                                     pack_radius = 20 )
     pack_rotamers_mover.apply( testing_pose )
     pmm.apply( testing_pose )
-
-
-    
-    #################################
-    ####                         ####
-    #################################
-
-    ## use the LinkageConformerMover to find a local sugar minima        
-    # make a MoveMap for these Fc sugars allowing only bb movement
-    mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, 
-                                 allow_bb_movement = True, 
-                                 allow_chi_movement = False )
-
-    # add in the branch points myself ( does not include the two ASN residues )
-    for branch_point in Fc_glycan_branch_point_nums:
-        mm.set_branches( branch_point, True )
-
-    # make an appropriate MonteCarlo object
-    mc = MonteCarlo( testing_pose, sugar_sf, 0.7 )
-
-    # run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
-    num_lcm_accept = 0
-    for ii in range( 50 ):
-        # apply a move here
-        
-        # accept or reject the move using the MonteCarlo object
-        if mc.boltzmann( testing_pose ):
-            num_lcm_accept += 1
-            pmm.apply( testing_pose )
-    
-    # pack the just-moved Fc sugars and around them within 20 Angstroms
-    pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose,
-                                                    apply_sf_sugar_constraints = False,
-                                                    pack_branch_points = True,
-                                                    residue_range = Fc_sugar_nums,
-                                                    use_pack_radius = True,
-                                                    pack_radius = 20 )
-    pack_rotamers_mover.apply( testing_pose )
-    pmm.apply( testing_pose )
     
     # dump the decoy
     jd.output_decoy( testing_pose )
     cur_decoy_num += 1
 
-
+# move the lowest E pack and minimized native structure into the lowest_E_structs dir
+fasc_filename = working_pose_decoy_name + ".fasc"
+lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 5 )
 
 
 

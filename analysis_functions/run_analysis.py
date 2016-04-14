@@ -12,8 +12,22 @@ parser.add_argument("resulting_filename", type=str, help="what do you want the r
 parser.add_argument("--verbose", "-v", default=False, action="store_true", help="do you want the program to tell you what it's doing?")
 input_args = parser.parse_args()
 
-from antibody_functions import *
-import os
+
+
+#################
+#### IMPORTS ####
+#################
+
+from antibody_functions import initialize_rosetta, load_pose, \
+    get_score_by_scoretype, get_interface_score, count_hbonds, \
+    count_interface_atomic_contacts, analyze_interface
+
+from rosetta import get_fa_scorefxn
+from rosetta.core.scoring import score_type_from_name, CA_rmsd
+
+import os, sys
+
+
 
 '''
 # define the residue numbers that comprise the CH2 and CH3 domains, loop regions, and the sugars ( pose numbering )
@@ -29,6 +43,12 @@ sugar_B = range( 440, 447 + 1 )  # the entire glycan on ASN 297 of chain B
 receptor_protein = range( 448, 607 + 1 )  # all amino acids within the receptor
 receptor_sugar = range( 608, 615 + 1 )  # the glycan that docks with the Fc region
 '''
+
+
+
+################################
+#### INITIAL PROTOCOL SETUP ####
+################################
 
 # check validity of structure directory
 working_dir = os.getcwd()
@@ -52,21 +72,27 @@ for f in os.listdir( os.getcwd() ):
         structure_names.append( f.split( '/' )[-1] )        
 os.chdir( working_dir )
 
-# inform the user of the structure directory and files to be analyzed
-print "From", structure_dir, "analyzing:"
-print structure_names
+# inform the user of the structure directory and number of files to be analyzed
+print "Analyzing", len( structure_names ), "structures from", structure_dir
+print
 
         
+
+###########################
+#### ANALYSIS PROTOCOL ####
+###########################
+
 class Analyze():
     def __init__(self):
-        # for use within go()
-        self.sf = get_fa_scorefxn()
+        # initialize Rosetta
+        initialize_rosetta()
         
-        
-    def go(self):
         # set up and store the input native structure as the base pdb
         print "Wild type pose:", input_args.native_pdb_filename
         self.WT_pose = load_pose( input_args.native_pdb_filename )
+        
+        # for use within go()
+        self.sf = get_fa_scorefxn()
         
         # calculate all base scores for comparison
         self.WT_score = self.sf( self.WT_pose )
@@ -76,6 +102,9 @@ class Analyze():
         self.WT_interface_contacts, self.WT_interface_contacts_list = count_interface_atomic_contacts( input_args.interface_jump_num, self.WT_pose, verbose = input_args.verbose )
         self.WT_interface_SASA = analyze_interface( input_args.interface_jump_num, self.WT_pose, pack_separated = True )
         
+        
+        
+    def go(self):
         # instantiate lists to save data for data frame
         mutation_made = []
         pose_score = []
@@ -166,8 +195,14 @@ class Analyze():
         
         print "Dumping", filename
         self.df.to_csv( filename, index=True, index_label = "Mutation Made" )
+        
+        return True
 
 
-# runs the program
+
+#####################
+#### RUN PROGRAM ####
+#####################
+
 my_obj = Analyze()
 my_obj.go()

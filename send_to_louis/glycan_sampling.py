@@ -1,0 +1,291 @@
+#!/usr/bin/python
+__author__ = "morganlnance"
+
+'''
+NOTES
+STARTING POSE (3ay4 without Fc) is a base structure that was acquired from making 1000 pack/min decoys of native 3ay4 (with Fc sugar on) and then manually removing the Fc sugars of the lowest energy decoy
+'''
+
+'''
+SAMPLE INPUT
+run glycan_sampling_just_LCM.py pdb_copies_dont_touch/native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ test_pdb_dir/ 5
+'''
+
+
+
+#########################
+#### PARSE ARGUMENTS ####
+#########################
+
+import argparse
+
+# parse and store input arguments
+parser = argparse.ArgumentParser(description="Use PyRosetta to glycosylate a pose and find a low E structure")
+parser.add_argument("native_pdb_file", type=str, help="the filename of the native PDB structure.")
+parser.add_argument("working_pdb_file", type=str, help="the filename of the PDB structure to be glycosylated.")
+parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan file to be used.")
+parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
+parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
+parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
+input_args = parser.parse_args()
+
+
+
+##########################
+#### CHECK ALL INPUTS ####
+##########################
+
+import os, sys
+
+## check the validity of the passed arguments
+# make sure the structure_dir passed is valid
+if os.path.isdir( input_args.structure_dir ):
+    if not input_args.structure_dir.endswith( '/' ):
+        main_structure_dir = input_args.structure_dir + '/'
+    else:
+        main_structure_dir = input_args.structure_dir
+else:
+    print
+    print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
+    sys.exit()
+
+# check the utility directory
+if not os.path.isdir( input_args.utility_dir ):
+    print "Your argument", input_args.utility_dir, "for utility_directory is not a directory, exiting"
+    sys.exit()
+
+# add the utility directory to the system path for loading of modules
+sys.path.append( input_args.utility_dir )
+
+# make the needed directories if needed
+# base_structs and lowest_E_structs
+# input_args.structure_directory as the base directory
+base_structs_dir = main_structure_dir + "base_structs/"
+lowest_E_structs_dir = main_structure_dir + "lowest_E_structs/"
+
+if not os.path.isdir( base_structs_dir ):
+    os.mkdir( base_structs_dir )
+if not os.path.isdir( lowest_E_structs_dir ):
+    os.mkdir( lowest_E_structs_dir )
+
+# relay information to user
+print
+print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
+print "Main structure directory:\t", main_structure_dir
+print "Base structures directory:\t", base_structs_dir
+print "Lowest E structures directory:\t", lowest_E_structs_dir
+print
+
+
+
+#################
+#### IMPORTS ####
+#################
+
+# Rosetta functions
+from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
+    PyMOL_Mover, MonteCarlo, PyJobDistributor
+from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
+#from rosetta.protocols.carbohydrates import LinkageConformerMover
+#from rosetta import SmallMover
+#from rosetta.protocols.carbohydrates import GlycanRelaxMover
+
+# Rosetta functions I wrote out
+from antibody_functions import initialize_rosetta, \
+    get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
+    make_movemap_for_range, load_pose, get_phi_psi_omega_of_res
+from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
+
+
+
+################################
+#### INITIAL PROTOCOL SETUP ####
+################################
+
+# initialize Rosetta
+initialize_rosetta()
+
+## load up the poses given from the arguments passed
+# native pose ( for comparison, really )
+native_pose = Pose()
+native_pose.assign( load_pose( input_args.native_pdb_file ) )
+
+# get the full path of the native PDB name
+native_pdb_filename_full_path = input_args.native_pdb_file
+native_pdb_filename = native_pdb_filename_full_path.split( '/' )[-1]
+native_pdb_name = native_pdb_filename.split( ".pdb" )[0]
+
+# change the name of the native PDB name
+native_pose_name = "native_pose"
+native_pose.pdb_info().name( native_pose_name )
+
+
+# load up the working pose
+working_pose = Pose()
+working_pose.assign( load_pose( input_args.working_pdb_file ) )
+
+# get the full path of the working pose PDB name
+working_pdb_filename_full_path = input_args.working_pdb_file
+working_pdb_filename = working_pdb_filename_full_path.split( '/' )[-1]
+working_pdb_name = working_pdb_filename.split( ".pdb" )[0]
+
+# change the name of the working PDB name
+working_pose_name = "working_pose"
+working_pose.pdb_info().name( working_pose_name )
+
+# make the directory for the working PDBs in the base_structs_dir
+structure_dir = base_structs_dir + working_pdb_name
+if not os.path.isdir( structure_dir ):
+    os.mkdir( structure_dir )
+working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_50_LCM"
+
+
+# collect the core GlcNAc values from the native pose
+A_phi, A_psi, A_omega = get_phi_psi_omega_of_res( native_pose, 216 )
+B_phi, B_psi, B_omega = get_phi_psi_omega_of_res( native_pose, 440 )
+
+## get some numbers that will be used in pieces of this protocol
+# this number is used later for resetting the core glycan
+n_res_no_Fc_glycan = working_pose.n_residue()
+
+# these numbers are of just the receptor glycan - they should be ignored sometimes
+# and get the residue numbers of branch points - they should also be ignored sometimes
+FcR_seqpos_nums = []
+FcR_branch_point_nums = []
+for res in working_pose:
+    if res.is_carbohydrate():
+        FcR_seqpos_nums.append( res.seqpos() )
+    if res.is_branch_point():
+        FcR_branch_point_nums.append( res.seqpos() )
+
+
+# get a standard fa_scorefxn for protein stuff
+sf = get_fa_scorefxn()
+
+# adjust the standard fa_scorefxn for sugar stuff
+sugar_sf = get_fa_scorefxn_with_given_weights( "fa_intra_rep", 0.440 )
+
+
+
+# pymol stuff
+pmm = PyMOL_Mover()
+pmm.keep_history( True )
+pmm.apply( native_pose )
+pmm.apply( working_pose )
+
+
+
+#########################
+#### JOB DISTRIBUTOR ####
+#########################
+
+# create and use the PyJobDistributor object
+jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, sugar_sf )
+jd.native_pose = native_pose
+cur_decoy_num = 0
+
+print "Running LCM PyJobDistributor..."
+
+while not jd.job_complete:
+    # get a fresh copy of the working pose to be used in this protocol
+    testing_pose = Pose()
+    testing_pose.assign( working_pose )
+    
+    ##########################
+    #### GLYCOSYLATE POSE #### 
+    ##########################
+    
+    # glycosylate the given testing_pose
+    # 69 and 284 are the two ASN297 residues from 3ay4 ( pose numbering system, not PDB )
+    glycosylate_these_ASN = [ 69, 284 ]
+    for ASN in glycosylate_these_ASN:
+        glycosylate_pose_by_file( testing_pose, ASN, "ND2", input_args.glyco_file )
+
+    testing_pose.pdb_info().name( "decoy_num_" + str( cur_decoy_num ) )
+    pmm.apply( testing_pose )
+
+    
+    ###########################
+    #### CORE GlcNAc RESET ####
+    ###########################
+
+    # reset the 1st GlcNAc on the ASN in the chibose core
+    n_res_Fc_glycan = testing_pose.n_residue()
+    num_sugars_added = n_res_Fc_glycan - n_res_no_Fc_glycan
+    size_of_one_glycan = num_sugars_added / 2
+    A_core_GlcNAc = n_res_no_Fc_glycan + 1
+    B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1
+    
+    ## reset both of the core GlcNAc residue of the glycosylated testing_pose
+    # chain A
+    testing_pose.set_phi( A_core_GlcNAc, A_phi )
+    testing_pose.set_psi( A_core_GlcNAc, A_psi )
+    testing_pose.set_omega( A_core_GlcNAc, A_omega )
+    
+    # chain B
+    testing_pose.set_phi( B_core_GlcNAc, B_phi )
+    testing_pose.set_psi( B_core_GlcNAc, B_psi )
+    testing_pose.set_omega( B_core_GlcNAc, B_omega )
+    
+    pmm.apply( testing_pose )
+
+    
+    
+    #################################
+    #### Fc GLYCAN AREA PACK/MIN ####
+    #################################
+
+    # get the res nums and branch points of the Fc sugars added
+    Fc_sugar_nums = []
+    Fc_glycan_branch_point_nums = []
+    
+    for res in testing_pose:
+        # if the residue is a carbohydrate
+        if res.is_carbohydrate():
+            # if the residue number is not in the FcR
+            if res.seqpos() not in FcR_seqpos_nums:
+                Fc_sugar_nums.append( res.seqpos() )
+                
+            # if the residue is a branch point
+            if res.is_branch_point():
+                # if it's not a branch point found in the FcR
+                if res.seqpos() not in FcR_branch_point_nums:
+                    # if it's a branch point that is a sugar ( ie. not the linking ASN )
+                    if res.is_carbohydrate():
+                        Fc_glycan_branch_point_nums.append( res.seqpos() )
+
+    # get a list of the Fc sugars discluding the core GlcNAc residues
+    Fc_sugar_nums_except_core_GlcNAc = []
+    for res_num in Fc_sugar_nums:
+        if res_num != A_core_GlcNAc and res_num != B_core_GlcNAc:
+            Fc_sugar_nums_except_core_GlcNAc.append( res_num )
+            
+    # pack the Fc sugars and around them within 20 Angstroms
+    pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
+                                                    apply_sf_sugar_constraints = False,
+                                                    pack_branch_points = True, 
+                                                    residue_range = Fc_sugar_nums, 
+                                                    use_pack_radius = True, 
+                                                    pack_radius = 20 )
+    pack_rotamers_mover.apply( testing_pose )
+    pmm.apply( testing_pose )
+    
+    # dump the decoy
+    jd.output_decoy( testing_pose )
+    cur_decoy_num += 1
+
+# move the lowest E pack and minimized native structure into the lowest_E_structs dir
+fasc_filename = working_pose_decoy_name + ".fasc"
+lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 5 )
+
+
+
+'''
+# do a regular pack and minimization round
+testing_pose = do_pack_min( sf, testing_pose, 
+                            apply_sf_sugar_constraints = False, 
+                            pack_branch_points = True )
+pmm.apply( testing_pose )
+print "After total pack/min\t\t", sf( testing_pose )
+print
+'''

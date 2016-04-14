@@ -87,6 +87,7 @@ from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
     PyMOL_Mover, MonteCarlo, PyJobDistributor
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
 #from rosetta.protocols.carbohydrates import LinkageConformerMover
+#from rosetta import SmallMover
 #from rosetta.protocols.carbohydrates import GlycanRelaxMover
 
 # Rosetta functions I wrote out

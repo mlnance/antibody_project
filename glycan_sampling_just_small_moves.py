@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling_just_LCM.py pdb_copies_dont_touch/native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ test_pdb_dir/ 5
+
 '''
 
 
@@ -27,7 +27,7 @@ parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan fil
 parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
-parser.add_argument("num_LCM_trials", type=int, help="how many trials of the LCM mover do you want to use in the protocol?")
+parser.add_argument("num_small_moves", type=int, help="how many small moves do you want to make on the entire Fc glycan?")
 input_args = parser.parse_args()
 
 
@@ -87,8 +87,8 @@ print
 from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
     PyMOL_Mover, MonteCarlo, PyJobDistributor
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
-from rosetta.protocols.carbohydrates import LinkageConformerMover
-#from rosetta import SmallMover
+#from rosetta.protocols.carbohydrates import LinkageConformerMover
+from rosetta import SmallMover
 #from rosetta.protocols.carbohydrates import GlycanRelaxMover
 
 # Rosetta functions I wrote out
@@ -185,7 +185,7 @@ jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, sugar_sf )
 jd.native_pose = native_pose
 cur_decoy_num = 0
 
-print "Running LCM PyJobDistributor..."
+print "Running SmallMover PyJobDistributor..."
 
 while not jd.job_complete:
     # get a fresh copy of the working pose to be used in this protocol
@@ -273,11 +273,11 @@ while not jd.job_complete:
 
 
     
-    #################################
-    #### LINKAGE CONFORMER MOVER ####
-    #################################
+    ####################
+    #### SmallMover ####
+    ####################
 
-    ## use the LinkageConformerMover to find a local sugar minima        
+    ## use the SmallMover find a local sugar minima        
     # make a MoveMap for these Fc sugars allowing only bb movement
     mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, 
                                  allow_bb_movement = True, 
@@ -290,16 +290,13 @@ while not jd.job_complete:
     # make an appropriate MonteCarlo object
     mc = MonteCarlo( testing_pose, sugar_sf, 0.7 )
 
-    # make an appropriate LinkageConformerMover
-    lcm = LinkageConformerMover()
-    lcm.set_movemap( mm )
-    lcm.set_x_standard_deviations( 2 )
+    # make an appropriate SmallMover
+    sm = SmallMover( movemap_in = mm, temperature_in = 0.7, nmoves_in = 5 )
     
-    # run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
-    num_lcm_accept = 0
-    for ii in range( input_args.num_LCM_trials ):
-        # apply the LCM
-        lcm.apply( testing_pose )
+    # run the SmallMover 10-100 times using a MonteCarlo object to accept or reject the move
+    for ii in range( input_args.num_small_moves ):
+        # apply the SmallMover
+        sm.apply( testing_pose )
         
         # accept or reject the move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):

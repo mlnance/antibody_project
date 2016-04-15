@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-
+run glycan_sampling_just_small_moves.py pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb /Users/Research/antibody_project/send_to_louis/project_glyco_files/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ /Users/Research/pyrosetta_dir/test_pdb_dir/ 2 5 5
 '''
 
 
@@ -27,7 +27,8 @@ parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan fil
 parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
-parser.add_argument("num_small_moves", type=int, help="how many small moves do you want to make on the entire Fc glycan?")
+parser.add_argument("num_small_moves", type=int, help="how many small moves do you want to make within the Fc glycan during one trial?")
+parser.add_argument("num_small_move_trials", type=int, help="how many trials of the SmallMover do you want to run?")
 input_args = parser.parse_args()
 
 
@@ -291,16 +292,18 @@ while not jd.job_complete:
     mc = MonteCarlo( testing_pose, sugar_sf, 0.7 )
 
     # make an appropriate SmallMover
-    sm = SmallMover( movemap_in = mm, temperature_in = 0.7, nmoves_in = 5 )
+    sm = SmallMover( movemap_in = mm, temperature_in = 0.7, nmoves_in = input_args.num_small_moves )
+    sm.scorefxn( sugar_sf )
     
     # run the SmallMover 10-100 times using a MonteCarlo object to accept or reject the move
-    for ii in range( input_args.num_small_moves ):
+    num_sm_accept = 0
+    for ii in range( input_args.num_small_move_trials ):
         # apply the SmallMover
         sm.apply( testing_pose )
         
         # accept or reject the move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):
-            num_lcm_accept += 1
+            num_sm_accept += 1
             pmm.apply( testing_pose )
     
     # pack the just-moved Fc sugars and around them within 20 Angstroms

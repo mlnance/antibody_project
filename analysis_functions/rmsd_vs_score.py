@@ -1,35 +1,67 @@
 #!/usr/bin/python
+__author__ = "morganlnance"
+
 
 import argparse
 
 parser = argparse.ArgumentParser(description="Use Rosetta to calculate RMSD between a native pose and a directory of structures")
 parser.add_argument("native_pdb_filename", help="the filename of the PDB structure to serve as the native structure")
 parser.add_argument("structure_dir", help="where do the structures to which I am comparing the native live?")
+parser.add_argument("resulting_filename", type=str, help="what do you want the resulting csv file to be called? This program will add the .csv extension for you")
 input_args = parser.parse_args()
 
-from mutational_analysis import *
+
+
+#################
+#### IMPORTS ####
+#################
+
+from antibody_functions import initialize_rosetta, load_pose
+from rosetta import Pose, get_fa_scorefxn
+from rosetta.core.scoring import CA_rmsd
+
+import os, sys
+import pandas as pd
+
+
+
+#######################
+#### RMSD PROTOCOL ####
+#######################
 
 # check the structure directory
 working_dir = os.getcwd() + '/'
-try:
-    if os.path.isdir( input_args.structure_dir ):
+if os.path.isdir( input_args.structure_dir ):
+    if not input_args.structure_dir.endswith( '/' ):
+        structure_dir = input_args.structure_dir + '/'
+    else:
         structure_dir = input_args.structure_dir
-        if not structure_dir[-1] == '/':
-            structure_dir = structure_dir + '/'
-        files = os.listdir( structure_dir )
-        pdbs = []
-        for f in files:
-            if f.endswith( ".pdb" ):
-                f = structure_dir + f
-                pdbs.append( os.path.abspath( f ) )
-except:
-    print "It appears", input_args.structure_dir, "is not a valid directory path. Exiting"
+else:
+    print "It seems like you gave me an incorrect path, exiting"
     sys.exit()
 
+# get all the structure names from the structure directory
+os.chdir( structure_dir )
+structures = []
+structure_names = []
+for f in os.listdir( os.getcwd() ):
+    if f.endswith( ".pdb" ):
+        structures.append( os.path.abspath( f ) )
+        structure_names.append( f.split( '/' )[-1] )
+os.chdir( working_dir )
+
+# inform the user of the structure directory and number of files to be analyzed
+num_structs = len( structure_names )
+print "Analyzing", num_structs, "structures from", structure_dir
+print
+
+
 # check and load native pose
+initialize_rosetta()
 try:
     if os.path.isfile( input_args.native_pdb_filename ):
-        native = load_pose( input_args.native_pdb_filename )
+        native = Pose()
+        native.assign( load_pose( input_args.native_pdb_filename ) )
 except:
     print "It appears", input_args.native_pdb_filename, "is not a valid pdb file. Exiting"
     sys.exit()
@@ -37,26 +69,38 @@ except:
 
 # make a scorefunction
 sf = get_fa_scorefxn()
-sf = apply_sugar_constraints_to_sf( sf, native )
 
 # collect the data
 rmsds = []
 scores = []
 pdb_names = []
-for pdb in pdbs:
-    mutant = load_pose( pdb )
+decoy_num = 1
+for pdb in structures:
+    print "Working on decoy number", decoy_num, "of", num_structs
     
+    # load the mutant Pose
+    mutant = Pose()
+    mutant.assign( load_pose( pdb ) )
+    
+    # collect the data
     name = pdb.split( '/' )[-1]
     pdb_names.append( name )
     rmsd = CA_rmsd( native, mutant )
     rmsds.append( rmsd )
-    score = sf( mutant )
-    scores.append( score )
+    scores.append( sf( mutant ) )
+    
+    # up the decoy_num counter
+    decoy_num += 1
 
 
-# dump the data
+# dump the data into a DataFrame
 df = pd.DataFrame( pdb_names )
 df["scores"] = scores
 df["rmsd"] = rmsds
 print df
-df.to_csv( "Protocol_on_Lowest_E_Pack_Min_3ay4_again_RMSD_vs_Score.csv", index=False )
+
+# check out the passed result filename for .csv extension
+filename = input_args.resulting_filename
+if not filename.endswith( ".csv" ):
+    filename += ".csv"
+df.to_csv( filename, index=False )

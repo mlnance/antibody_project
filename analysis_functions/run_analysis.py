@@ -1,4 +1,6 @@
 #!/usr/bin/python
+__author__ = "morganlnance"
+
 
 import argparse
 
@@ -22,10 +24,11 @@ from antibody_functions import initialize_rosetta, load_pose, \
     get_score_by_scoretype, get_interface_score, count_hbonds, \
     count_interface_atomic_contacts, analyze_interface
 
-from rosetta import get_fa_scorefxn
+from rosetta import Pose, get_fa_scorefxn
 from rosetta.core.scoring import score_type_from_name, CA_rmsd
 
 import os, sys
+import pandas as pd
 
 
 
@@ -51,7 +54,7 @@ receptor_sugar = range( 608, 615 + 1 )  # the glycan that docks with the Fc regi
 ################################
 
 # check validity of structure directory
-working_dir = os.getcwd()
+working_dir = os.getcwd() + '/'
 if os.path.isdir( input_args.structure_dir ):
     if input_args.structure_dir.endswith( '/' ):
         structure_dir = input_args.structure_dir
@@ -73,7 +76,8 @@ for f in os.listdir( os.getcwd() ):
 os.chdir( working_dir )
 
 # inform the user of the structure directory and number of files to be analyzed
-print "Analyzing", len( structure_names ), "structures from", structure_dir
+num_structs = len( structure_names )
+print "Analyzing", num_structs, "structures from", structure_dir
 print
 
         
@@ -89,7 +93,8 @@ class Analyze():
         
         # set up and store the input native structure as the base pdb
         print "Wild type pose:", input_args.native_pdb_filename
-        self.WT_pose = load_pose( input_args.native_pdb_filename )
+        self.WT_pose = Pose()
+        self.WT_pose.assign( load_pose( input_args.native_pdb_filename ) )
         
         # for use within go()
         self.sf = get_fa_scorefxn()
@@ -100,33 +105,38 @@ class Analyze():
         self.WT_interface_score = get_interface_score( input_args.interface_jump_num, self.sf, self.WT_pose )
         self.WT_hbonds = count_hbonds( self.WT_pose )
         self.WT_interface_contacts, self.WT_interface_contacts_list = count_interface_atomic_contacts( input_args.interface_jump_num, self.WT_pose, verbose = input_args.verbose )
-        self.WT_interface_SASA = analyze_interface( input_args.interface_jump_num, self.WT_pose, pack_separated = True )
+        #self.WT_interface_SASA = analyze_interface( input_args.interface_jump_num, self.WT_pose, pack_separated = True )
         
         
         
     def go(self):
         # instantiate lists to save data for data frame
-        mutation_made = []
-        pose_score = []
-        dG_score = []
-        elec_score = []
-        dG_elec_score = []
-        interface_score = []
-        ddG_interface = []
-        hbonds = []
-        dHbonds = []
-        interface_contacts = []
-        dinterface_contacts = []
-        new_interface_contacts = []
-        tot_dinterface_contacts = []
-        interface_SASA = []
-        dInterface_SASA = []
-        rmsd = []
+        self.mutation_made = []
+        self.pose_score = []
+        self.dG_score = []
+        self.elec_score = []
+        self.dG_elec_score = []
+        self.interface_score = []
+        self.ddG_interface = []
+        self.hbonds = []
+        self.dHbonds = []
+        self.interface_contacts = []
+        self.dinterface_contacts = []
+        self.new_interface_contacts = []
+        self.tot_dinterface_contacts = []
+        self.interface_SASA = []
+        self.dInterface_SASA = []
+        self.rmsd = []
         
         # analyze dat data!
+        decoy_num = 1
         for pdb in structures:
+            # print out decoy_num counter
+            print "On decoy number:", decoy_num
+            
             # load mutated pdb
-            pose = load_pose( pdb )
+            pose = Pose()
+            pose.assign( load_pose( pdb ) )
             if input_args.verbose:
                 print "Working on", pdb.split( '/' )[-1]
             
@@ -136,23 +146,23 @@ class Analyze():
             mut_interface_score = get_interface_score( input_args.interface_jump_num, self.sf, pose )
             mut_hbonds = count_hbonds( pose )
             mut_interface_contacts, mut_interface_contacts_list = count_interface_atomic_contacts( input_args.interface_jump_num, pose, verbose = input_args.verbose )
-            mut_interface_SASA = analyze_interface( input_args.interface_jump_num, pose, pack_separated = True )
+            #mut_interface_SASA = analyze_interface( input_args.interface_jump_num, pose, pack_separated = True )
             mut_rmsd = CA_rmsd( self.WT_pose, pose )
-            rmsd.append( mut_rmsd )
+            self.rmsd.append( mut_rmsd )
             
             # add to lists - unless it was the native, I don't want that there
             if not pose.pdb_info().name() == self.WT_pose.pdb_info().name():
-                mutation_made.append( pdb.split( '/' )[-1] )
-                pose_score.append( mut_score )
-                dG_score.append( mut_score - self.WT_score )
-                elec_score.append( mut_elec_score )
-                dG_elec_score.append( mut_elec_score - self.WT_elec_score )
-                interface_score.append( mut_interface_score )
-                ddG_interface.append( mut_interface_score - self.WT_interface_score )
-                hbonds.append( mut_hbonds )
-                dHbonds.append( mut_hbonds - self.WT_hbonds )
-                interface_SASA.append( mut_interface_SASA )
-                dInterface_SASA.append( mut_interface_SASA - self.WT_interface_SASA )
+                self.mutation_made.append( pdb.split( '/' )[-1] )
+                self.pose_score.append( mut_score )
+                self.dG_score.append( mut_score - self.WT_score )
+                self.elec_score.append( mut_elec_score )
+                self.dG_elec_score.append( mut_elec_score - self.WT_elec_score )
+                self.interface_score.append( mut_interface_score )
+                self.ddG_interface.append( mut_interface_score - self.WT_interface_score )
+                self.hbonds.append( mut_hbonds )
+                self.dHbonds.append( mut_hbonds - self.WT_hbonds )
+                #self.interface_SASA.append( mut_interface_SASA )
+                #self.dInterface_SASA.append( mut_interface_SASA - self.WT_interface_SASA )
                 
                 native_contacts = 0
                 new_contacts = 0
@@ -161,10 +171,13 @@ class Analyze():
                         native_contacts += 1
                     else:
                         new_contacts += 1
-                interface_contacts.append( mut_interface_contacts )
-                dinterface_contacts.append( native_contacts - self.WT_interface_contacts )
-                new_interface_contacts.append( new_contacts )
-                tot_dinterface_contacts.append( ( native_contacts - self.WT_interface_contacts ) + new_contacts )
+                self.interface_contacts.append( mut_interface_contacts )
+                self.dinterface_contacts.append( native_contacts - self.WT_interface_contacts )
+                self.new_interface_contacts.append( new_contacts )
+                self.tot_dinterface_contacts.append( ( native_contacts - self.WT_interface_contacts ) + new_contacts )
+                
+            # up the decoy_num counter
+            decoy_num += 1
                 
         # return to working dir
         os.chdir( working_dir )
@@ -175,23 +188,23 @@ class Analyze():
             filename = filename + ".csv"
         
         # make and dump pandas dataframe as a csv
-        self.df = pd.DataFrame( index=mutation_made )
+        self.df = pd.DataFrame( index=self.mutation_made )
         
-        self.df["Pose Score"] = pose_score
-        self.df["dG Scores"] = dG_score
-        self.df["Elec Score"] = elec_score
-        self.df["dG Elec Scores"] = dG_elec_score
-        self.df["Interface Score"] = interface_score
-        self.df["dG Interface"] = ddG_interface
-        self.df["Num Hbonds"] = hbonds
-        self.df["delta Hbonds"] = dHbonds
-        self.df["interface contacts"] = interface_contacts
-        self.df["lost native interface contacts"] = dinterface_contacts
-        self.df["new interface contacts"] = new_interface_contacts
-        self.df["total change interface contacts"] = tot_dinterface_contacts
-        self.df["Interface SASA"] = interface_SASA
-        self.df["delta Interface SASA"] = dInterface_SASA
-        self.df["rmsd"] = rmsd
+        self.df["Pose Score"] = self.pose_score
+        self.df["dG Scores"] = self.dG_score
+        self.df["Elec Score"] = self.elec_score
+        self.df["dG Elec Scores"] = self.dG_elec_score
+        self.df["Interface Score"] = self.interface_score
+        self.df["dG Interface"] = self.ddG_interface
+        self.df["Num Hbonds"] = self.hbonds
+        self.df["delta Hbonds"] = self.dHbonds
+        self.df["interface contacts"] = self.interface_contacts
+        self.df["lost native interface contacts"] = self.dinterface_contacts
+        self.df["new interface contacts"] = self.new_interface_contacts
+        self.df["total change interface contacts"] = self.tot_dinterface_contacts
+        #self.df["Interface SASA"] = self.interface_SASA
+        #self.df["delta Interface SASA"] = self.dInterface_SASA
+        self.df["rmsd"] = self.rmsd
         
         print "Dumping", filename
         self.df.to_csv( filename, index=True, index_label = "Mutation Made" )

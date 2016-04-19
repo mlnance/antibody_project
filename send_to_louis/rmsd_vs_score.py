@@ -21,7 +21,10 @@ from rosetta import Pose, get_fa_scorefxn
 from rosetta.core.scoring import CA_rmsd
 
 import os, sys, csv
-import pandas as pd
+try:
+    import pandas as pd
+except:
+    pass
 
 
 

@@ -139,7 +139,7 @@ working_pose.pdb_info().name( working_pose_name )
 structure_dir = base_structs_dir + working_pdb_name
 if not os.path.isdir( structure_dir ):
     os.mkdir( structure_dir )
-working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_50_LCM"
+working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_%s_GRM" %input_args.num_GRM_moves
 
 
 # collect the core GlcNAc values from the native pose

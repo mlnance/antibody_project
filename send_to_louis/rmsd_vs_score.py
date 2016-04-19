@@ -125,8 +125,6 @@ try:
 
 # or, dump the three lists into three separate .csv files
 except:
-    adjusted_filename = "USING_CSV_MODULE_" + filename
-    with open( adjusted_filename, "wb" ) as f:
+    with open( filename, "wb" ) as f:
         writer = csv.writer( f )
         writer.writerows( mutant_df_data )
-

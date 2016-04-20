@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling_just_LCM.py pdb_copies_dont_touch/native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ test_pdb_dir/ 5
+run glycan_sampling_just_LCM.py pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb ~/antibody_project/send_to_louis/project_glyco_files/3ay4_Fc_Glycan.iupac ~/antibody_project/send_to_louis/project_utility_files/ ~/pyrosetta_dir/test_pdb_dir/ 2 10
 '''
 
 
@@ -84,19 +84,20 @@ print
 #### IMPORTS ####
 #################
 
-# Rosetta functions
+# Rosetta worker functions
 from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
     PyMOL_Mover, MonteCarlo, PyJobDistributor
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
 from rosetta.protocols.carbohydrates import LinkageConformerMover
-#from rosetta import SmallMover
-#from rosetta.protocols.carbohydrates import GlycanRelaxMover
 
 # Rosetta functions I wrote out
 from antibody_functions import initialize_rosetta, \
     get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
     make_movemap_for_range, load_pose, get_phi_psi_omega_of_res
+
+# utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
+from pose_metrics_util import get_pose_metrics
 
 
 
@@ -316,6 +317,12 @@ while not jd.job_complete:
                                                     pack_radius = 20 )
     pack_rotamers_mover.apply( testing_pose )
     pmm.apply( testing_pose )
+    
+    # collect additional metric data
+    metrics = get_pose_metrics( native_pose, testing_pose, sugar_sf, 2 )
+    
+    # add the metric data to the .fasc file
+    jd.additional_decoy_info = metrics
     
     # dump the decoy
     jd.output_decoy( testing_pose )

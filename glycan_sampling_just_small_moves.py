@@ -72,6 +72,7 @@ if not os.path.isdir( lowest_E_structs_dir ):
 # relay information to user
 print
 print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
+print "Working PDB filename:\t\t", input_args.working_pdb_file.split( '/' )[-1]
 print "Main structure directory:\t", main_structure_dir
 print "Base structures directory:\t", base_structs_dir
 print "Lowest E structures directory:\t", lowest_E_structs_dir
@@ -292,17 +293,12 @@ while not jd.job_complete:
     mc = MonteCarlo( testing_pose, sugar_sf, 0.7 )
 
     # make an appropriate SmallMover
-    sm = SmallMover( movemap_in = mm, temperature_in = 0.7, nmoves_in = input_args.num_small_moves )
+    sm = SmallMover( movemap_in = mm, temperature_in = 0.7, nmoves_in = 1 )
     sm.scorefxn( sugar_sf )
     
-    # apply the SmallMover 10-100 times
-    sm.apply( testing_pose )
-    pmm.apply( testing_pose )
-    
-    '''
     # run the SmallMover 10-100 times using a MonteCarlo object to accept or reject the move
     num_sm_accept = 0
-    for ii in range( input_args.num_small_move_trials ):
+    for ii in range( input_args.num_small_moves ):
         # apply the SmallMover
         sm.apply( testing_pose )
         
@@ -310,8 +306,7 @@ while not jd.job_complete:
         if mc.boltzmann( testing_pose ):
             num_sm_accept += 1
             pmm.apply( testing_pose )
-    '''
-    
+
     # pack the just-moved Fc sugars and around them within 20 Angstroms
     pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose,
                                                     apply_sf_sugar_constraints = False,

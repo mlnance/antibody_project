@@ -323,7 +323,7 @@ while not jd.job_complete:
     pmm.apply( testing_pose )
     
     # collect additional metric data
-    metrics = get_pose_metrics( native_pose, testing_pose, sugar_sf, 2 )
+    metrics = get_pose_metrics( testing_pose, native_pose, sugar_sf, 2 )
     
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics

@@ -67,6 +67,7 @@ AA_list = [ 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q'
 all_letters_list = [ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' ]
 CUTOFF_DISTANCE = 5.0  # used when calculating the number of residue contacts at the interface
 PACK_RADIUS = 20.0  # used when making mutations to structures, repacks in this area
+PROBE_RADIUS = 1.4  # used for calculating total SASA
 kT = 0.7  # used in MonteCarlo and small and shear movers
 
 
@@ -134,6 +135,9 @@ def load_pose( pose_filename ):
     :param pose_filename: str( /path/to/pose/filename )
     :return: a Rosetta Pose
     """
+    # imports
+    from rosetta import Pose, pose_from_file, FoldTree
+    
     # create Pose object from filename
 #    print "Loading pose"
     pose = Pose()
@@ -752,10 +756,10 @@ def make_movemap_for_loop( loop, allow_bb_movement = True, allow_chi_movement = 
 
 
 
-def make_movemap_for_jumps( jump_numbers, verbose = False ):
+def make_movemap_for_jumps( JUMP_NUMbers, verbose = False ):
     """
     Given a jump number, creates and returns a MoveMap allowing for movement of only the Jump(s) given in the list
-    :param jump_num: list( int( valid Jump number ) )
+    :param JUMP_NUM: list( int( valid Jump number ) )
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: MoveMap for Jump(s)
     """
@@ -763,27 +767,27 @@ def make_movemap_for_jumps( jump_numbers, verbose = False ):
     mm = MoveMap()
 
     # print different verbose statements and make the MoveMap differently depending on if it's a single number, or a list
-    if isinstance( jump_numbers, int ):
+    if isinstance( JUMP_NUMbers, int ):
         # this is only one Jump
         if verbose:
-            print "Making a MoveMap for Jump number", jump_numbers
+            print "Making a MoveMap for Jump number", JUMP_NUMbers
 
         # set only the given Jump to True
-        mm.set_jump( jump_numbers, True )
+        mm.set_jump( JUMP_NUMbers, True )
 
-    elif isinstance( jump_numbers, list ):
+    elif isinstance( JUMP_NUMbers, list ):
         # this is a list of Jump numbers
         if verbose:
-            print "Making a MoveMap for Jump numbers", jump_numbers
+            print "Making a MoveMap for Jump numbers", JUMP_NUMbers
 
         # set only the given Jumps to True
-        for jump_num in jump_numbers:
-            mm.set_jump( jump_num, True )
+        for JUMP_NUM in JUMP_NUMbers:
+            mm.set_jump( JUMP_NUM, True )
 
     else:
         # I don't know what they gave me  -  I need an integer or a list
         print
-        print "I'm not sure what ", jump_numbers, "is. I need an integer or a list of integers. Exiting"
+        print "I'm not sure what ", JUMP_NUMbers, "is. I need an integer or a list of integers. Exiting"
         sys.exit()
 
     return mm
@@ -1051,11 +1055,11 @@ def CCD_loop_closure( loop, pose ):
 
 
 
-def get_interface_score( jump_num, sf, pose ):
+def get_interface_score( JUMP_NUM, sf, pose ):
     """
     Given a jump number that defines the interface, calculates Rosetta's ddG interface
-    Splits apart the two domains defined by the <jump_num>, scores it, then subtracts that from the total score of the <pose>  -  result is the interface score
-    :param jump_num: int( valid Jump number of the interface )
+    Splits apart the two domains defined by the <JUMP_NUM>, scores it, then subtracts that from the total score of the <pose>  -  result is the interface score
+    :param JUMP_NUM: int( valid Jump number of the interface )
     :param sf: ScoreFunction
     :param pose: Pose
     :return: float( ddG interface score )
@@ -1066,12 +1070,12 @@ def get_interface_score( jump_num, sf, pose ):
     # make and split the temporary pose
     temp_pose = Pose()
     temp_pose.assign( pose )
-    jump = temp_pose.jump( jump_num )
+    jump = temp_pose.jump( JUMP_NUM )
 
     #TODO-get current xyz location and multiply by 500 or something instead
     vec = xyzVector_Real( 1000, 1000, 1000 )
     jump.set_translation( vec )
-    temp_pose.set_jump( jump_num, jump )
+    temp_pose.set_jump( JUMP_NUM, jump )
 
     # get and return interface score
     split_apart_score = sf( temp_pose )
@@ -1241,24 +1245,24 @@ def count_atomic_contacts_between_range1_range2( range1, range2, pose, cutoff = 
 
 
 
-def count_interface_atomic_contacts( jump_num, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+def count_interface_atomic_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
     """
-    Counts the atom-to-atom (discluding hydrogens) contacts given a cutoff of <cutoff> Angstroms at the interface given the jump number <jump_num>
+    Counts the atom-to-atom (discluding hydrogens) contacts given a cutoff of <cutoff> Angstroms at the interface given the jump number <JUMP_NUM>
     Returns the number of contacts as a float and a list of the unique contacts made between the atoms of side 1 to side 2
-    :param jump_num: int( Jump number that defines the interface )
+    :param JUMP_NUM: int( Jump number that defines the interface )
     :param pose: Pose
     :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: float( number of atomic contacts at interface ), list( str( atm1 res name + atm name + atm1 chain + '_' + atm2 res name + atm2 atm name + atm2 chain
     """
     # check to see that the jump number is valid
-    if jump_num <= 0 or jump_num > pose.num_jump():
+    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
         print
         print "You gave me an invalid jump number, try again"
         sys.exit()
 
     if verbose:
-        print "Counting interface contacts across jump number", jump_num, "discluding hydrogen atoms..."
+        print "Counting interface contacts across jump number", JUMP_NUM, "discluding hydrogen atoms..."
 
     # get a list of all residue numbers from side 1 to 2
     side_1_list = []
@@ -1266,7 +1270,7 @@ def count_interface_atomic_contacts( jump_num, pose, cutoff = CUTOFF_DISTANCE, v
 
     # find all of the residue numbers that correspond to side 1 and side 2
     for ii in range( 1, pose.total_residue() + 1 ):
-        if ii < pose.fold_tree().downstream_jump_residue( jump_num ):
+        if ii < pose.fold_tree().downstream_jump_residue( JUMP_NUM ):
             side_1_list.append( ii )
         else:
             side_2_list.append( ii )
@@ -1274,7 +1278,7 @@ def count_interface_atomic_contacts( jump_num, pose, cutoff = CUTOFF_DISTANCE, v
     # check to see that neither of the lists are empty
     if len( side_1_list ) == 0 or len( side_2_list ) == 0:
         print
-        print "It appears that the jump number", jump_num, "does not actually define an interface"
+        print "It appears that the jump number", JUMP_NUM, "does not actually define an interface"
         sys.exit()
 
     # find all residues from side 1 and side 2 that are within 3 * CUTOFF_DISTANCE angstroms of each other
@@ -1311,25 +1315,60 @@ def count_interface_atomic_contacts( jump_num, pose, cutoff = CUTOFF_DISTANCE, v
 
 
 
-def analyze_interface( jump_num, pose, pack_separated = True ):
+def calc_interface_sasa( pose, JUMP_NUM ):
+    """
+    Use rosetta.calc_total_sasa to compute the SASA of the total pose - SASA of the split-apart pose at <JUMP_NUM>
+    :param pose: Pose
+    :param JUMP_NUM: int( valid Jump number defining interface )
+    :return: float( interface_SASA value )
+    """
+    # imports
+    from rosetta import calc_total_sasa
+    
+    # make sure a valid JUMP_NUM was passed in
+    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
+        print
+        print JUMP_NUM, "is an invalid Jump number. Exiting"
+        sys.exit()
+    
+    # make and split the temporary pose
+    temp_pose = Pose()
+    temp_pose.assign( pose )
+    jump = temp_pose.jump( JUMP_NUM )
+
+    #TODO-get current xyz location and multiply by 500 or something instead
+    vec = xyzVector_Real( 1000, 1000, 1000 )
+    jump.set_translation( vec )
+    temp_pose.set_jump( JUMP_NUM, jump )
+    
+    # calculate the SASA values
+    total_sasa = calc_total_sasa( pose, PROBE_RADIUS )
+    split_sasa = calc_total_sasa( temp_pose, PROBE_RADIUS )
+    delta_interface_sasa = total_sasa - split_sasa
+    
+    return delta_interface_sasa
+
+
+
+def analyze_interface( pose, JUMP_NUM, pack_separated = True ):
     """
     Use rosetta.protocols.analysis.Interface Analyzer to compute various interface metrics
-    :param jump_num: int( valid Jump number defining interface )
     :param pose: Pose
+    :param JUMP_NUM: int( valid Jump number defining interface )
     :param pack_separated: bool( Do you want to pack the protein after you split them apart? ). Default = True
     :return: float( interface_SASA value )
     """
-    # make sure a valid jump_num was passed in
-    if jump_num <= 0 or jump_num > pose.num_jump():
+    # make sure a valid JUMP_NUM was passed in
+    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
         print
-        print jump_num, "is an invalid Jump number. Exiting"
+        print JUMP_NUM, "is an invalid Jump number. Exiting"
         sys.exit()
 
     # instantiate an InterfaceAnalyzer mover
     IAmover = IAM()
 
     # set the interface jump to the jump number passed in
-    IAmover.set_interface_jump( jump_num )
+    IAmover.set_interface_jump( JUMP_NUM )
 
     # TODO-see what's worth calculating and then actually return the value
     # set what you want to calculate
@@ -1342,6 +1381,7 @@ def analyze_interface( jump_num, pose, pack_separated = True ):
     IAmover.set_pack_separated( pack_separated )
 
     print "Analyzing interface..."
+    IAmover.reset_status()
     IAmover.apply( pose )
 
     # retrieve data
@@ -1895,7 +1935,7 @@ def foldtree_to_string_and_stripped( pose, verbose = False ):
 
 
 
-def get_jump_num_from_seq_pos( seq_pos, pose, downstream = False, verbose = False ):
+def get_JUMP_NUM_from_seq_pos( seq_pos, pose, downstream = False, verbose = False ):
     """
     Return the associated up- or downstream jump number given a specific <seq_pos> of a <pose>
     Returns the upstream jump number by default, set <downstream> to True to retrieve upstream jump number of <seq_pos>
@@ -1972,27 +2012,27 @@ def get_jump_num_from_seq_pos( seq_pos, pose, downstream = False, verbose = Fals
 
 
 
-def get_seq_pos_from_jump_num( jump_num, pose, start = False, verbose = False):
+def get_seq_pos_from_JUMP_NUM( JUMP_NUM, pose, start = False, verbose = False):
     """
-    Return the associated start or stop sequence position corresponding to the <jump_num> in a <pose>
+    Return the associated start or stop sequence position corresponding to the <JUMP_NUM> in a <pose>
     By default, returns the stop position. Set <start> to True if you want the start position
-    :param jump_num: int( Jump number )
+    :param JUMP_NUM: int( Jump number )
     :param pose: Pose
     :param start: bool( do you want the start sequence position? Please set to True). Default = False (ie. returns stop position )
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: int( sequence position of the start or stop residue )
     """
-    # check to make sure a valid <jump_num> was passed
-    if jump_num <= 0 or jump_num > pose.num_jump():
+    # check to make sure a valid <JUMP_NUM> was passed
+    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
         print
-        print "Invalid jump number given:", jump_num, "Exiting"
+        print "Invalid jump number given:", JUMP_NUM, "Exiting"
         sys.exit()
 
     if verbose:
         if start:
-            print "Getting the start residue closest to the Jump number", jump_num
+            print "Getting the start residue closest to the Jump number", JUMP_NUM
         else:
-            print "Getting the stop residue closest to the Jump number", jump_num
+            print "Getting the stop residue closest to the Jump number", JUMP_NUM
 
     # get string version without whitespace of FoldTree EDGE's
     ft_split_on_white_space = foldtree_to_string_and_stripped( pose )
@@ -2011,13 +2051,13 @@ def get_seq_pos_from_jump_num( jump_num, pose, start = False, verbose = False):
                     edge_split_on_white.append( e )
 
 
-        # find the start or stop residue of the given <jump_num>
+        # find the start or stop residue of the given <JUMP_NUM>
         start_pos = int( edge_split_on_white[0] )
         stop_pos = int( edge_split_on_white[1] )
         edge_type = int( edge_split_on_white[2] )
 
-        # if the edge_type is the <jump_num>
-        if edge_type == jump_num:
+        # if the edge_type is the <JUMP_NUM>
+        if edge_type == JUMP_NUM:
             # return start or stop position, given user input
             if start:
                 return start_pos

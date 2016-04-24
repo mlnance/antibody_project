@@ -60,41 +60,102 @@ def get_pose_metrics( working, native, sf, JUMP_NUM ):
 
 
 
+class fasc_dict( dict ):
+    """
+    Allows you to create your own version of a dictionary so you can add attributes to it
+    """
+    pass
 
-def read_fasc_file( fasc_filename, terms_to_collect ):
+
+
+def read_fasc_file( fasc_filename ):
     """
     Read the <fasc_filename> and return a dictionary of the scoring data
     :param fasc_filename: str( /path/to/.fasc file
-    :param terms_to_collect: list( of str( valid terms to collect from the .fasc file ) )
     :return: dict( .fasc scoring data )
     """
     #################
     #### IMPORTS ####
     #################
 
-    import csv
+    import re
+    
+    try:
+        import pandas
+    except:
+        import csv
     
     
     ##########################
     #### FASC FILE READER ####
     ##########################
+     
+    # create the dictionary that will hold the fasc_data and its corresponding attributes
+    fasc_data = fasc_dict()
+    fasc_data.nstruct = None
+    fasc_data.pdb_name = None
     
-    with open( fasc_filename, "rb" ) as f:
-        # holds fasc data
-        fasc_data = []
+    # open up the fasc_file
+    try:
+        with open( fasc_filename, "rb" ) as fh:
+            for line in fh:
+                # remove newline characters
+                line = line.rstrip()
+                
+                # this should be the very first line of the .fasc file only
+                if line.startswith( "pdb" ):
+                    # need to replace this specific space for clarity
+                    line = line.replace( "pdb name", "pdb_name" )
+                    
+                    # replace X amount of spaces that follow ':'
+                    arr = re.split( "[:\s]+", line)
+    except:
+        print
+        print "It appears that %s is not a valid filepath, please check your input" %fasc_file
+        sys.exit()
+            
+    # turn the list of line data into an iterator
+    iterator = iter( arr )
+    
+    # cycle through the first iterator to get the pdb_name and the nstruct
+    # first iterator should always have this data
+    for ii in iterator:
+        key = str( ii )
+        try:
+            value = str( next( iterator ) )
+            if key == "pdb_name":
+                fasc_data.pdb_name = value
+            elif key == "nstruct":
+                fasc_data.nstruct = value
+        except:
+            pass   
         
-        for line in f.readlines():
-            # remove carriage returns
+    # cycle through the .fasc file again to get the scoring terms and their values
+    with open( fasc_filename, 'r' ) as fh:
+        for line in fh:
             line = line.rstrip()
-            
-            # split the line on spaces
-            space_split = line.split( ' ' )
-            
-            # ignore empty spaces
-            for data in space_split:
-                if data != ' ' and data != '':
-                    # remove the trailing ':' character
-                    fasc_data.append( data.replace( ':', '' ) )
-    
-    
+
+            # if the line is NOT the first line of the .fasc file
+            if not line.startswith( "pdb" ):
+                # split on multiple spaces after the ':' again
+                arr = re.split( "[:\s]+", line )
+                
+                iterator = iter( arr )
+                data_holder = {}
+                for ii in iterator:
+                    key = str( ii )
+                    try:
+                        # put the decoy data in the temporary holder
+                        value = str( next( iterator ) )
+                        data_holder[ key ] = value
+                        
+                        # pull out the filename decoy number
+                        if key == "filename":
+                            decoy_num = int( value.replace( ".pdb", '' ).split( '_' )[-1] )
+                    except:
+                        pass
+                    
+                # add the decoy data to the fasc_data object given the decoy number
+                fasc_data[ decoy_num ] = data_holder
+                
     return fasc_data

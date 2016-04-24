@@ -3,12 +3,11 @@ __author__ = "morganlnance"
 
 
 
-
-def get_pose_metrics( pose, ref_pose, sf, JUMP_NUM ):
+def get_pose_metrics( working, native, sf, JUMP_NUM ):
     """
     Return a space-delimited string containing various pose metrics.
-    :param pose: Pose()
-    :param ref_pose: reference Pose()
+    :param working: decoy Pose()
+    :param native: native Pose()
     :param sf: ScoreFunction()
     :param JUMP_NUM: int( interface JUMP_NUM )
     :return: str( pose metrics )
@@ -18,33 +17,41 @@ def get_pose_metrics( pose, ref_pose, sf, JUMP_NUM ):
     #################
 
     from rosetta import Vector1, calc_interaction_energy, \
-        calc_Fnat
+        calc_Fnat, calc_total_sasa
     from rosetta.core.scoring import non_peptide_heavy_atom_RMSD
+    from toolbox import get_hbonds
     
     
     
     #############################
     #### METRIC CALCULATIONS ####
     #############################
-
+    
     # holds all relevant metric data and corresponding label
     metric_data = []
     
     # ligand RMSD calculation
-    ligand_rmsd = non_peptide_heavy_atom_RMSD( pose, ref_pose )
+    ligand_rmsd = non_peptide_heavy_atom_RMSD( working, native )
     metric_data.append( "ligand_rmsd:" )
     metric_data.append( str( ligand_rmsd ) )
     
-    # interaction energy
-    interaction_energy = calc_interaction_energy( pose, sf, Vector1( [ JUMP_NUM ] ) )
-    metric_data.append( "interface_interaction_energy:" )
-    metric_data.append( str( interaction_energy ) )
+    # delta interaction energy
+    working_interaction_energy = calc_interaction_energy( working, sf, Vector1( [ JUMP_NUM ] ) )
+    native_interaction_energy = calc_interaction_energy( native, sf, Vector1( [ JUMP_NUM ] ) )
+    delta_interaction_energy = working_interaction_energy - native_interaction_energy
+    metric_data.append( "delta_interface_interaction_energy:" )
+    metric_data.append( str( delta_interaction_energy ) )
     
     # fraction of native contacts
-    Fnat = calc_Fnat( pose, ref_pose, sf, Vector1( [ JUMP_NUM ] ) )
-    metric_data.append( "Fnat:" )
-    metric_data.append( str( Fnat ) )
+    #Fnat = calc_Fnat( working, native, sf, Vector1( [ JUMP_NUM ] ) )
+    #metric_data.append( "Fnat:" )
+    #metric_data.append( str( Fnat ) )
         
+    # delta hbonds
+    delta_hbonds = get_hbonds( working ).nhbonds() - get_hbonds( native ).nhbonds()
+    metric_data.append( "delta_hbonds:" )
+    metric_data.append( str( delta_hbonds ) )
+    
     # create metrics string
     metrics = ' '.join( metric_data )
     

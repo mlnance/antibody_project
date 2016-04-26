@@ -8,7 +8,6 @@ parser = argparse.ArgumentParser(description="Use Rosetta to calculate RMSD betw
 parser.add_argument("native_pdb_filename", help="the filename of the PDB structure to serve as the native structure")
 parser.add_argument("structure_dir", help="where do the structures to which I am comparing the native live?")
 parser.add_argument("resulting_filename", type=str, help="what do you want the resulting csv file to be called? This program will add the .csv extension for you")
-parser.add_argument("--verbose", "-v", default=False, action="store_true", help="do you want the program to print out which decoy number it is on? Default = False")
 input_args = parser.parse_args()
 
 
@@ -88,8 +87,7 @@ mutant_df_data.append( header )
 # run the data collection while printing out decoy_num
 decoy_num = 1
 for pdb in structures:
-    if input_args.verbose:
-        print "Working on decoy number", decoy_num, "of", num_structs
+    print "Working on decoy number", decoy_num, "of", num_structs
     
     # load the mutant Pose
     mutant = Pose()

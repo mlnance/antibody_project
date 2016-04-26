@@ -894,7 +894,7 @@ def do_min_with_this_mm( mm, sf, pose, apply_sf_sugar_constraints = True, minimi
 
 
 
-def do_pack_min( sf, input_pose, apply_sf_sugar_constraints = True, residue_range = None, jumps = None, pack_branch_points = True, use_pack_radius = False, pack_radius = PACK_RADIUS, minimization_type = "dfpmin_strong_wolfe", verbose = False, pmm = None ):
+def do_pack_min( sf, input_pose, apply_sf_sugar_constraints = True, residue_range = None, jumps = None, pack_branch_points = True, use_pack_radius = False, pack_radius = PACK_RADIUS, allow_sugar_chi = False, minimization_type = "dfpmin_strong_wolfe", verbose = False, pmm = None ):
     """
     Makes and applies a packer task and basic min mover to <pose> using the supplied ScoreFunction <sf>
     IMPORTANT: If using a specific type of minimization, <minimization_type>, it DOES NOT check beforehand if the type you gave is valid, so any string actually will work. It will break when used
@@ -952,6 +952,7 @@ def do_pack_min( sf, input_pose, apply_sf_sugar_constraints = True, residue_rang
                                 pose, 
                                 apply_sf_sugar_constraints = apply_sf_sugar_constraints, 
                                 jumps = jumps, 
+                                allow_sugar_chi = allow_sugar_chi,
                                 minimization_type = minimization_type, 
                                 verbose = verbose )
     min_mover.apply( pose )

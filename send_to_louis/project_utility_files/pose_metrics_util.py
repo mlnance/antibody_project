@@ -90,29 +90,24 @@ def read_fasc_file( fasc_filename ):
     #### FASC FILE READER ####
     ##########################
      
-    # create the dictionary that will hold the fasc_data and its corresponding attributes
-    fasc_data = fasc_dict()
-    fasc_data.nstruct = None
-    fasc_data.pdb_name = None
+    # create the dictionary that will hold the fasc_data_dict and its corresponding attributes
+    fasc_data_dict = fasc_dict()
+    fasc_data_dict.nstruct = None
+    fasc_data_dict.pdb_name = None
     
     # open up the fasc_file
-    try:
-        with open( fasc_filename, "rb" ) as fh:
-            for line in fh:
-                # remove newline characters
-                line = line.rstrip()
+    with open( fasc_filename, "rb" ) as fh:
+        for line in fh:
+            # remove newline characters
+            line = line.rstrip()
+            
+            # this should be the very first line of the .fasc file only
+            if line.startswith( "pdb" ):
+                # need to replace this specific space for clarity
+                line = line.replace( "pdb name", "pdb_name" )
                 
-                # this should be the very first line of the .fasc file only
-                if line.startswith( "pdb" ):
-                    # need to replace this specific space for clarity
-                    line = line.replace( "pdb name", "pdb_name" )
-                    
-                    # replace X amount of spaces that follow ':'
-                    arr = re.split( "[:\s]+", line)
-    except:
-        print
-        print "It appears that %s is not a valid filepath, please check your input" %fasc_file
-        sys.exit()
+                # replace X amount of spaces that follow ':'
+                arr = re.split( "[:\s]+", line)
             
     # turn the list of line data into an iterator
     iterator = iter( arr )
@@ -124,11 +119,14 @@ def read_fasc_file( fasc_filename ):
         try:
             value = str( next( iterator ) )
             if key == "pdb_name":
-                fasc_data.pdb_name = value
+                fasc_data_dict.pdb_name = value
             elif key == "nstruct":
-                fasc_data.nstruct = value
+                fasc_data_dict.nstruct = value
         except:
-            pass   
+            pass
+        
+    # will hold valid decoy numbers in the fasc_data_dict object for easy access
+    fasc_data_dict.decoy_nums = []
         
     # cycle through the .fasc file again to get the scoring terms and their values
     with open( fasc_filename, 'r' ) as fh:
@@ -152,10 +150,37 @@ def read_fasc_file( fasc_filename ):
                         # pull out the filename decoy number
                         if key == "filename":
                             decoy_num = int( value.replace( ".pdb", '' ).split( '_' )[-1] )
+                            fasc_data_dict.decoy_nums.append( decoy_num )
                     except:
                         pass
                     
-                # add the decoy data to the fasc_data object given the decoy number
-                fasc_data[ decoy_num ] = data_holder
+                # add the decoy data to the fasc_data_dict object given the decoy number
+                fasc_data_dict[ decoy_num ] = data_holder
                 
-    return fasc_data
+    # just because I'm picky - sort the decoy_nums
+    fasc_data_dict.decoy_nums.sort()
+    
+    # return the fasc data
+    return fasc_data_dict
+
+
+
+def get_score_term_from_fasc_data_dict( fasc_data_dict, score_term ):
+    """
+    After getting a <fasc_data_dict> from running read_fasc_file, pull out the <score_term> for each decoy in the .fasc file
+    :param fasc_data_dict: dict( data dictionary from .fasc file )
+    :param score_term: str( the score term you want back for each decoy
+    :return: dict( decoy : score_term value )
+    """
+    # iterate through the dictionary skipping decoys that don't have that term
+    score_term_dict = {}
+    for decoy_num in fasc_data_dict.decoy_nums:
+        try:
+            score_term_dict[ decoy_num ] = float( fasc_data_dict[ decoy_num ][ score_term ] )
+        # if it can only be a string
+        except ValueError:
+            score_term_dict[ decoy_num ] = fasc_data_dict[ decoy_num ][ score_term ]
+        except:
+            pass
+        
+    return score_term_dict

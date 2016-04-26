@@ -8,6 +8,7 @@ parser = argparse.ArgumentParser(description="Use Rosetta to calculate RMSD betw
 parser.add_argument("native_pdb_filename", help="the filename of the PDB structure to serve as the native structure")
 parser.add_argument("structure_dir", help="where do the structures to which I am comparing the native live?")
 parser.add_argument("resulting_filename", type=str, help="what do you want the resulting csv file to be called? This program will add the .csv extension for you")
+parser.add_argument("--verbose", "-v", default=False, action="store_true", help="do you want the program to print out which decoy number it is on? Default = False")
 input_args = parser.parse_args()
 
 
@@ -18,7 +19,8 @@ input_args = parser.parse_args()
 
 from antibody_functions import initialize_rosetta, load_pose
 from rosetta import Pose, get_fa_scorefxn
-from rosetta.core.scoring import CA_rmsd
+#from rosetta.core.scoring import CA_rmsd as RMSD_function
+from rosetta.core.scoring import non_peptide_heavy_atom_RMSD as RMSD_function
 
 import os, sys, csv
 try:
@@ -86,7 +88,8 @@ mutant_df_data.append( header )
 # run the data collection while printing out decoy_num
 decoy_num = 1
 for pdb in structures:
-    print "Working on decoy number", decoy_num, "of", num_structs
+    if input_args.verbose:
+        print "Working on decoy number", decoy_num, "of", num_structs
     
     # load the mutant Pose
     mutant = Pose()
@@ -95,7 +98,7 @@ for pdb in structures:
     # collect the data
     name = pdb.split( '/' )[-1]
     score = sf( mutant )
-    rmsd = CA_rmsd( native, mutant )
+    rmsd = RMSD_function( native, mutant )
     
     # for if Pandas does work
     pdb_names.append( name )

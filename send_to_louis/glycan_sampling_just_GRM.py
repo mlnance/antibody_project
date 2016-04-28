@@ -351,38 +351,48 @@ while not jd.job_complete:
     # make an appropriate GlycanRelaxMover
     grm = GlycanRelaxMover( mm = grm_mm, scorefxn = sugar_sf, rounds = input_args.num_GRM_moves )
     
+    # make an appropriate MonteCarlo object
+    mc = MonteCarlo( testing_pose, sugar_sf, 0.7 )    
+    
     # run the GlycanRelaxMover 10-100 times
-    grm.apply( testing_pose )
-    pmm.apply( testing_pose )
+    mc_accepted = False
+    while not( mc_accepted ):
+        # apply the GlycanRelaxMover
+        grm.apply( testing_pose )
+        
+        # pack the Fc sugars and around them within 20 Angstroms
+        pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
+                                                        apply_sf_sugar_constraints = False,
+                                                        pack_branch_points = True, 
+                                                        residue_range = Fc_sugar_nums, 
+                                                        use_pack_radius = True, 
+                                                        pack_radius = 20 )
+        pack_rotamers_mover.apply( testing_pose )
+        print "score after pack", sf( testing_pose )
+        
+        # make MoveMap for the Fc sugars
+        min_mm = make_movemap_for_range( Fc_sugar_nums, 
+                                         allow_bb_movement = True, 
+                                         allow_chi_movement = True )
+        
+        # add in the branch points myself ( does not include the two ASN residues )
+        for branch_point in Fc_glycan_branch_point_nums:
+            min_mm.set_branches( branch_point, True )
+            
+        # make and apply MinMover
+        min_mover = MinMover( movemap_in = min_mm, 
+                              scorefxn_in = sugar_sf, 
+                              min_type_in = "dfpmin_strong_wolfe", 
+                              tolerance_in = 0.01, 
+                              use_nb_list_in = True )
+        min_mover.apply( testing_pose )
+        print "score after min", sf( testing_pose )
+        
+        # accept or reject the moves using the MonteCarlo object
+        if mc.boltzmann( testing_pose ):
+            mc_accepted = True
+            pmm.apply( testing_pose )
     
-    # pack the Fc sugars and around them within 20 Angstroms
-    pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
-                                                    apply_sf_sugar_constraints = False,
-                                                    pack_branch_points = True, 
-                                                    residue_range = Fc_sugar_nums, 
-                                                    use_pack_radius = True, 
-                                                    pack_radius = 20 )
-    pack_rotamers_mover.apply( testing_pose )
-    print "score after pack", sf( testing_pose )
-        
-    # make MoveMap for the Fc sugars
-    min_mm = make_movemap_for_range( Fc_sugar_nums, 
-                                     allow_bb_movement = True, 
-                                     allow_chi_movement = True )
-    
-    # add in the branch points myself ( does not include the two ASN residues )
-    for branch_point in Fc_glycan_branch_point_nums:
-        min_mm.set_branches( branch_point, True )
-        
-    # make and apply MinMover
-    min_mover = MinMover( movemap_in = min_mm, 
-                          scorefxn_in = sugar_sf, 
-                          min_type_in = "dfpmin_strong_wolfe", 
-                          tolerance_in = 0.01, 
-                          use_nb_list_in = True )
-    min_mover.apply( testing_pose )
-    print "score after min", sf( testing_pose )
-        
     # collect additional metric data
     metrics = get_pose_metrics( testing_pose,
                                 native_pose,

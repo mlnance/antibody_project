@@ -577,7 +577,8 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True,
 
     # if specified, turn off packing for each branch point residue
     if pack_branch_points is False:
-        print "  Turning off packing for branch points"
+        if verbose:
+            print "  Turning off packing for branch points"
         for res_num in range( 1, pose.n_residue() + 1 ):
             if pose.residue( res_num ).is_branch_point():
                 task.nonconst_residue_task( res_num ).prevent_repacking()
@@ -911,6 +912,7 @@ def do_pack_min( sf, input_pose, apply_sf_sugar_constraints = True, residue_rang
     :param pack_branch_points: bool( allow packing at branch points? ). Default = True
     :param use_pack_radius: bool( Do you want to pack residues within a certain <pack_radius> around residues specified in <residue_range>? ). Default = False
     :param pack_radius: int( or float( the radius around which you want to pack additional residues around the residues from <residue_range>. MUST have <set use_pack_radius> to True to do this ). Default = PACK_RADIUS = 20.0 Angstroms
+    :param allow_sugar_chi: bool( allow chi minimization for sugars? ). Default = False
     :param minimization_type: str( the type of minimization you want to use ). Default = "dfpmin_strong_wolfe"
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None

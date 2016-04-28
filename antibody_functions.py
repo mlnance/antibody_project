@@ -1248,6 +1248,83 @@ def count_atomic_contacts_between_range1_range2( range1, range2, pose, cutoff = 
 
 
 
+def count_interface_residue_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+    """
+    Counts the number of residue "contacts" in a <pose> between interface residues given a <cutoff>
+    :param JUMP_NUM: int( Jump number that defines the interface )
+    :param pose: Pose
+    :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :return: float( number of residue contacts at interface ), list( str( res1resname_res1chain_res1pdbnum+res2resname_res2chain_res2pdbnum ) )
+    """
+    # check to see that the jump number is valid
+    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
+        print
+        print "You gave me an invalid jump number, try again"
+        sys.exit()
+
+    # get a list of all residue numbers from side 1 to 2
+    range1 = []
+    range2 = []
+
+    # find all of the residue numbers that correspond to side 1 and side 2
+    for ii in range( 1, pose.total_residue() + 1 ):
+        if ii < pose.fold_tree().downstream_jump_residue( JUMP_NUM ):
+            range1.append( ii )
+        else:
+            range2.append( ii )
+
+    # check to see that neither of the lists are empty
+    if len( range1 ) == 0 or len( range2 ) == 0:
+        print
+        print "It appears that the jump number", JUMP_NUM, "does not actually define an interface"
+        sys.exit()
+
+    # instantiate counter and the list to hold the unique contact names
+    contacts = 0
+    contact_list = []
+    
+    # loop through each residue of each residue of side 1 specified and see if its within <cutoff> distance of any residue from side 2
+    for res_num_1 in range1:
+        # get the chain and seqpos of this residue
+        res1 = pose.residue( res_num_1 )
+        res1_name = res1.name3()
+        res1_chain = pose.pdb_info().chain( res_num_1 )
+        res1_pdb_num = pose.pdb_info().pose2pdb( res_num_1 ).split( ' ' )[0]
+        
+        # get the center of res_num_1
+        res1_center = res1.nbr_atom_xyz()
+        
+        # loop over each residue on side 2
+        for res_num_2 in range2:
+            # get the chain and seqpos of this residue
+            res2 = pose.residue( res_num_2 )
+            res2_name = res2.name3()
+            res2_chain = pose.pdb_info().chain( res_num_2 )
+            res2_pdb_num = pose.pdb_info().pose2pdb( res_num_2 ).split( ' ' )[0]
+            
+            # get the center of res_num_2
+            res2_center = res2.nbr_atom_xyz()
+
+            # if the two residues are within the appropriate distance given by <cutoff>
+            dist = res1_center.distance( res2_center )
+            if dist <= cutoff:
+                # makes unique names for each contact for ease of analysis
+                uniq_name_res1 = res1_name + '_' + res1_chain + '_' + str( res1_pdb_num )
+                uniq_name_res2 = res2_name + '_' + res2_chain + '_' + str( res2_pdb_num )
+
+                # unique name is the combination of the information from both res1 and res2
+                unique_name = uniq_name_res1 + '+' + uniq_name_res2
+                
+                # if this specific contact has not already been found, add it to the list and up the contacts counter
+                if unique_name not in contact_list:
+                    contact_list.append( unique_name )
+                    contacts += 1
+
+    return contacts, contact_list
+
+
+
 def count_interface_atomic_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
     """
     Counts the atom-to-atom (discluding hydrogens) contacts given a cutoff of <cutoff> Angstroms at the interface given the jump number <JUMP_NUM>

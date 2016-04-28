@@ -169,7 +169,6 @@ def dump_pdb_by_chain( filename, pose, chains ):
     #################
     
     import os, sys
-    sys.path.append( "/Users/Research/antibody_project/utility_functions" )
     from line_definitions import PDB_line, HETNAM_line, \
         LINK_line, SSBOND_line
     

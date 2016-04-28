@@ -247,9 +247,7 @@ def dump_pdb_by_chain( filename, pose, chains ):
 
     
 
-# TODO: figure out why this won't work....
-'''
-def dump_pdb_by_chain( filename, pose, chains ):
+def fancy_dump_pdb_by_chain( filename, pose, chains ):
     """
     Dump a .pdb file of <pose> including only the specified <chains>
     Sample input -- dump_pdb_by_chain( "test_out.pdb", my_pose, [ 'A', 'C', 'E' ]
@@ -292,17 +290,14 @@ def dump_pdb_by_chain( filename, pose, chains ):
     if len( keep_these_residues ) == 0:
         print "No residues matched your chain ID. I won't be dumping a file for you."
         return False
-    print keep_these_residues
 
     # otherwise dump the selected residues into a PDB file
     fh = open( filename, "wb" )
-    ostream_fh = ostream( fh )
     try:
-        pose.dump_pdb( ostream_fh, keep_these_residues )
+        pose.dump_pdb( ostream( fh ), keep_these_residues )
         fh.close()        
         return True
     
     except:
         fh.close()    
         return False
-'''

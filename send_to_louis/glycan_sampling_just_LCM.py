@@ -150,6 +150,9 @@ working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylate
 A_phi, A_psi, A_omega = get_phi_psi_omega_of_res( native_pose, 216 )
 B_phi, B_psi, B_omega = get_phi_psi_omega_of_res( native_pose, 440 )
 
+# collect the chain id's of the Fc glycan from the native pose
+native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
+
 ## get some numbers that will be used in pieces of this protocol
 # this number is used later for resetting the core glycan
 n_res_no_Fc_glycan = working_pose.n_residue()
@@ -158,12 +161,23 @@ n_res_no_Fc_glycan = working_pose.n_residue()
 # and get the residue numbers of branch points - they should also be ignored sometimes
 FcR_seqpos_nums = []
 FcR_branch_point_nums = []
+working_pose_chains = []
 for res in working_pose:
+    # residue numbers
     if res.is_carbohydrate():
         FcR_seqpos_nums.append( res.seqpos() )
+        
+    # branch points
     if res.is_branch_point():
         FcR_branch_point_nums.append( res.seqpos() )
+        
+    # chain id's
+    res_chain = working_pose.pdb_info().chain( res.seqpos() )
+    if res_chain not in working_pose_chains:
+        working_pose_chains.append( res_chain )
 
+# get the number of chains because the Pose renumbers its chains after glycosylation
+num_working_pose_chains = len( working_pose_chains )
 
 # get a standard fa_scorefxn for protein stuff
 sf = get_fa_scorefxn()
@@ -212,7 +226,20 @@ while not jd.job_complete:
     testing_pose.pdb_info().name( "decoy_num_" + str( cur_decoy_num ) )
     pmm.apply( testing_pose )
     print "score of glycosylated pose", sf( testing_pose )
-
+    
+    # get the chain id's of the glycosylated testing_pose
+    testing_pose_chains = []
+    for res in testing_pose:
+        # chain id's
+        res_chain = testing_pose.pdb_info().chain( res.seqpos() )
+        if res_chain not in testing_pose_chains:
+            testing_pose_chains.append( res_chain )
+    num_testing_pose_chains = len( testing_pose_chains )
+    
+    # pull out the chain id's based on how many chains were added to testing_pose
+    num_chains_added = num_testing_pose_chains - num_working_pose_chains
+    Fc_glycan_chains = testing_pose_chains[ ( -1 * num_chains_added ) : ]
+    
     
 
     ###########################
@@ -381,7 +408,13 @@ while not jd.job_complete:
         print "  Acceptance rate:", mc_acceptance
 
     # collect additional metric data
-    metrics = get_pose_metrics( testing_pose, native_pose, sugar_sf, 2, mc_acceptance )
+    metrics = get_pose_metrics( testing_pose, 
+                                native_pose, 
+                                sugar_sf, 
+                                2, 
+                                Fc_glycan_chains, 
+                                native_Fc_glycan_chains, 
+                                mc_acceptance )
     
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics

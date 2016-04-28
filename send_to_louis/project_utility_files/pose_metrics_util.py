@@ -57,8 +57,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
         metric_data.append( str( MC_acceptance_rate ) )
     
     # create metrics string
-    metrics = ' '.join( metric_data )
-    
+    metrics = ' '.join( metric_data )    
     
     return metrics
 
@@ -164,7 +163,6 @@ def read_fasc_file( fasc_filename ):
     # just because I'm picky - sort the decoy_nums
     fasc_data_dict.decoy_nums.sort()
     
-    # return the fasc data
     return fasc_data_dict
 
 

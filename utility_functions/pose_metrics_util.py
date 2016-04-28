@@ -56,8 +56,8 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     metric_data.append( str( delta_hbonds ) )
     
     # interface residue contacts
-    working_interface_res_contacts, working_contact_list = count_interface_residue_contacts( 2, working, cutoff = 10 )
-    native_interface_res_contacts, native_contact_list = count_interface_residue_contacts( 2, native, cutoff = 10 )
+    working_interface_res_contacts, working_contact_list = count_interface_residue_contacts( 2, working, cutoff = 8 )
+    native_interface_res_contacts, native_contact_list = count_interface_residue_contacts( 2, native, cutoff = 8 )
     delta_interface_res_contacts = working_interface_res_contacts - native_interface_res_contacts
     metric_data.append( "delta_interface_res_contacts_10_A:" )
     metric_data.append( str( delta_interface_res_contacts ) )

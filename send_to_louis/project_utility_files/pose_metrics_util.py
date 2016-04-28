@@ -3,13 +3,14 @@ __author__ = "morganlnance"
 
 
 
-def get_pose_metrics( working, native, sf, JUMP_NUM ):
+def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None ):
     """
     Return a space-delimited string containing various pose metrics.
     :param working: decoy Pose()
     :param native: native Pose()
     :param sf: ScoreFunction()
     :param JUMP_NUM: int( interface JUMP_NUM )
+    :param MC_acceptance_rate: float( the MonteCarlo acceptance rate of your protocol, if relevant ). Default = None
     :return: str( pose metrics )
     """
     #################
@@ -30,10 +31,11 @@ def get_pose_metrics( working, native, sf, JUMP_NUM ):
     # holds all relevant metric data and corresponding label
     metric_data = []
     
-    # ligand RMSD calculation
-    ligand_rmsd = non_peptide_heavy_atom_RMSD( working, native )
-    metric_data.append( "ligand_rmsd:" )
-    metric_data.append( str( ligand_rmsd ) )
+    # glycan RMSD calculation
+    # take off FcR of working and native and compare to subtract out rmsd contribution from the FcR
+    glycan_rmsd = non_peptide_heavy_atom_RMSD( working, native )
+    metric_data.append( "glycan_rmsd:" )
+    metric_data.append( str( glycan_rmsd ) )
     
     # delta interaction energy
     working_interaction_energy = calc_interaction_energy( working, sf, Vector1( [ JUMP_NUM ] ) )
@@ -42,15 +44,17 @@ def get_pose_metrics( working, native, sf, JUMP_NUM ):
     metric_data.append( "delta_interface_interaction_energy:" )
     metric_data.append( str( delta_interaction_energy ) )
     
-    # fraction of native contacts
-    #Fnat = calc_Fnat( working, native, sf, Vector1( [ JUMP_NUM ] ) )
-    #metric_data.append( "Fnat:" )
-    #metric_data.append( str( Fnat ) )
-        
     # delta hbonds
-    delta_hbonds = get_hbonds( working ).nhbonds() - get_hbonds( native ).nhbonds()
+    working_hbonds = get_hbonds( working )
+    native_hbonds = get_hbonds( native )
+    delta_hbonds = working_hbonds.nhbonds() - native_hbonds.nhbonds()
     metric_data.append( "delta_hbonds:" )
     metric_data.append( str( delta_hbonds ) )
+    
+    # MonteCarlo acceptance rate - if relevant
+    if MC_acceptance_rate is not None:
+        metric_data.append( "MonteCarlo_acceptance_rate:" )
+        metric_data.append( str( MC_acceptance_rate ) )
     
     # create metrics string
     metrics = ' '.join( metric_data )

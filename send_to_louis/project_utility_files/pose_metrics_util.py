@@ -3,13 +3,15 @@ __author__ = "morganlnance"
 
 
 
-def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None ):
+def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, native_Fc_glycan_chains, MC_acceptance_rate = None ):
     """
     Return a space-delimited string containing various pose metrics.
     :param working: decoy Pose()
     :param native: native Pose()
     :param sf: ScoreFunction()
     :param JUMP_NUM: int( JUMP_NUM that defines the interface )
+    :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
+    :param native_Fc_glycan_chains: list( the chain id's for the native Fc glycan ). Ex = [ 'D', 'E' ]
     :param MC_acceptance_rate: float( the MonteCarlo acceptance rate of your protocol, if relevant ). Default = None
     :return: str( pose metrics )
     """
@@ -18,13 +20,17 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     #################
     
     # Rosetta functions
-    from rosetta import Vector1, calc_interaction_energy
+    from rosetta import Pose, Vector1, calc_interaction_energy
     from rosetta.core.scoring import non_peptide_heavy_atom_RMSD
     from toolbox import get_hbonds
     
     # Rosetta functions I wrote out
     from antibody_functions import count_interface_residue_contacts, \
-        calc_interface_sasa
+        calc_interface_sasa, load_pose
+    
+    # utility functions
+    import os
+    from util import dump_pdb_by_chain
     
     
     
@@ -36,10 +42,22 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     metric_data = []
     
     # glycan RMSD calculation
-    # take off FcR of working and native and compare to subtract out rmsd contribution from the FcR
-    glycan_rmsd = non_peptide_heavy_atom_RMSD( working, native )
+    working_filename = "temp_working.pdb"
+    native_filename = "temp_native.pdb"
+    dump_pdb_by_chain( working_filename, working, working_Fc_glycan_chains )
+    dump_pdb_by_chain( native_filename, native, native_Fc_glycan_chains )
+    
+    temp_working = Pose()
+    temp_working.assign( load_pose( working_filename ) )
+    os.popen( "rm %s" %working_filename )
+    temp_native = Pose()
+    temp_native.assign( load_pose( native_filename ) )
+    os.popen( "rm %s" %native_filename )
+
+    glycan_rmsd = non_peptide_heavy_atom_RMSD( temp_working, temp_native )
     metric_data.append( "glycan_rmsd:" )
     metric_data.append( str( glycan_rmsd ) )
+    
     
     # delta interaction energy
     working_interaction_energy = calc_interaction_energy( working, sf, Vector1( [ JUMP_NUM ] ) )
@@ -47,6 +65,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     delta_interaction_energy = working_interaction_energy - native_interaction_energy
     metric_data.append( "delta_interface_interaction_energy:" )
     metric_data.append( str( delta_interaction_energy ) )
+
     
     # delta hbonds
     working_hbonds = get_hbonds( working )
@@ -54,6 +73,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     delta_hbonds = working_hbonds.nhbonds() - native_hbonds.nhbonds()
     metric_data.append( "delta_hbonds:" )
     metric_data.append( str( delta_hbonds ) )
+
     
     # delta interface residue contacts
     working_interface_res_contacts, working_contact_list = count_interface_residue_contacts( JUMP_NUM, working, cutoff = 8 )
@@ -61,6 +81,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     delta_interface_res_contacts = working_interface_res_contacts - native_interface_res_contacts
     metric_data.append( "delta_interface_res_contacts_8_A:" )
     metric_data.append( str( delta_interface_res_contacts ) )
+
     
     # delta interface sasa
     working_interface_sasa = calc_interface_sasa( working, JUMP_NUM )
@@ -68,6 +89,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     delta_interface_sasa = working_interface_sasa - native_interface_sasa
     metric_data.append( "delta_interface_sasa:" )
     metric_data.append( str( delta_interface_sasa ) )
+
     
     # MonteCarlo acceptance rate - if relevant
     if MC_acceptance_rate is not None:

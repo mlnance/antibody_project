@@ -89,6 +89,8 @@ from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
     PyMOL_Mover, MonteCarlo, PyJobDistributor
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
 from rosetta.protocols.carbohydrates import LinkageConformerMover
+from rosetta import MinMover
+from toolbox import get_hbonds
 
 # Rosetta functions I wrote out
 from antibody_functions import initialize_rosetta, \
@@ -112,6 +114,7 @@ initialize_rosetta()
 # native pose ( for comparison, really )
 native_pose = Pose()
 native_pose.assign( load_pose( input_args.native_pdb_file ) )
+print "Native hbonds", get_hbonds( native_pose ).nhbonds()
 
 # get the full path of the native PDB name
 native_pdb_filename_full_path = input_args.native_pdb_file
@@ -194,6 +197,8 @@ while not jd.job_complete:
     testing_pose = Pose()
     testing_pose.assign( working_pose )
     
+
+
     ##########################
     #### GLYCOSYLATE POSE #### 
     ##########################
@@ -206,8 +211,10 @@ while not jd.job_complete:
 
     testing_pose.pdb_info().name( "decoy_num_" + str( cur_decoy_num ) )
     pmm.apply( testing_pose )
+    print "score of glycosylated pose", sf( testing_pose )
 
     
+
     ###########################
     #### CORE GlcNAc RESET ####
     ###########################
@@ -231,6 +238,7 @@ while not jd.job_complete:
     testing_pose.set_omega( B_core_GlcNAc, B_omega )
     
     pmm.apply( testing_pose )
+    print "score of glyco reset", sf( testing_pose )
 
     
     
@@ -263,6 +271,25 @@ while not jd.job_complete:
         if res_num != A_core_GlcNAc and res_num != B_core_GlcNAc:
             Fc_sugar_nums_except_core_GlcNAc.append( res_num )
             
+    # make MoveMap for the Fc sugars
+    min_mm = make_movemap_for_range( Fc_sugar_nums, 
+                                     allow_bb_movement = True, 
+                                     allow_chi_movement = True )
+    
+    # add in the branch points myself ( does not include the two ASN residues )
+    for branch_point in Fc_glycan_branch_point_nums:
+        min_mm.set_branches( branch_point, True )
+    
+    # make and apply MinMover
+    min_mover = MinMover( movemap_in = min_mm, 
+                          scorefxn_in = sugar_sf, 
+                          min_type_in = "dfpmin_strong_wolfe", 
+                          tolerance_in = 0.01, 
+                          use_nb_list_in = True )
+    min_mover.apply( testing_pose )
+    pmm.apply( testing_pose )
+    print "score of min", sf( testing_pose )
+
     # pack the Fc sugars and around them within 20 Angstroms
     pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
                                                     apply_sf_sugar_constraints = False,
@@ -272,54 +299,89 @@ while not jd.job_complete:
                                                     pack_radius = 20 )
     pack_rotamers_mover.apply( testing_pose )
     pmm.apply( testing_pose )
-
+    print "score of pack", sf( testing_pose )
+    
+    min_mover.apply( testing_pose )
+    pmm.apply( testing_pose )
+    print "score of second min", sf( testing_pose )
 
     
-    #################################
-    #### LINKAGE CONFORMER MOVER ####
-    #################################
+    
+    ###############################
+    #### LinkageConformerMover ####
+    ###############################
 
-    ## use the LinkageConformerMover to find a local sugar minima        
+    ## use the LinkageConformerMover find a local sugar minima        
     # make a MoveMap for these Fc sugars allowing only bb movement
-    mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, 
-                                 allow_bb_movement = True, 
-                                 allow_chi_movement = False )
-
+    lcm_mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, 
+                                     allow_bb_movement = True, 
+                                     allow_chi_movement = False )
+    
     # add in the branch points myself ( does not include the two ASN residues )
     for branch_point in Fc_glycan_branch_point_nums:
-        mm.set_branches( branch_point, True )
-
+        lcm_mm.set_branches( branch_point, True )
+    
     # make an appropriate MonteCarlo object
     mc = MonteCarlo( testing_pose, sugar_sf, 0.7 )
-
+    
     # make an appropriate LinkageConformerMover
     lcm = LinkageConformerMover()
-    lcm.set_movemap( mm )
+    lcm.set_movemap( lcm_mm )
     lcm.set_x_standard_deviations( 2 )
     
-    # run the LCM 10-100 times using a MonteCarlo object to accept or reject the move
+    # run the LinkageConformerMover 10-100 times using a MonteCarlo object to accept or reject the move
     num_lcm_accept = 0
+    num_mc_checks = 0
     for ii in range( input_args.num_LCM_trials ):
-        # apply the LCM
+        # apply the LinkageConformerMover
+        print
+        print "score before move", sf( testing_pose )
         lcm.apply( testing_pose )
+        print "score after move", sf( testing_pose )
+        
+        # pack the Fc sugars and around them within 20 Angstroms every other trial
+        if ii % 2 == 0:
+            pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
+                                                            apply_sf_sugar_constraints = False,
+                                                            pack_branch_points = True, 
+                                                            residue_range = Fc_sugar_nums, 
+                                                            use_pack_radius = True, 
+                                                            pack_radius = 20 )
+            pack_rotamers_mover.apply( testing_pose )
+            print "score after pack", sf( testing_pose )
+        
+        # make MoveMap for the Fc sugars
+        min_mm = make_movemap_for_range( Fc_sugar_nums, 
+                                         allow_bb_movement = True, 
+                                         allow_chi_movement = True )
+        
+        # add in the branch points myself ( does not include the two ASN residues )
+        for branch_point in Fc_glycan_branch_point_nums:
+            min_mm.set_branches( branch_point, True )
+            
+        # make and apply MinMover
+        min_mover = MinMover( movemap_in = min_mm, 
+                              scorefxn_in = sugar_sf, 
+                              min_type_in = "dfpmin_strong_wolfe", 
+                              tolerance_in = 0.01, 
+                              use_nb_list_in = True )
+        min_mover.apply( testing_pose )
+        print "score after min", sf( testing_pose )
         
         # accept or reject the move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):
             num_lcm_accept += 1
             pmm.apply( testing_pose )
-    
-    # pack the just-moved Fc sugars and around them within 20 Angstroms
-    pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose,
-                                                    apply_sf_sugar_constraints = False,
-                                                    pack_branch_points = True,
-                                                    residue_range = Fc_sugar_nums,
-                                                    use_pack_radius = True,
-                                                    pack_radius = 20 )
-    pack_rotamers_mover.apply( testing_pose )
-    pmm.apply( testing_pose )
-    
+            
+        # calculate and print out the MC acceptance rate
+        num_mc_checks += 1
+        mc_acceptance = round( ( float( num_lcm_accept ) / float( num_mc_checks ) * 100 ), 3 )
+        print "Moves made so far:", num_mc_checks, 
+        print "  Moves accepted:", num_lcm_accept, 
+        print "  Acceptance rate:", mc_acceptance
+
     # collect additional metric data
-    metrics = get_pose_metrics( testing_pose, native_pose, sugar_sf, 2 )
+    metrics = get_pose_metrics( testing_pose, native_pose, sugar_sf, 2, mc_acceptance )
     
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics
@@ -331,15 +393,3 @@ while not jd.job_complete:
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 fasc_filename = working_pose_decoy_name + ".fasc"
 lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 5 )
-
-
-
-'''
-# do a regular pack and minimization round
-testing_pose = do_pack_min( sf, testing_pose, 
-                            apply_sf_sugar_constraints = False, 
-                            pack_branch_points = True )
-pmm.apply( testing_pose )
-print "After total pack/min\t\t", sf( testing_pose )
-print
-'''

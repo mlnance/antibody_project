@@ -1058,48 +1058,6 @@ def CCD_loop_closure( loop, pose ):
 
 
 
-def get_interface_score( JUMP_NUM, sf, pose ):
-    """
-    Given a jump number that defines the interface, calculates Rosetta's ddG interface
-    Splits apart the two domains defined by the <JUMP_NUM>, scores it, then subtracts that from the total score of the <pose>  -  result is the interface score
-    :param JUMP_NUM: int( valid Jump number of the interface )
-    :param sf: ScoreFunction
-    :param pose: Pose
-    :return: float( ddG interface score )
-    """
-    # get start score
-    start_score = sf( pose )
-
-    # make and split the temporary pose
-    temp_pose = Pose()
-    temp_pose.assign( pose )
-    jump = temp_pose.jump( JUMP_NUM )
-
-    #TODO-get current xyz location and multiply by 500 or something instead
-    vec = xyzVector_Real( 1000, 1000, 1000 )
-    jump.set_translation( vec )
-    temp_pose.set_jump( JUMP_NUM, jump )
-
-    # get and return interface score
-    split_apart_score = sf( temp_pose )
-    interface_score = start_score - split_apart_score
-
-    return interface_score
-
-
-
-def count_hbonds( pose ):
-    """
-    Uses the PyRosetta toolbox get_hbonds function to count the number of hydrogen bonds in the Pose
-    :param pose: Pose
-    :return: float( number of hydrogen bonds )
-    """
-    num_hbonds = get_hbonds( pose ).nhbonds()
-
-    return float( num_hbonds )
-
-
-
 def calc_distance( vec1, vec2 ):
     """
     Calculates the distances between two points in 3D space
@@ -1131,348 +1089,6 @@ def calc_distance( vec1, vec2 ):
     dist = sqrt( pow( x2 - x1, 2 ) + pow( y2 - y1, 2 ) + pow( z2 - z1, 2 ) )
 
     return dist
-
-
-
-def calculate_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
-    """
-    Returns a dictionary of each residue in <pose> that has a contact with another residue in the <pose> less than the given <cutoff> distance
-    :param pose: Pose
-    :param cutoff: int( or float( distance cutoff for what defines a contact). Default = CUTOFF_DISTANCE = 5 Angstroms
-    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    :return: dictionary of 0s and 1s for each residue position to every other residue position
-    """
-    if verbose:
-        print "Getting the residue contact map for the Pose"
-
-    # holds the resulting contact map
-    return_dict = {}
-
-    for seq_pos in range( 1, pose.n_residue() + 1 ):
-        # holder for the residue numbers of residues within the given <cutoff> distance
-        contacts = []
-
-        # get the center for residue one
-        center_1 = list( pose.residue( seq_pos ).nbr_atom_xyz() )
-
-        # for every residue in the <pose>
-        for residue in pose:
-            seq_pos_2 = residue.seqpos()
-
-            # if it's not the same residue (obviously they contact)
-            if seq_pos != seq_pos_2:
-                # get the center of the second residue
-                center_2 = list( residue.nbr_atom_xyz() )
-
-                # calculate the distance and store the residue number if it's below the given <cutoff>
-                if calc_distance( center_1, center_2 ) < cutoff:
-                    contacts.append( seq_pos_2 )
-
-        # fill the return_dict with the contacts to that residue, only if there any
-        if len( contacts ) != 0:
-            return_dict[ seq_pos ] = contacts
-
-    return return_dict
-
-
-
-# TODO-make this function but for residue contacts based on distance between their centers
-def count_atomic_contacts_between_range1_range2( range1, range2, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
-    """
-    Counts the number of non-hydrogen atomic contacts in a <pose> between residues of <range1> and <range2> given the <cutoff> distance
-    :param range1: list of ints( Pose residue numbers of side 1 )
-    :param range2: list of ints( Pose residue numbers of side 2 )
-    :param pose: Pose
-    :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
-    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    :return: float( number of atomic contacts at interface ), list( str( atm1 res name + atm name + atm1 chain + '_' + atm2 res name + atm2 atm name + atm2 chain
-    """
-    if verbose:
-        print "Finding atomic contacts (except hydrogens) between", len( range1 ), "residues on side 1 and", len( range2 ), "residues on side 2"
-
-    # instantiate counter and the list to hold the unique contact names
-    contacts = 0
-    contact_list = []
-    
-    # loop through each atom of each residue of side 1 specified and see if its within <cutoff> distance of any atom from side 2
-    for res_num_1 in range1:
-        # get the number of atoms in residue 1
-        n_atms_1 = pose.residue( res_num_1 ).natoms()
-
-        # loop over each atom
-        for atm_1 in range( 1, n_atms_1 + 1 ):
-            # if it's not a hydrogen atom, get its...
-            if not pose.residue( res_num_1 ).atom_is_hydrogen( atm_1 ):
-                # xyz coordinates
-                atm1_xyz = list( pose.residue( res_num_1 ).atom( atm_1 ).xyz() )
-                # residue name
-                atm1_res_name = pose.residue( res_num_1 ).name3()
-                # atom name
-                atm1_atm_name = pose.residue( res_num_1 ).atom_name( atm_1 ).replace( ' ', '' )
-                # and which chain it's on
-                atm1_chain = pose.pdb_info().chain( res_num_1 )
-
-                # do the same for residue 2
-                for res_num_2 in range2:
-                    # get the number of atoms in residue 2
-                    n_atms_2 = pose.residue( res_num_2 ).natoms()
-
-                    for atm_2 in range( 1, n_atms_2 + 1 ):
-                        # if it's not a hydrogen atom, get its...
-                        if not pose.residue( res_num_2 ).atom_is_hydrogen( atm_2 ):
-                            # xyz coordinates
-                            atm2_xyz = list( pose.residue( res_num_2 ).atom( atm_2 ).xyz() )
-                            # residue name
-                            atm2_res_name = pose.residue( res_num_2 ).name3()
-                            # atom name
-                            atm2_atm_name = pose.residue( res_num_2 ).atom_name( atm_2 ).replace( ' ', '' )
-                            # and which chain it's on
-                            atm2_chain = pose.pdb_info().chain( res_num_2 )
-
-                            # if the two atoms are within the appropriate distance given by <cutoff>
-                            atm1_atm2_dist = calc_distance( atm1_xyz, atm2_xyz )
-                            if atm1_atm2_dist <= cutoff:
-                                # makes unique names for each contact for ease of analysis
-                                uniq_name_atm1 = atm1_res_name + '_' + atm1_atm_name + '_' + atm1_chain + '_' + str( res_num_1 )
-                                uniq_name_atm2 = atm2_res_name + '_' + atm2_atm_name + '_' + atm2_chain + '_' + str( res_num_2 )
-
-                                # unique name is the combination of the atom information from both atom1 and atom2
-                                unique_name = uniq_name_atm1 + '.' + uniq_name_atm2
-
-                                # if this specific contact has not already been found, add it to the list and up the contacts counter
-                                if unique_name not in contact_list:
-                                    contact_list.append( unique_name )
-                                    contacts += 1
-
-    return contacts, contact_list
-
-
-
-def count_interface_residue_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
-    """
-    Counts the number of residue "contacts" in a <pose> between interface residues given a <cutoff>
-    :param JUMP_NUM: int( Jump number that defines the interface )
-    :param pose: Pose
-    :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
-    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    :return: float( number of residue contacts at interface ), list( str( res1resname_res1chain_res1pdbnum+res2resname_res2chain_res2pdbnum ) )
-    """
-    # check to see that the jump number is valid
-    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
-        print
-        print "You gave me an invalid jump number, try again"
-        sys.exit()
-
-    # get a list of all residue numbers from side 1 to 2
-    range1 = []
-    range2 = []
-
-    # find all of the residue numbers that correspond to side 1 and side 2
-    for ii in range( 1, pose.total_residue() + 1 ):
-        if ii < pose.fold_tree().downstream_jump_residue( JUMP_NUM ):
-            range1.append( ii )
-        else:
-            range2.append( ii )
-
-    # check to see that neither of the lists are empty
-    if len( range1 ) == 0 or len( range2 ) == 0:
-        print
-        print "It appears that the jump number", JUMP_NUM, "does not actually define an interface"
-        sys.exit()
-
-    # instantiate counter and the list to hold the unique contact names
-    contacts = 0
-    contact_list = []
-    
-    # loop through each residue of each residue of side 1 specified and see if its within <cutoff> distance of any residue from side 2
-    for res_num_1 in range1:
-        # get the chain and seqpos of this residue
-        res1 = pose.residue( res_num_1 )
-        res1_name = res1.name3()
-        res1_chain = pose.pdb_info().chain( res_num_1 )
-        res1_pdb_num = pose.pdb_info().pose2pdb( res_num_1 ).split( ' ' )[0]
-        
-        # get the center of res_num_1
-        res1_center = res1.nbr_atom_xyz()
-        
-        # loop over each residue on side 2
-        for res_num_2 in range2:
-            # get the chain and seqpos of this residue
-            res2 = pose.residue( res_num_2 )
-            res2_name = res2.name3()
-            res2_chain = pose.pdb_info().chain( res_num_2 )
-            res2_pdb_num = pose.pdb_info().pose2pdb( res_num_2 ).split( ' ' )[0]
-            
-            # get the center of res_num_2
-            res2_center = res2.nbr_atom_xyz()
-
-            # if the two residues are within the appropriate distance given by <cutoff>
-            dist = res1_center.distance( res2_center )
-            if dist <= cutoff:
-                # makes unique names for each contact for ease of analysis
-                uniq_name_res1 = res1_name + '_' + res1_chain + '_' + str( res1_pdb_num )
-                uniq_name_res2 = res2_name + '_' + res2_chain + '_' + str( res2_pdb_num )
-
-                # unique name is the combination of the information from both res1 and res2
-                unique_name = uniq_name_res1 + '+' + uniq_name_res2
-                
-                # if this specific contact has not already been found, add it to the list and up the contacts counter
-                if unique_name not in contact_list:
-                    contact_list.append( unique_name )
-                    contacts += 1
-
-    return contacts, contact_list
-
-
-
-def count_interface_atomic_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
-    """
-    Counts the atom-to-atom (discluding hydrogens) contacts given a cutoff of <cutoff> Angstroms at the interface given the jump number <JUMP_NUM>
-    Returns the number of contacts as a float and a list of the unique contacts made between the atoms of side 1 to side 2
-    :param JUMP_NUM: int( Jump number that defines the interface )
-    :param pose: Pose
-    :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
-    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    :return: float( number of atomic contacts at interface ), list( str( atm1 res name + atm name + atm1 chain + '_' + atm2 res name + atm2 atm name + atm2 chain
-    """
-    # check to see that the jump number is valid
-    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
-        print
-        print "You gave me an invalid jump number, try again"
-        sys.exit()
-
-    if verbose:
-        print "Counting interface contacts across jump number", JUMP_NUM, "discluding hydrogen atoms..."
-
-    # get a list of all residue numbers from side 1 to 2
-    side_1_list = []
-    side_2_list = []
-
-    # find all of the residue numbers that correspond to side 1 and side 2
-    for ii in range( 1, pose.total_residue() + 1 ):
-        if ii < pose.fold_tree().downstream_jump_residue( JUMP_NUM ):
-            side_1_list.append( ii )
-        else:
-            side_2_list.append( ii )
-
-    # check to see that neither of the lists are empty
-    if len( side_1_list ) == 0 or len( side_2_list ) == 0:
-        print
-        print "It appears that the jump number", JUMP_NUM, "does not actually define an interface"
-        sys.exit()
-
-    # find all residues from side 1 and side 2 that are within 3 * CUTOFF_DISTANCE angstroms of each other
-    # speeds up the counting process a bit
-    side_1_list_close = []
-    side_2_list_close = []
-
-    # triple the given <cutoff> distance
-    TRIPLE_CUTOFF_DISTANCE = cutoff * 3
-
-    if verbose:
-        print "Finding the residues within 3 times the given cutoff distance to speed up counting a bit"
-
-    # loop over each residue from side 1
-    for res_num_1 in side_1_list:
-        # find the center of the residue in side 1
-        center = pose.residue( res_num_1 ).nbr_atom_xyz()
-
-        # now loop over the residues in side 2 for comparison
-        for res_num_2 in side_2_list:
-            # compare the distance to the other residue in side 2  -  using triple the distance at first to theoretically speed up the counting process
-            if center.distance( pose.residue( res_num_2 ).nbr_atom_xyz() ) <= TRIPLE_CUTOFF_DISTANCE:
-                # if the residues are within triple the <cutoff>, and if they haven't already been added, add them to the close list
-                if res_num_1 not in side_1_list_close:
-                    side_1_list_close.append( res_num_1 )
-
-                if res_num_2 not in side_2_list_close:
-                    side_2_list_close.append( res_num_2 )
-
-    # loops over side 1 list and see which atoms are within 5 Ang of side 2 for native pose
-    num_interface_contacts, interface_contact_list = count_atomic_contacts_between_range1_range2( side_1_list_close, side_2_list_close, pose, cutoff )
-
-    return float( num_interface_contacts ), interface_contact_list
-
-
-
-def calc_interface_sasa( pose, JUMP_NUM ):
-    """
-    Use rosetta.calc_total_sasa to compute the SASA of the total pose - SASA of the split-apart pose at <JUMP_NUM>
-    :param pose: Pose
-    :param JUMP_NUM: int( valid Jump number defining interface )
-    :return: float( interface_SASA value )
-    """
-    # imports
-    from rosetta import calc_total_sasa
-    
-    # make sure a valid JUMP_NUM was passed in
-    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
-        print
-        print JUMP_NUM, "is an invalid Jump number. Exiting"
-        sys.exit()
-    
-    # make and split the temporary pose
-    temp_pose = Pose()
-    temp_pose.assign( pose )
-    jump = temp_pose.jump( JUMP_NUM )
-
-    #TODO-get current xyz location and multiply by 500 or something instead
-    vec = xyzVector_Real( 1000, 1000, 1000 )
-    jump.set_translation( vec )
-    temp_pose.set_jump( JUMP_NUM, jump )
-    
-    # calculate the SASA values
-    total_sasa = calc_total_sasa( pose, PROBE_RADIUS )
-    split_sasa = calc_total_sasa( temp_pose, PROBE_RADIUS )
-    delta_interface_sasa = total_sasa - split_sasa
-    
-    return delta_interface_sasa
-
-
-
-def analyze_interface( pose, JUMP_NUM, pack_separated = True ):
-    """
-    Use rosetta.protocols.analysis.Interface Analyzer to compute various interface metrics
-    :param pose: Pose
-    :param JUMP_NUM: int( valid Jump number defining interface )
-    :param pack_separated: bool( Do you want to pack the protein after you split them apart? ). Default = True
-    :return: float( interface_SASA value )
-    """
-    # make sure a valid JUMP_NUM was passed in
-    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
-        print
-        print JUMP_NUM, "is an invalid Jump number. Exiting"
-        sys.exit()
-
-    # instantiate an InterfaceAnalyzer mover
-    IAmover = IAM()
-
-    # set the interface jump to the jump number passed in
-    IAmover.set_interface_jump( JUMP_NUM )
-
-    # TODO-see what's worth calculating and then actually return the value
-    # set what you want to calculate
-    ##IAmover.set_compute_interface_delta_hbond_unsat( True )
-    ##IAmover.set_compute_interface_sc( True )
-    IAmover.set_compute_separated_sasa( True )
-
-    # set the relevant options
-    IAmover.set_input_pose( pose )
-    IAmover.set_pack_separated( pack_separated )
-
-    print "Analyzing interface..."
-    IAmover.reset_status()
-    IAmover.apply( pose )
-
-    # retrieve data
-    # TODO-retrieve new, relevant data
-    interface_dSASA = IAmover.get_interface_delta_sasa()
-    ##unsat_hbond =  IAmover.get_interface_delta_hbond_unsat()
-    ##interface_dG = IAmover.get_interface_dG()  # I already calculate this with the fxn I wrote
-    ##num_interface_residues = IAmover.get_num_interface_residues()
-
-
-    return interface_dSASA
 
 
 
@@ -2449,7 +2065,7 @@ def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK
     for ii in range( 1, 20 + 1 ):
         aa_bool.append( ii == mutant_amino_acid )
 
-    # get center of mutated residue to be used in distance calculation for pack radius                     
+    # get center of mutated residue to be used in distance calculation for pack radius
     center = pose.residue( seq_pos ).nbr_atom_xyz()
 
     # make the packer task
@@ -2763,6 +2379,378 @@ def make_my_new_asymmetric_antibody( mutation_string, sf, input_pose, apply_sf_s
 ########################
 #### DATA FUNCTIONS ####
 ########################
+
+def calculate_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+    """
+    Returns a dictionary of each residue in <pose> that has a contact with another residue in the <pose> less than the given <cutoff> distance
+    :param pose: Pose
+    :param cutoff: int( or float( distance cutoff for what defines a contact). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :return: dictionary of 0s and 1s for each residue position to every other residue position
+    """
+    if verbose:
+        print "Getting the residue contact map for the Pose"
+
+    # holds the resulting contact map
+    return_dict = {}
+
+    for seq_pos in range( 1, pose.n_residue() + 1 ):
+        # holder for the residue numbers of residues within the given <cutoff> distance
+        contacts = []
+
+        # get the center for residue one
+        center_1 = list( pose.residue( seq_pos ).nbr_atom_xyz() )
+
+        # for every residue in the <pose>
+        for residue in pose:
+            seq_pos_2 = residue.seqpos()
+
+            # if it's not the same residue (obviously they contact)
+            if seq_pos != seq_pos_2:
+                # get the center of the second residue
+                center_2 = list( residue.nbr_atom_xyz() )
+
+                # calculate the distance and store the residue number if it's below the given <cutoff>
+                if calc_distance( center_1, center_2 ) < cutoff:
+                    contacts.append( seq_pos_2 )
+
+        # fill the return_dict with the contacts to that residue, only if there any
+        if len( contacts ) != 0:
+            return_dict[ seq_pos ] = contacts
+
+    return return_dict
+
+
+
+def count_interface_residue_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+    """
+    Counts the number of residue "contacts" in a <pose> between interface residues given a <cutoff>
+    :param JUMP_NUM: int( Jump number that defines the interface )
+    :param pose: Pose
+    :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :return: float( number of residue contacts at interface ), list( str( res1resname_res1chain_res1pdbnum+res2resname_res2chain_res2pdbnum ) )
+    """
+    # check to see that the jump number is valid
+    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
+        print
+        print "You gave me an invalid jump number, try again"
+        sys.exit()
+
+    # get a list of all residue numbers from side 1 to 2
+    range1 = []
+    range2 = []
+
+    # find all of the residue numbers that correspond to side 1 and side 2
+    for ii in range( 1, pose.total_residue() + 1 ):
+        if ii < pose.fold_tree().downstream_jump_residue( JUMP_NUM ):
+            range1.append( ii )
+        else:
+            range2.append( ii )
+
+    # check to see that neither of the lists are empty
+    if len( range1 ) == 0 or len( range2 ) == 0:
+        print
+        print "It appears that the jump number", JUMP_NUM, "does not actually define an interface"
+        sys.exit()
+
+    # instantiate counter and the list to hold the unique contact names
+    contacts = 0
+    contact_list = []
+    
+    # loop through each residue of each residue of side 1 specified and see if its within <cutoff> distance of any residue from side 2
+    for res_num_1 in range1:
+        # get the chain and seqpos of this residue
+        res1 = pose.residue( res_num_1 )
+        res1_name = res1.name3()
+        res1_chain = pose.pdb_info().chain( res_num_1 )
+        res1_pdb_num = pose.pdb_info().pose2pdb( res_num_1 ).split( ' ' )[0]
+        
+        # get the center of res_num_1
+        res1_center = res1.nbr_atom_xyz()
+        
+        # loop over each residue on side 2
+        for res_num_2 in range2:
+            # get the chain and seqpos of this residue
+            res2 = pose.residue( res_num_2 )
+            res2_name = res2.name3()
+            res2_chain = pose.pdb_info().chain( res_num_2 )
+            res2_pdb_num = pose.pdb_info().pose2pdb( res_num_2 ).split( ' ' )[0]
+            
+            # get the center of res_num_2
+            res2_center = res2.nbr_atom_xyz()
+
+            # if the two residues are within the appropriate distance given by <cutoff>
+            dist = res1_center.distance( res2_center )
+            if dist <= cutoff:
+                # makes unique names for each contact for ease of analysis
+                uniq_name_res1 = res1_name + '_' + res1_chain + '_' + str( res1_pdb_num )
+                uniq_name_res2 = res2_name + '_' + res2_chain + '_' + str( res2_pdb_num )
+
+                # unique name is the combination of the information from both res1 and res2
+                unique_name = uniq_name_res1 + '+' + uniq_name_res2
+                
+                # if this specific contact has not already been found, add it to the list and up the contacts counter
+                if unique_name not in contact_list:
+                    contact_list.append( unique_name )
+                    contacts += 1
+
+    return contacts, contact_list
+
+
+
+# TODO-make this function but for residue contacts based on distance between their centers
+def count_atomic_contacts_between_range1_range2( range1, range2, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+    """
+    Counts the number of non-hydrogen atomic contacts in a <pose> between residues of <range1> and <range2> given the <cutoff> distance
+    :param range1: list of ints( Pose residue numbers of side 1 )
+    :param range2: list of ints( Pose residue numbers of side 2 )
+    :param pose: Pose
+    :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :return: float( number of atomic contacts at interface ), list( str( atm1 res name + atm name + atm1 chain + '_' + atm2 res name + atm2 atm name + atm2 chain
+    """
+    if verbose:
+        print "Finding atomic contacts (except hydrogens) between", len( range1 ), "residues on side 1 and", len( range2 ), "residues on side 2"
+
+    # instantiate counter and the list to hold the unique contact names
+    contacts = 0
+    contact_list = []
+    
+    # loop through each atom of each residue of side 1 specified and see if its within <cutoff> distance of any atom from side 2
+    for res_num_1 in range1:
+        # get the number of atoms in residue 1
+        n_atms_1 = pose.residue( res_num_1 ).natoms()
+
+        # loop over each atom
+        for atm_1 in range( 1, n_atms_1 + 1 ):
+            # if it's not a hydrogen atom, get its...
+            if not pose.residue( res_num_1 ).atom_is_hydrogen( atm_1 ):
+                # xyz coordinates
+                atm1_xyz = list( pose.residue( res_num_1 ).atom( atm_1 ).xyz() )
+                # residue name
+                atm1_res_name = pose.residue( res_num_1 ).name3()
+                # atom name
+                atm1_atm_name = pose.residue( res_num_1 ).atom_name( atm_1 ).replace( ' ', '' )
+                # and which chain it's on
+                atm1_chain = pose.pdb_info().chain( res_num_1 )
+
+                # do the same for residue 2
+                for res_num_2 in range2:
+                    # get the number of atoms in residue 2
+                    n_atms_2 = pose.residue( res_num_2 ).natoms()
+
+                    for atm_2 in range( 1, n_atms_2 + 1 ):
+                        # if it's not a hydrogen atom, get its...
+                        if not pose.residue( res_num_2 ).atom_is_hydrogen( atm_2 ):
+                            # xyz coordinates
+                            atm2_xyz = list( pose.residue( res_num_2 ).atom( atm_2 ).xyz() )
+                            # residue name
+                            atm2_res_name = pose.residue( res_num_2 ).name3()
+                            # atom name
+                            atm2_atm_name = pose.residue( res_num_2 ).atom_name( atm_2 ).replace( ' ', '' )
+                            # and which chain it's on
+                            atm2_chain = pose.pdb_info().chain( res_num_2 )
+
+                            # if the two atoms are within the appropriate distance given by <cutoff>
+                            atm1_atm2_dist = calc_distance( atm1_xyz, atm2_xyz )
+                            if atm1_atm2_dist <= cutoff:
+                                # makes unique names for each contact for ease of analysis
+                                uniq_name_atm1 = atm1_res_name + '_' + atm1_atm_name + '_' + atm1_chain + '_' + str( res_num_1 )
+                                uniq_name_atm2 = atm2_res_name + '_' + atm2_atm_name + '_' + atm2_chain + '_' + str( res_num_2 )
+
+                                # unique name is the combination of the atom information from both atom1 and atom2
+                                unique_name = uniq_name_atm1 + '.' + uniq_name_atm2
+
+                                # if this specific contact has not already been found, add it to the list and up the contacts counter
+                                if unique_name not in contact_list:
+                                    contact_list.append( unique_name )
+                                    contacts += 1
+
+    return contacts, contact_list
+
+
+
+def count_interface_atomic_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+    """
+    Counts the atom-to-atom (discluding hydrogens) contacts given a cutoff of <cutoff> Angstroms at the interface given the jump number <JUMP_NUM>
+    Returns the number of contacts as a float and a list of the unique contacts made between the atoms of side 1 to side 2
+    :param JUMP_NUM: int( Jump number that defines the interface )
+    :param pose: Pose
+    :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :return: float( number of atomic contacts at interface ), list( str( atm1 res name + atm name + atm1 chain + '_' + atm2 res name + atm2 atm name + atm2 chain
+    """
+    # check to see that the jump number is valid
+    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
+        print
+        print "You gave me an invalid jump number, try again"
+        sys.exit()
+
+    if verbose:
+        print "Counting interface contacts across jump number", JUMP_NUM, "discluding hydrogen atoms..."
+
+    # get a list of all residue numbers from side 1 to 2
+    side_1_list = []
+    side_2_list = []
+
+    # find all of the residue numbers that correspond to side 1 and side 2
+    for ii in range( 1, pose.total_residue() + 1 ):
+        if ii < pose.fold_tree().downstream_jump_residue( JUMP_NUM ):
+            side_1_list.append( ii )
+        else:
+            side_2_list.append( ii )
+
+    # check to see that neither of the lists are empty
+    if len( side_1_list ) == 0 or len( side_2_list ) == 0:
+        print
+        print "It appears that the jump number", JUMP_NUM, "does not actually define an interface"
+        sys.exit()
+
+    # find all residues from side 1 and side 2 that are within 3 * CUTOFF_DISTANCE angstroms of each other
+    # speeds up the counting process a bit
+    side_1_list_close = []
+    side_2_list_close = []
+
+    # triple the given <cutoff> distance
+    TRIPLE_CUTOFF_DISTANCE = cutoff * 3
+
+    if verbose:
+        print "Finding the residues within 3 times the given cutoff distance to speed up counting a bit"
+
+    # loop over each residue from side 1
+    for res_num_1 in side_1_list:
+        # find the center of the residue in side 1
+        center = pose.residue( res_num_1 ).nbr_atom_xyz()
+
+        # now loop over the residues in side 2 for comparison
+        for res_num_2 in side_2_list:
+            # compare the distance to the other residue in side 2  -  using triple the distance at first to theoretically speed up the counting process
+            if center.distance( pose.residue( res_num_2 ).nbr_atom_xyz() ) <= TRIPLE_CUTOFF_DISTANCE:
+                # if the residues are within triple the <cutoff>, and if they haven't already been added, add them to the close list
+                if res_num_1 not in side_1_list_close:
+                    side_1_list_close.append( res_num_1 )
+
+                if res_num_2 not in side_2_list_close:
+                    side_2_list_close.append( res_num_2 )
+
+    # loops over side 1 list and see which atoms are within 5 Ang of side 2 for native pose
+    num_interface_contacts, interface_contact_list = count_atomic_contacts_between_range1_range2( side_1_list_close, side_2_list_close, pose, cutoff )
+
+    return float( num_interface_contacts ), interface_contact_list
+
+
+
+def calc_interface_sasa( pose, JUMP_NUM ):
+    """
+    Use rosetta.calc_total_sasa to compute the SASA of the total pose - SASA of the split-apart pose at <JUMP_NUM>
+    :param pose: Pose
+    :param JUMP_NUM: int( valid Jump number defining interface )
+    :return: float( interface_SASA value )
+    """
+    # imports
+    from rosetta import calc_total_sasa
+    
+    # make sure a valid JUMP_NUM was passed in
+    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
+        print
+        print JUMP_NUM, "is an invalid Jump number. Exiting"
+        sys.exit()
+    
+    # make and split the temporary pose
+    temp_pose = Pose()
+    temp_pose.assign( pose )
+    jump = temp_pose.jump( JUMP_NUM )
+
+    #TODO-get current xyz location and multiply by 500 or something instead
+    vec = xyzVector_Real( 1000, 1000, 1000 )
+    jump.set_translation( vec )
+    temp_pose.set_jump( JUMP_NUM, jump )
+    
+    # calculate the SASA values
+    total_sasa = calc_total_sasa( pose, PROBE_RADIUS )
+    split_sasa = calc_total_sasa( temp_pose, PROBE_RADIUS )
+    delta_interface_sasa = total_sasa - split_sasa
+    
+    return delta_interface_sasa
+
+
+
+def analyze_interface( pose, JUMP_NUM, pack_separated = True ):
+    """
+    Use rosetta.protocols.analysis.Interface Analyzer to compute various interface metrics
+    :param pose: Pose
+    :param JUMP_NUM: int( valid Jump number defining interface )
+    :param pack_separated: bool( Do you want to pack the protein after you split them apart? ). Default = True
+    :return: float( interface_SASA value )
+    """
+    # make sure a valid JUMP_NUM was passed in
+    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
+        print
+        print JUMP_NUM, "is an invalid Jump number. Exiting"
+        sys.exit()
+
+    # instantiate an InterfaceAnalyzer mover
+    IAmover = IAM()
+
+    # set the interface jump to the jump number passed in
+    IAmover.set_interface_jump( JUMP_NUM )
+
+    # TODO-see what's worth calculating and then actually return the value
+    # set what you want to calculate
+    ##IAmover.set_compute_interface_delta_hbond_unsat( True )
+    ##IAmover.set_compute_interface_sc( True )
+    IAmover.set_compute_separated_sasa( True )
+
+    # set the relevant options
+    IAmover.set_input_pose( pose )
+    IAmover.set_pack_separated( pack_separated )
+
+    print "Analyzing interface..."
+    IAmover.reset_status()
+    IAmover.apply( pose )
+
+    # retrieve data
+    # TODO-retrieve new, relevant data
+    interface_dSASA = IAmover.get_interface_delta_sasa()
+    ##unsat_hbond =  IAmover.get_interface_delta_hbond_unsat()
+    ##interface_dG = IAmover.get_interface_dG()  # I already calculate this with the fxn I wrote
+    ##num_interface_residues = IAmover.get_num_interface_residues()
+
+
+    return interface_dSASA
+
+
+
+def get_interface_score( JUMP_NUM, sf, pose ):
+    """
+    Given a jump number that defines the interface, calculates Rosetta's ddG interface
+    Splits apart the two domains defined by the <JUMP_NUM>, scores it, then subtracts that from the total score of the <pose>  -  result is the interface score
+    :param JUMP_NUM: int( valid Jump number of the interface )
+    :param sf: ScoreFunction
+    :param pose: Pose
+    :return: float( ddG interface score )
+    """
+    # get start score
+    start_score = sf( pose )
+
+    # make and split the temporary pose
+    temp_pose = Pose()
+    temp_pose.assign( pose )
+    jump = temp_pose.jump( JUMP_NUM )
+
+    #TODO-get current xyz location and multiply by 500 or something instead
+    vec = xyzVector_Real( 1000, 1000, 1000 )
+    jump.set_translation( vec )
+    temp_pose.set_jump( JUMP_NUM, jump )
+
+    # get and return interface score
+    split_apart_score = sf( temp_pose )
+    interface_score = start_score - split_apart_score
+
+    return interface_score
+
+
 
 def get_phi_psi_omega_of_res( pose, seqpos ):
     """

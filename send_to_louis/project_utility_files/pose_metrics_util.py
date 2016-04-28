@@ -9,18 +9,22 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     :param working: decoy Pose()
     :param native: native Pose()
     :param sf: ScoreFunction()
-    :param JUMP_NUM: int( interface JUMP_NUM )
+    :param JUMP_NUM: int( JUMP_NUM that defines the interface )
     :param MC_acceptance_rate: float( the MonteCarlo acceptance rate of your protocol, if relevant ). Default = None
     :return: str( pose metrics )
     """
     #################
     #### IMPORTS ####
     #################
-
+    
+    # Rosetta functions
     from rosetta import Vector1, calc_interaction_energy, \
         calc_Fnat, calc_total_sasa
     from rosetta.core.scoring import non_peptide_heavy_atom_RMSD
     from toolbox import get_hbonds
+    
+    # Rosetta functions I wrote out
+    from antibody_functions import count_interface_residue_contacts
     
     
     
@@ -50,6 +54,13 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     delta_hbonds = working_hbonds.nhbonds() - native_hbonds.nhbonds()
     metric_data.append( "delta_hbonds:" )
     metric_data.append( str( delta_hbonds ) )
+    
+    # interface residue contacts
+    working_interface_res_contacts, working_contact_list = count_interface_residue_contacts( 2, working, cutoff = 10 )
+    native_interface_res_contacts, native_contact_list = count_interface_residue_contacts( 2, native, cutoff = 10 )
+    delta_interface_res_contacts = working_interface_res_contacts - native_interface_res_contacts
+    metric_data.append( "delta_interface_res_contacts_10_A:" )
+    metric_data.append( str( delta_interface_res_contacts ) )
     
     # MonteCarlo acceptance rate - if relevant
     if MC_acceptance_rate is not None:

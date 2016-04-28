@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling_just_LCM.py pdb_copies_dont_touch/native_crystal_struct_3ay4_Fc_FcgRIII.pdb pdb_copies_dont_touch/lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb database/chemical/carbohydrates/common_glycans/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ test_pdb_dir/ 5
+run glycan_sampling.py ~/pyrosetta_dir/pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb ~/pyrosetta_dir/pdb_copies_dont_touch/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb ~/antibody_project/send_to_louis/project_glyco_files/3ay4_Fc_Glycan.iupac ~/antibody_project/send_to_louis/project_utility_files/ ~/pyrosetta_dir/test_pdb_dir/ 1
 '''
 
 
@@ -304,7 +304,7 @@ while not jd.job_complete:
     print "score of second min", sf( testing_pose )
 
     # collect additional metric data
-    metrics = get_pose_metrics( testing_pose, native_pose, sugar_sf, 2, mc_acceptance )
+    metrics = get_pose_metrics( testing_pose, native_pose, sugar_sf, 2 )
     
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics

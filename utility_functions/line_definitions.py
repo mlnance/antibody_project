@@ -53,6 +53,44 @@ class PDB_line:
 
 
 
+class HETNAM_line:
+    def __init__(self, line):
+        self.line = line
+        
+        # rough work-around for Jason's HETNAM structure
+        line_on_split = line.split( ' ' )
+        pieces = []
+        for piece in line_on_split:
+            if piece != '':
+                pieces.append( piece )
+                
+        self.res_name = pieces[1]
+        self.res_chain = pieces[2]
+        self.res_connection = pieces[3]
+        
+
+
+class SSBOND_line:
+    def __init__(self, line):
+        self.line = line
+        
+        # rough work-around for SSBOND lines
+        line_on_split = line.split( ' ' )
+        pieces = []
+        for piece in line_on_split:
+            if piece != '':
+                pieces.append( piece )
+        
+        self.res1_name = pieces[1]
+        self.res1_chain = pieces[2]
+        self.res1_num = pieces[3]
+        self.res2_name = pieces[4]
+        self.res2_chain = pieces[5]
+        self.res2_num = pieces[6]
+        self.value = pieces[7]
+        
+
+
 class LINK_line:
     def __init__(self, line):
         # only works for LINK lines

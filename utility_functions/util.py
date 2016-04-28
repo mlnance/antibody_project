@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from gzip import GzipFile
 from StringIO import StringIO
 import os
@@ -151,6 +153,99 @@ def renumber_PDB( pdb_filename, new_filename = None, reverse  = False ):
                 pdb_fh.write( line )
 
 
+
+def dump_pdb_by_chain( filename, pose, chains ):
+    """
+    Dump a .pdb file of <pose> including only the specified <chains>
+    Sample input -- dump_pdb_by_chain( "test_out.pdb", my_pose, [ 'A', 'C', 'E' ]
+    Sample input -- dump_pdb_by_chain( "test_out.pdb", my_pose, 'D' )
+    :param filename: str( filename for the dumped PDB )
+    :param pose: Pose()
+    :param chains: list( chains of interest ) or str( chain )
+    :return: bool( True if dump successful, False if not )
+    """
+    #################
+    #### IMPORTS ####
+    #################
+    
+    import os, sys
+    sys.path.append( "/Users/Research/antibody_project/utility_functions" )
+    from line_definitions import PDB_line, HETNAM_line, \
+        LINK_line, SSBOND_line
+    
+    
+    # check validity of input args
+    if not ( isinstance( chains, list ) or isinstance( chains, str ) ):
+        print
+        print "You didn't pass me a list or a string for the <chains> argument. Exiting."
+        sys.exit()
+        
+    # dump the given pose to get access to its PDB lines
+    dump_name = os.getcwd() + "/dump.pdb"
+    pose.dump_pdb( dump_name )
+    
+    # grab the dumped PDB lines
+    with open( dump_name, "rb" ) as fh:
+        pdb_lines = fh.readlines()
+        
+    # remove the dumped pdb
+    cmd = "rm %s" %dump_name
+    os.popen( cmd )
+            
+    # for each line, check the residues chain id and decide whether to keep it
+    keep_these_lines = []
+    for line in pdb_lines:
+        # if this is a residue line
+        if line.startswith( "ATOM" ):
+            _PDB_line = PDB_line( line )
+            
+            # if you were given a list of chain id's to keep
+            if isinstance( chains, list ):
+                if _PDB_line.res_chain in chains:
+                    keep_these_lines.append( line )
+                    
+            # if you were given one chain to keep
+            elif isinstance( chains, str ):
+                if _PDB_line.res_chain == chains:
+                    keep_these_lines.append( line )
+            
+        # otherwise it's some other kind of line, just keep it
+        else:
+            # if you were given a list of chain id's to keep
+            if isinstance( chains, list ):
+                # HETNAM lines
+                if line.startswith( "HETNAM" ):
+                    _HETNAM_line = HETNAM_line( line )
+                    if _HETNAM_line.res_chain in chains:
+                        keep_these_lines.append( line )
+                        
+                # SSBOND lines
+                if line.startswith( "SSBOND" ):
+                    _SSBOND_line = SSBOND_line( line )
+                    if _SSBOND_line.res1_chain in chains and _SSBOND_line.res2_chain in chains:
+                        keep_these_lines.append( line )
+                        
+                # LINK lines
+                if line.startswith( "LINK" ):
+                    _LINK_line = LINK_line( line )
+                    if _LINK_line.res1_chain in chains and _LINK_line.res2_chain in chains:
+                        keep_these_lines.append( line )
+            
+    # if no residues were selected, return False
+    if len( keep_these_lines ) == 0:
+        print "No residues matched your chain ID. I won't be dumping a file for you."
+        return False
+
+    # otherwise dump the selected residues into a PDB file
+    try:
+        with open( filename, "wb" ) as fh:
+            fh.writelines( keep_these_lines )
+        return True
+    except:
+        raise
+    
+
+    
 
 # TODO: figure out why this won't work....
 '''

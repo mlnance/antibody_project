@@ -18,13 +18,13 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     #################
     
     # Rosetta functions
-    from rosetta import Vector1, calc_interaction_energy, \
-        calc_Fnat, calc_total_sasa
+    from rosetta import Vector1, calc_interaction_energy
     from rosetta.core.scoring import non_peptide_heavy_atom_RMSD
     from toolbox import get_hbonds
     
     # Rosetta functions I wrote out
-    from antibody_functions import count_interface_residue_contacts
+    from antibody_functions import count_interface_residue_contacts, \
+        calc_interface_sasa
     
     
     
@@ -55,12 +55,19 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, MC_acceptance_rate = None )
     metric_data.append( "delta_hbonds:" )
     metric_data.append( str( delta_hbonds ) )
     
-    # interface residue contacts
-    working_interface_res_contacts, working_contact_list = count_interface_residue_contacts( 2, working, cutoff = 8 )
-    native_interface_res_contacts, native_contact_list = count_interface_residue_contacts( 2, native, cutoff = 8 )
+    # delta interface residue contacts
+    working_interface_res_contacts, working_contact_list = count_interface_residue_contacts( JUMP_NUM, working, cutoff = 8 )
+    native_interface_res_contacts, native_contact_list = count_interface_residue_contacts( JUMP_NUM, native, cutoff = 8 )
     delta_interface_res_contacts = working_interface_res_contacts - native_interface_res_contacts
-    metric_data.append( "delta_interface_res_contacts_10_A:" )
+    metric_data.append( "delta_interface_res_contacts_8_A:" )
     metric_data.append( str( delta_interface_res_contacts ) )
+    
+    # delta interface sasa
+    working_interface_sasa = calc_interface_sasa( working, JUMP_NUM )
+    native_interface_sasa = calc_interface_sasa( native, JUMP_NUM )
+    delta_interface_sasa = working_interface_sasa - native_interface_sasa
+    metric_data.append( "delta_interface_sasa:" )
+    metric_data.append( str( delta_interface_sasa ) )
     
     # MonteCarlo acceptance rate - if relevant
     if MC_acceptance_rate is not None:

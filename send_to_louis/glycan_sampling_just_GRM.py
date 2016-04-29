@@ -65,9 +65,15 @@ base_structs_dir = main_structure_dir + "base_structs/"
 lowest_E_structs_dir = main_structure_dir + "lowest_E_structs/"
 
 if not os.path.isdir( base_structs_dir ):
-    os.mkdir( base_structs_dir )
+    try:
+        os.mkdir( base_structs_dir )
+    except:
+        pass
 if not os.path.isdir( lowest_E_structs_dir ):
-    os.mkdir( lowest_E_structs_dir )
+    try:
+        os.mkdir( lowest_E_structs_dir )
+    except:
+        pass
 
 # relay information to user
 print

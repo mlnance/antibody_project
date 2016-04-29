@@ -45,8 +45,8 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     # glycan RMSD calculation
     working_filename = "temp_working_%s.pdb" %str( decoy_num )
     native_filename = "temp_native_%s.pdb" %str( decoy_num )
-    dump_pdb_by_chain( working_filename, working, working_Fc_glycan_chains )
-    dump_pdb_by_chain( native_filename, native, native_Fc_glycan_chains )
+    dump_pdb_by_chain( working_filename, working, working_Fc_glycan_chains, decoy_num )
+    dump_pdb_by_chain( native_filename, native, native_Fc_glycan_chains, decoy_num )
     
     temp_working = Pose()
     temp_working.assign( load_pose( working_filename ) )

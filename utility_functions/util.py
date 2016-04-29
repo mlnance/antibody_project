@@ -154,7 +154,7 @@ def renumber_PDB( pdb_filename, new_filename = None, reverse  = False ):
 
 
 
-def dump_pdb_by_chain( filename, pose, chains ):
+def dump_pdb_by_chain( filename, pose, chains, decoy_num ):
     """
     Dump a .pdb file of <pose> including only the specified <chains>
     Sample input -- dump_pdb_by_chain( "test_out.pdb", my_pose, [ 'A', 'C', 'E' ]
@@ -162,6 +162,7 @@ def dump_pdb_by_chain( filename, pose, chains ):
     :param filename: str( filename for the dumped PDB )
     :param pose: Pose()
     :param chains: list( chains of interest ) or str( chain )
+    :param decoy_num: int( the number of the decoy for use when dumping the temporary PDB )
     :return: bool( True if dump successful, False if not )
     """
     #################
@@ -180,7 +181,7 @@ def dump_pdb_by_chain( filename, pose, chains ):
         sys.exit()
         
     # dump the given pose to get access to its PDB lines
-    dump_name = os.getcwd() + "/dump.pdb"
+    dump_name = os.getcwd() + "/dump_%s.pdb" %str( decoy_num )
     pose.dump_pdb( dump_name )
     
     # grab the dumped PDB lines

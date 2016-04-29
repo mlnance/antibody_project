@@ -411,7 +411,8 @@ while not jd.job_complete:
                                 sugar_sf,
                                 2,
                                 Fc_glycan_chains,
-                                native_Fc_glycan_chains,
+                                native_Fc_glycan_chains, 
+                                jd.current_num, 
                                 mc_acceptance )
     
     # add the metric data to the .fasc file

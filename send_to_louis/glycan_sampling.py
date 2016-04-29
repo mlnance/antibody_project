@@ -336,7 +336,8 @@ while not jd.job_complete:
                                 sugar_sf,
                                 2,
                                 Fc_glycan_chains,
-                                native_Fc_glycan_chains )
+                                native_Fc_glycan_chains, 
+                                jd.current_num )
     
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics

@@ -202,7 +202,7 @@ pmm.apply( working_pose )
 # create and use the PyJobDistributor object
 jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, sugar_sf )
 jd.native_pose = native_pose
-cur_decoy_num = 0
+cur_decoy_num = 1
 
 print "Running GRM PyJobDistributor..."
 
@@ -399,7 +399,8 @@ while not jd.job_complete:
                                 sugar_sf,
                                 2,
                                 Fc_glycan_chains,
-                                native_Fc_glycan_chains )
+                                native_Fc_glycan_chains, 
+                                jd.current_num )
     
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics

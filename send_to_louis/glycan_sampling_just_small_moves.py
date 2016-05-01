@@ -28,6 +28,7 @@ parser.add_argument("utility_dir", type=str, help="where do your utility files l
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_small_move_trials", type=int, help="how many trials of 5 SmallMoves do you want to make within the Fc glycan?")
+parser.add_argument("ramp_sf", type=bool, help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 input_args = parser.parse_args()
 
 
@@ -94,13 +95,15 @@ print
 from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
     PyMOL_Mover, MonteCarlo, PyJobDistributor
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
+from rosetta.core.scoring import score_type_from_name
 from rosetta import SmallMover, MinMover
 from toolbox import get_hbonds
 
 # Rosetta functions I wrote out
 from antibody_functions import initialize_rosetta, \
     get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
-    make_movemap_for_range, load_pose, get_phi_psi_omega_of_res
+    make_movemap_for_range, load_pose, get_phi_psi_omega_of_res, \
+    ramp_score_weight
 
 # utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
@@ -360,10 +363,31 @@ while not jd.job_complete:
     sm = SmallMover( movemap_in = small_mm, temperature_in = 0.7, nmoves_in = 5 )
     sm.scorefxn( sugar_sf )
     
+    # store scoring terms in case score ramping is desired
+    # store the original fa_atr, fa_rep, and fa_elec weights
+    FA_ATR_ORIG = sugar_sf.get_weight( score_type_from_name( "fa_atr" ) )
+    FA_REP_ORIG = sugar_sf.get_weight( score_type_from_name( "fa_rep" ) )
+    
+    # raise the fa_atr term and lower the fa_rep term in the ScoreFunction to be able to do a ramping of its contribution
+    #FA_ATR_NEW = FA_ATR_ORIG * 2
+    FA_ATR_NEW = FA_ATR_ORIG * 0.5
+    sugar_sf.set_weight( score_type_from_name( "fa_atr" ), FA_ATR_NEW )
+    
+    #FA_REP_NEW = FA_REP_ORIG * 0.5
+    FA_REP_NEW = FA_REP_ORIG * 2
+    sugar_sf.set_weight( score_type_from_name( "fa_rep" ), FA_REP_NEW )
+    
     # run the SmallMover 10-100 times using a MonteCarlo object to accept or reject the move
     num_sm_accept = 0
     num_mc_checks = 0
-    for ii in range( input_args.num_small_move_trials ):
+    for ii in range( 1, input_args.num_small_move_trials + 1 ):
+        # if score ramping is desired
+        if input_args.ramp_sf:
+            # ramp up or down the appropriate scoring terms and get it back to the MonteCarlo object
+            sugar_sf = ramp_score_weight( sugar_sf, "fa_atr", FA_ATR_ORIG, ii - 1, input_args.num_small_move_trials )
+            sugar_sf = ramp_score_weight( sugar_sf, "fa_rep", FA_REP_ORIG, ii - 1, input_args.num_small_move_trials )
+            mc.score_function( sugar_sf )
+
         # apply the SmallMover
         print
         print "score before move", sf( testing_pose )

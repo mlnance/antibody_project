@@ -384,8 +384,16 @@ while not jd.job_complete:
         # if score ramping is desired
         if input_args.ramp_sf:
             # ramp up or down the appropriate scoring terms and get it back to the MonteCarlo object
-            sugar_sf = ramp_score_weight( sugar_sf, "fa_atr", FA_ATR_ORIG, ii - 1, input_args.num_small_move_trials )
-            sugar_sf = ramp_score_weight( sugar_sf, "fa_rep", FA_REP_ORIG, ii - 1, input_args.num_small_move_trials )
+            sugar_sf = ramp_score_weight( sugar_sf, 
+                                          "fa_atr", 
+                                          FA_ATR_ORIG, 
+                                          ii - 1, 
+                                          input_args.num_small_move_trials )
+            sugar_sf = ramp_score_weight( sugar_sf, 
+                                          "fa_rep", 
+                                          FA_REP_ORIG, 
+                                          ii - 1, 
+                                          input_args.num_small_move_trials )
             mc.score_function( sugar_sf )
 
         # apply the SmallMover

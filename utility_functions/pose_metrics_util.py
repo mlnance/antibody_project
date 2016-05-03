@@ -77,10 +77,15 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
 
     
     # delta interface residue contacts
-    working_interface_res_contacts, working_contact_list = count_interface_residue_contacts( JUMP_NUM, working, cutoff = 8 )
-    native_interface_res_contacts, native_contact_list = count_interface_residue_contacts( JUMP_NUM, native, cutoff = 8 )
-    delta_interface_res_contacts = working_interface_res_contacts - native_interface_res_contacts
-    metric_data.append( "delta_interface_res_contacts_8_A:" )
+    cutoff = 8
+    working_intf_contacts, working_contact_list = count_interface_residue_contacts( JUMP_NUM, 
+                                                                                    working, 
+                                                                                    cutoff = cutoff )
+    native_intf_contacts, native_contact_list = count_interface_residue_contacts( JUMP_NUM, 
+                                                                                  native, 
+                                                                                  cutoff = cutoff )
+    delta_interface_res_contacts = working_intf_contacts - native_intf_contacts
+    metric_data.append( "delta_interface_res_contacts_%s_A:" %( str( cutoff ) ) )
     metric_data.append( str( delta_interface_res_contacts ) )
 
     

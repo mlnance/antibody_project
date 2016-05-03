@@ -28,7 +28,7 @@ parser.add_argument("utility_dir", type=str, help="where do your utility files l
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_LCM_trials", type=int, help="how many trials of the LCM mover do you want to use in the protocol?")
-parser.add_argument("ramp_sf", type=bool, help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
+parser.add_argument("--ramp_sf", action="store_true", default=False, help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 input_args = parser.parse_args()
 
 
@@ -151,7 +151,10 @@ working_pose.pdb_info().name( working_pose_name )
 # make the directory for the working PDBs in the base_structs_dir
 structure_dir = base_structs_dir + working_pdb_name
 if not os.path.isdir( structure_dir ):
-    os.mkdir( structure_dir )
+    try:
+        os.mkdir( structure_dir )
+    except:
+        pass
 working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_%s_LCM" %input_args.num_LCM_trials
 
 
@@ -246,6 +249,7 @@ while not jd.job_complete:
     num_testing_pose_chains = len( testing_pose_chains )
     
     # pull out the chain id's based on how many chains were added to testing_pose
+    # Rosetta seems to just rename the chains, so the last X chains added should be the glycan
     num_chains_added = num_testing_pose_chains - num_working_pose_chains
     Fc_glycan_chains = testing_pose_chains[ ( -1 * num_chains_added ) : ]
     

@@ -29,17 +29,20 @@ def read_fasc( fasc_filename, return_this_many_structures ):
                 # strip off the carriage return
                 line = line.rstrip()
                 
-                # get the pdb name
-                pdb_name = line.split( "filename: " )[1].split( ' ' )[0]
-                
-                # pull total score out
-                tot_score = float( line.split( "total_score: " )[1].split( ' ' )[0] )
-                
-                # add the data to a dictionary
-                data_dict[ pdb_name ] = tot_score
-                
-                # and add the score to a list
-                data_list.append( tot_score )
+                try:
+                    # get the pdb name
+                    pdb_name = line.split( "filename: " )[1].split( ' ' )[0]
+                    
+                    # pull total score out
+                    tot_score = float( line.split( "total_score: " )[1].split( ' ' )[0] )
+                    
+                    # add the data to a dictionary
+                    data_dict[ pdb_name ] = tot_score
+                    
+                    # and add the score to a list
+                    data_list.append( tot_score )
+                except:
+                    pass
                 
                 
     # sort the list

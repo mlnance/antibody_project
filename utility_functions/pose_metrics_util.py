@@ -49,13 +49,23 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     dump_pdb_by_chain( native_filename, native, native_Fc_glycan_chains, decoy_num )
     
     temp_working = Pose()
-    temp_working.assign( load_pose( working_filename ) )
-    os.popen( "rm %s" %working_filename )
+    try:
+        temp_working.assign( load_pose( working_filename ) )
+        os.popen( "rm %s" %working_filename )
+    except:
+        pass
     temp_native = Pose()
-    temp_native.assign( load_pose( native_filename ) )
-    os.popen( "rm %s" %native_filename )
-
-    glycan_rmsd = non_peptide_heavy_atom_RMSD( temp_working, temp_native )
+    try:
+        temp_native.assign( load_pose( native_filename ) )
+        os.popen( "rm %s" %native_filename )
+    except:
+        pass
+    
+    try:
+        glycan_rmsd = non_peptide_heavy_atom_RMSD( temp_working, temp_native )
+    except:
+        glycan_rmsd = "nan"
+        pass
     metric_data.append( "glycan_rmsd:" )
     metric_data.append( str( glycan_rmsd ) )
     

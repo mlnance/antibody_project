@@ -38,6 +38,15 @@ input_args = parser.parse_args()
 
 import os, sys
 
+# collect and create necessary directories for use in metric calculations
+working_dir = os.getcwd() + '/'
+metrics_dump_dir = working_dir + "GRM_%s_dir" %str( input_args.num_GRM_moves )
+try:
+    os.mkdir( metrics_dump_dir )
+except:
+    pass
+
+
 ## check the validity of the passed arguments
 # make sure the structure_dir passed is valid
 if os.path.isdir( input_args.structure_dir ):
@@ -243,6 +252,7 @@ while not jd.job_complete:
     num_testing_pose_chains = len( testing_pose_chains )
     
     # pull out the chain id's based on how many chains were added to testing_pose
+    # Rosetta seems to just rename the chains, so the last X chains added should be the glycan
     num_chains_added = num_testing_pose_chains - num_working_pose_chains
     Fc_glycan_chains = testing_pose_chains[ ( -1 * num_chains_added ) : ]
     
@@ -406,6 +416,7 @@ while not jd.job_complete:
                                 2,
                                 Fc_glycan_chains,
                                 native_Fc_glycan_chains, 
+                                metrics_dump_dir, 
                                 jd.current_num )
     
     # add the metric data to the .fasc file
@@ -414,6 +425,13 @@ while not jd.job_complete:
     # dump the decoy
     jd.output_decoy( testing_pose )
     cur_decoy_num += 1
+
+
+# remove the metrics_dump_dir
+try:
+    os.rmdir( metrics_dump_dir )
+except:
+    pass
 
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 fasc_filename = working_pose_decoy_name + ".fasc"

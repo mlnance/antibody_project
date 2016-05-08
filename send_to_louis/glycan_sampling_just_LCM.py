@@ -39,6 +39,14 @@ input_args = parser.parse_args()
 
 import os, sys
 
+# collect and create necessary directories for use in metric calculations
+working_dir = os.getcwd() + '/'
+metrics_dump_dir = working_dir + "LCM_%s_dir" %str( input_args.num_LCM_trials )
+try:
+    os.mkdir( metrics_dump_dir )
+except:
+    pass
+
 ## check the validity of the passed arguments
 # make sure the structure_dir passed is valid
 if os.path.isdir( input_args.structure_dir ):
@@ -457,6 +465,7 @@ while not jd.job_complete:
                                 Fc_glycan_chains, 
                                 native_Fc_glycan_chains, 
                                 jd.current_num, 
+                                metrics_dump_dir, 
                                 mc_acceptance )
     
     # add the metric data to the .fasc file
@@ -465,6 +474,13 @@ while not jd.job_complete:
     # dump the decoy
     jd.output_decoy( testing_pose )
     cur_decoy_num += 1
+
+
+# remove the metrics_dump_dir
+try:
+    os.rmdir( metrics_dump_dir )
+except:
+    pass
 
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 fasc_filename = working_pose_decoy_name + ".fasc"

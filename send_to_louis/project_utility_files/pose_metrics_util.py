@@ -3,7 +3,7 @@ __author__ = "morganlnance"
 
 
 
-def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, native_Fc_glycan_chains, decoy_num, MC_acceptance_rate = None ):
+def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, native_Fc_glycan_chains, decoy_num, dump_dir, MC_acceptance_rate = None ):
     """
     Return a space-delimited string containing various pose metrics.
     :param working: decoy Pose()
@@ -13,6 +13,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
     :param native_Fc_glycan_chains: list( the chain id's for the native Fc glycan ). Ex = [ 'D', 'E' ]
     :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
+    :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
     :param MC_acceptance_rate: float( the MonteCarlo acceptance rate of your protocol, if relevant ). Default = None
     :return: str( pose metrics )
     """
@@ -43,8 +44,12 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     metric_data = []
     
     # glycan RMSD calculation
-    working_filename = "temp_working_%s.pdb" %str( decoy_num )
-    native_filename = "temp_native_%s.pdb" %str( decoy_num )
+    if dump_dir.endswith( '/' ):
+        working_filename = "%stemp_working_%s.pdb" %( dump_dir, str( decoy_num ) )
+        native_filename = "%stemp_native_%s.pdb" %( dump_dir, str( decoy_num ) )
+    else:
+        working_filename = "%s/temp_working_%s.pdb" %( dump_dir, str( decoy_num ) )
+        native_filename = "%s/temp_native_%s.pdb" %( dump_dir, str( decoy_num ) )
     dump_pdb_by_chain( working_filename, working, working_Fc_glycan_chains, decoy_num )
     dump_pdb_by_chain( native_filename, native, native_Fc_glycan_chains, decoy_num )
     

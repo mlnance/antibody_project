@@ -383,13 +383,15 @@ while not jd.job_complete:
     FA_REP_ORIG = sugar_sf.get_weight( score_type_from_name( "fa_rep" ) )
     
     # raise the fa_atr term and lower the fa_rep term in the ScoreFunction to be able to do a ramping of its contribution
-    #FA_ATR_NEW = FA_ATR_ORIG * 2
-    FA_ATR_NEW = FA_ATR_ORIG * 0.5
-    sugar_sf.set_weight( score_type_from_name( "fa_atr" ), FA_ATR_NEW )
+    # if score ramping is desired
+    if input_args.ramp_sf:
+        #FA_ATR_NEW = FA_ATR_ORIG * 2
+        FA_ATR_NEW = FA_ATR_ORIG * 0.5
+        sugar_sf.set_weight( score_type_from_name( "fa_atr" ), FA_ATR_NEW )
         
-    #FA_REP_NEW = FA_REP_ORIG * 0.5
-    FA_REP_NEW = FA_REP_ORIG * 2
-    sugar_sf.set_weight( score_type_from_name( "fa_rep" ), FA_REP_NEW )
+        #FA_REP_NEW = FA_REP_ORIG * 0.5
+        FA_REP_NEW = FA_REP_ORIG * 2
+        sugar_sf.set_weight( score_type_from_name( "fa_rep" ), FA_REP_NEW )
     
     # run the LinkageConformerMover 10-100 times using a MonteCarlo object to accept or reject the move
     num_lcm_accept = 0

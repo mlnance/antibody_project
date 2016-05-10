@@ -154,7 +154,7 @@ def renumber_PDB( pdb_filename, new_filename = None, reverse  = False ):
 
 
 
-def dump_pdb_by_chain( filename, pose, chains, decoy_num ):
+def dump_pdb_by_chain( filename, pose, chains, decoy_num, dump_dir = None ):
     """
     Dump a .pdb file of <pose> including only the specified <chains>
     Sample input -- dump_pdb_by_chain( "test_out.pdb", my_pose, [ 'A', 'C', 'E' ]
@@ -163,6 +163,7 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num ):
     :param pose: Pose()
     :param chains: list( chains of interest ) or str( chain )
     :param decoy_num: int( the number of the decoy for use when dumping the temporary PDB )
+    :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted ). Default = None = current working directory
     :return: bool( True if dump successful, False if not )
     """
     #################
@@ -181,7 +182,15 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num ):
         sys.exit()
         
     # dump the given pose to get access to its PDB lines
-    dump_name = os.getcwd() + "/dump_%s.pdb" %str( decoy_num )
+    # if given a dump_dir
+    if dump_dir is not None:
+        if dump_dir.endswith( '/' ):
+            dump_name = dump_dir + "dump_%s.pdb" %str( decoy_um )
+        else:
+            dump_name = dump_dir + "/dump_%s.pdb" %str( decoy_um )
+    # else dump in the current working directory
+    else:
+        dump_name = os.getcwd() + "/dump_%s.pdb" %str( decoy_num )
     pose.dump_pdb( dump_name )
     
     # grab the dumped PDB lines
@@ -190,7 +199,10 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num ):
         
     # remove the dumped pdb
     cmd = "rm %s" %dump_name
-    os.popen( cmd )
+    try:
+        os.popen( cmd )
+    except:
+        pass
             
     # for each line, check the residues chain id and decide whether to keep it
     keep_these_lines = []

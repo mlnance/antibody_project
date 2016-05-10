@@ -185,9 +185,9 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num, dump_dir = None ):
     # if given a dump_dir
     if dump_dir is not None:
         if dump_dir.endswith( '/' ):
-            dump_name = dump_dir + "dump_%s.pdb" %str( decoy_um )
+            dump_name = dump_dir + "dump_%s.pdb" %str( decoy_num )
         else:
-            dump_name = dump_dir + "/dump_%s.pdb" %str( decoy_um )
+            dump_name = dump_dir + "/dump_%s.pdb" %str( decoy_num )
     # else dump in the current working directory
     else:
         dump_name = os.getcwd() + "/dump_%s.pdb" %str( decoy_num )

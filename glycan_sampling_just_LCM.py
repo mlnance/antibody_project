@@ -249,6 +249,7 @@ while not jd.job_complete:
     testing_pose.pdb_info().name( "decoy_num_" + str( cur_decoy_num ) )
     pmm.apply( testing_pose )
     if input_args.verbose:
+        print
         print "score of glycosylated pose", sf( testing_pose )
 
 

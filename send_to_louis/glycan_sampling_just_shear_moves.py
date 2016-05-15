@@ -12,6 +12,9 @@ run glycan_sampling_just_shear_moves.py pdb_copies_dont_touch/lowest_E_double_pa
 '''
 
 
+# global values
+kT = 0.8
+
 
 #########################
 #### PARSE ARGUMENTS ####
@@ -29,6 +32,7 @@ parser.add_argument("structure_dir", type=str, help="where do you want to dump t
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_shear_move_trials", type=int, help="how many trials of 5 ShearMoves do you want to make within the Fc glycan?")
 parser.add_argument("--ramp_sf", action="store_true", default=False, help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
+parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
 input_args = parser.parse_args()
 
 
@@ -46,7 +50,6 @@ try:
     os.mkdir( metrics_dump_dir )
 except:
     pass
-
 
 ## check the validity of the passed arguments
 # make sure the structure_dir passed is valid
@@ -103,10 +106,10 @@ print
 # Rosetta worker functions
 from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
     PyMOL_Mover, MonteCarlo, PyJobDistributor
+from rosetta.numeric.random import random_range, uniform
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
 from rosetta.core.scoring import score_type_from_name
 from rosetta import ShearMover, MinMover
-from toolbox import get_hbonds
 
 # Rosetta functions I wrote out
 from antibody_functions import initialize_rosetta, \
@@ -131,7 +134,6 @@ initialize_rosetta()
 # native pose ( for comparison, really )
 native_pose = Pose()
 native_pose.assign( load_pose( input_args.native_pdb_file ) )
-print "Native hbonds", get_hbonds( native_pose ).nhbonds()
 
 # get the full path of the native PDB name
 native_pdb_filename_full_path = input_args.native_pdb_file
@@ -186,11 +188,11 @@ for res in working_pose:
     # residue numbers
     if res.is_carbohydrate():
         FcR_seqpos_nums.append( res.seqpos() )
-
+        
     # branch points
     if res.is_branch_point():
         FcR_branch_point_nums.append( res.seqpos() )
-
+        
     # chain id's
     res_chain = working_pose.pdb_info().chain( res.seqpos() )
     if res_chain not in working_pose_chains:
@@ -230,13 +232,13 @@ while not jd.job_complete:
     # get a fresh copy of the working pose to be used in this protocol
     testing_pose = Pose()
     testing_pose.assign( working_pose )
-    
+
 
 
     ##########################
     #### GLYCOSYLATE POSE #### 
     ##########################
-    
+
     # glycosylate the given testing_pose
     # 69 and 284 are the two ASN297 residues from 3ay4 ( pose numbering system, not PDB )
     glycosylate_these_ASN = [ 69, 284 ]
@@ -245,66 +247,35 @@ while not jd.job_complete:
 
     testing_pose.pdb_info().name( "decoy_num_" + str( cur_decoy_num ) )
     pmm.apply( testing_pose )
-    print "score of glycosylated pose", sf( testing_pose )
-    
-    # get the chain id's of the glycosylated testing_pose
-    testing_pose_chains = []
-    for res in testing_pose:
-        # chain id's
-        res_chain = testing_pose.pdb_info().chain( res.seqpos() )
-        if res_chain not in testing_pose_chains:
-            testing_pose_chains.append( res_chain )
-    num_testing_pose_chains = len( testing_pose_chains )
-    
-    # pull out the chain id's based on how many chains were added to testing_pose
-    # Rosetta seems to just rename the chains, so the last X chains added should be the glycan
-    num_chains_added = num_testing_pose_chains - num_working_pose_chains
-    Fc_glycan_chains = testing_pose_chains[ ( -1 * num_chains_added ) : ]
-    
-    
-    
-    ###########################
-    #### CORE GlcNAc RESET ####
-    ###########################
+    if input_args.verbose:
+        print
+        print "score of glycosylated pose", sf( testing_pose )
 
-    # reset the 1st GlcNAc on the ASN in the chibose core
+
+
+    ###################################
+    #### COLLECT Fc GLYCAN NUMBERS ####
+    ###################################
+
+    # pull out some core sugar residue numbers
     n_res_Fc_glycan = testing_pose.n_residue()
     num_sugars_added = n_res_Fc_glycan - n_res_no_Fc_glycan
     size_of_one_glycan = num_sugars_added / 2
     A_core_GlcNAc = n_res_no_Fc_glycan + 1
-    B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1
-    
-    ## reset both of the core GlcNAc residue of the glycosylated testing_pose
-    # chain A
-    testing_pose.set_phi( A_core_GlcNAc, A_phi )
-    testing_pose.set_psi( A_core_GlcNAc, A_psi )
-    testing_pose.set_omega( A_core_GlcNAc, A_omega )
-    
-    # chain B
-    testing_pose.set_phi( B_core_GlcNAc, B_phi )
-    testing_pose.set_psi( B_core_GlcNAc, B_psi )
-    testing_pose.set_omega( B_core_GlcNAc, B_omega )
-    
-    pmm.apply( testing_pose )
-    print "score of glyco reset", sf( testing_pose )
-
-    
-    
-    #################################
-    #### Fc GLYCAN AREA PACK/MIN ####
-    #################################
+    B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1    
 
     # get the res nums and branch points of the Fc sugars added
     Fc_sugar_nums = []
+    Fc_sugar_nums_except_core_GlcNAc = []
     Fc_glycan_branch_point_nums = []
-    
+
     for res in testing_pose:
         # if the residue is a carbohydrate
         if res.is_carbohydrate():
             # if the residue number is not in the FcR
             if res.seqpos() not in FcR_seqpos_nums:
                 Fc_sugar_nums.append( res.seqpos() )
-                
+
             # if the residue is a branch point
             if res.is_branch_point():
                 # if it's not a branch point found in the FcR
@@ -314,29 +285,88 @@ while not jd.job_complete:
                         Fc_glycan_branch_point_nums.append( res.seqpos() )
 
     # get a list of the Fc sugars discluding the core GlcNAc residues
-    Fc_sugar_nums_except_core_GlcNAc = []
     for res_num in Fc_sugar_nums:
         if res_num != A_core_GlcNAc and res_num != B_core_GlcNAc:
             Fc_sugar_nums_except_core_GlcNAc.append( res_num )
-            
+
+    # get the chain id's of the glycosylated testing_pose
+    testing_pose_chains = []
+    for res in testing_pose:
+        # chain id's
+        res_chain = testing_pose.pdb_info().chain( res.seqpos() )
+        if res_chain not in testing_pose_chains:
+            testing_pose_chains.append( res_chain )
+    num_testing_pose_chains = len( testing_pose_chains )
+
+    # pull out the chain id's based on how many chains were added to testing_pose
+    # Rosetta seems to just rename the chains, so the last X chains added should be the glycan
+    num_chains_added = num_testing_pose_chains - num_working_pose_chains
+    Fc_glycan_chains = testing_pose_chains[ ( -1 * num_chains_added ) : ]
+
+
+
+    ###########################
+    #### CORE GlcNAc RESET ####
+    ###########################
+
+    ## reset both of the core GlcNAc residue of the glycosylated testing_pose
+    # chain A
+    testing_pose.set_phi( A_core_GlcNAc, A_phi )
+    testing_pose.set_psi( A_core_GlcNAc, A_psi )
+    testing_pose.set_omega( A_core_GlcNAc, A_omega )
+
+    # chain B
+    testing_pose.set_phi( B_core_GlcNAc, B_phi )
+    testing_pose.set_psi( B_core_GlcNAc, B_psi )
+    testing_pose.set_omega( B_core_GlcNAc, B_omega )
+
+    pmm.apply( testing_pose )
+    if input_args.verbose:
+        print "score of glyco reset", sf( testing_pose )
+
+
+
+    ################################
+    #### Fc GLYCAN RANDOM RESET ####
+    ################################
+    '''
+    # for each residue except the core GlcNAc in Fc glycan
+    for res_num in Fc_sugar_nums_except_core_GlcNAc:
+        # pick three random integers between 0 and 360
+        reset_phi_num = float( random_range( 0, 360 ) )
+        reset_psi_num = float( random_range( 0, 360 ) )
+        reset_omega_num = float( random_range( 0, 360 ) )
+        
+        # reset the phi, psi, and omega values for the residue
+        testing_pose.set_phi( res_num, reset_phi_num )
+        testing_pose.set_psi( res_num, reset_psi_num )
+        #testing_pose.set_omega( res_num, reset_omega_num )
+        
+    pmm.apply( testing_pose )
+    if input_args.verbose:
+        print "score of random reset", sf( testing_pose )
+    '''
+
+
+    #################################
+    #### Fc GLYCAN AREA PACK/MIN ####
+    #################################
+
     # make MoveMap for the Fc sugars
     min_mm = make_movemap_for_range( Fc_sugar_nums, 
                                      allow_bb_movement = True, 
                                      allow_chi_movement = True )
-    
+
     # add in the branch points myself ( does not include the two ASN residues )
     for branch_point in Fc_glycan_branch_point_nums:
         min_mm.set_branches( branch_point, True )
-    
+
     # make and apply MinMover
     min_mover = MinMover( movemap_in = min_mm, 
                           scorefxn_in = sugar_sf, 
                           min_type_in = "dfpmin_strong_wolfe", 
                           tolerance_in = 0.01, 
                           use_nb_list_in = True )
-    min_mover.apply( testing_pose )
-    pmm.apply( testing_pose )
-    print "score of min", sf( testing_pose )
 
     # pack the Fc sugars and around them within 20 Angstroms
     pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
@@ -345,21 +375,29 @@ while not jd.job_complete:
                                                     residue_range = Fc_sugar_nums, 
                                                     use_pack_radius = True, 
                                                     pack_radius = 20 )
-    pack_rotamers_mover.apply( testing_pose )
-    pmm.apply( testing_pose )
-    print "score of pack", sf( testing_pose )
-    
-    min_mover.apply( testing_pose )
-    pmm.apply( testing_pose )
-    print "score of second min", sf( testing_pose )
 
-    
-    
+    # do 2 pack/mins to try to get to a low-energy structure
+    # those that don't get to a negative score will probably just be outliers?
+    for ii in range( 2 ):
+        # pack
+        pack_rotamers_mover.apply( testing_pose )
+        if input_args.verbose:
+            print "score of pack", sf( testing_pose )
+
+        # minimize
+        min_mover.apply( testing_pose )
+        if input_args.verbose:
+            print "score of min", sf( testing_pose )
+        
+        pmm.apply( testing_pose )
+
+
+
     ####################
     #### ShearMover ####
     ####################
 
-    ## use the ShearMover find a local sugar minima        
+    ## use the ShearMover find a local sugar minima
     # make a MoveMap for these Fc sugars allowing only bb movement
     shear_mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, 
                                        allow_bb_movement = True, 
@@ -370,30 +408,30 @@ while not jd.job_complete:
         shear_mm.set_branches( branch_point, True )
 
     # make an appropriate MonteCarlo object
-    mc = MonteCarlo( testing_pose, sugar_sf, 0.7 )
+    mc = MonteCarlo( testing_pose, sugar_sf, kT )
 
     # make an appropriate ShearMover
-    sh = ShearMover( movemap_in = shear_mm, temperature_in = 0.7, nmoves_in = 5 )
-    sh.scorefxn( sugar_sf )
-    
+    sm = ShearMover( movemap_in = shear_mm, temperature_in = kT, nmoves_in = 5 )
+    sm.scorefxn( sugar_sf )
+
     # store scoring terms in case score ramping is desired
     # store the original fa_atr, fa_rep, and fa_elec weights
     FA_ATR_ORIG = sugar_sf.get_weight( score_type_from_name( "fa_atr" ) )
     FA_REP_ORIG = sugar_sf.get_weight( score_type_from_name( "fa_rep" ) )
-    
-    # raise the fa_atr term and lower the fa_rep term in the ScoreFunction to be able to do a ramping of its contribution
+
+    # raise the fa_atr term and lower the fa_rep term in the ScoreFunction for ramping
     # if score ramping is desired
     if input_args.ramp_sf:
         #FA_ATR_NEW = FA_ATR_ORIG * 2
         FA_ATR_NEW = FA_ATR_ORIG * 0.5
         sugar_sf.set_weight( score_type_from_name( "fa_atr" ), FA_ATR_NEW )
-    
+
         #FA_REP_NEW = FA_REP_ORIG * 0.5
         FA_REP_NEW = FA_REP_ORIG * 2
         sugar_sf.set_weight( score_type_from_name( "fa_rep" ), FA_REP_NEW )
-    
+
     # run the ShearMover 10-100 times using a MonteCarlo object to accept or reject the move
-    num_sh_accept = 0
+    num_sm_accept = 0
     num_mc_checks = 0
     for ii in range( 1, input_args.num_shear_move_trials + 1 ):
         # if score ramping is desired
@@ -411,12 +449,11 @@ while not jd.job_complete:
                                           input_args.num_shear_move_trials )
             mc.score_function( sugar_sf )
 
-        # apply the ShearlMover
-        print
-        print "score before move", sf( testing_pose )
-        sh.apply( testing_pose )
-        print "score after move", sf( testing_pose )
-        
+        # apply the ShearMover
+        sm.apply( testing_pose )        
+        if input_args.verbose:
+            print "score after move", sf( testing_pose )
+
         # pack the Fc sugars and around them within 20 Angstroms every other trial
         if ii % 2 == 0:
             pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
@@ -426,17 +463,18 @@ while not jd.job_complete:
                                                             use_pack_radius = True, 
                                                             pack_radius = 20 )
             pack_rotamers_mover.apply( testing_pose )
-            print "score after pack", sf( testing_pose )
-        
+            if input_args.verbose:
+                print "score after pack", sf( testing_pose )
+
         # make MoveMap for the Fc sugars
         min_mm = make_movemap_for_range( Fc_sugar_nums, 
                                          allow_bb_movement = True, 
                                          allow_chi_movement = True )
-        
+
         # add in the branch points myself ( does not include the two ASN residues )
         for branch_point in Fc_glycan_branch_point_nums:
             min_mm.set_branches( branch_point, True )
-            
+
         # make and apply MinMover
         min_mover = MinMover( movemap_in = min_mm, 
                               scorefxn_in = sugar_sf, 
@@ -444,34 +482,37 @@ while not jd.job_complete:
                               tolerance_in = 0.01, 
                               use_nb_list_in = True )
         min_mover.apply( testing_pose )
-        print "score after min", sf( testing_pose )
-        
+        if input_args.verbose:
+            print "score after min", sf( testing_pose )
+
         # accept or reject the move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):
-            num_sh_accept += 1
+            num_sm_accept += 1
             pmm.apply( testing_pose )
-            
+
         # calculate and print out the MC acceptance rate
         num_mc_checks += 1
-        mc_acceptance = round( ( float( num_sh_accept ) / float( num_mc_checks ) * 100 ), 3 )
-        print "Moves made so far:", num_mc_checks, 
-        print "  Moves accepted:", num_sh_accept, 
-        print "  Acceptance rate:", mc_acceptance
+        mc_acceptance = round( ( float( num_sm_accept ) / float( num_mc_checks ) * 100 ), 3 )
+        if input_args.verbose:
+            print
+            print "Moves made so far:", num_mc_checks, 
+            print "  Moves accepted:", num_sm_accept, 
+            print "  Acceptance rate:", mc_acceptance
 
     # collect additional metric data
-    metrics = get_pose_metrics( testing_pose,
-                                native_pose,
-                                sugar_sf,
-                                2,
-                                Fc_glycan_chains,
+    metrics = get_pose_metrics( testing_pose, 
+                                native_pose, 
+                                sugar_sf, 
+                                2, # interface JUMP_NUM
+                                Fc_glycan_chains, 
                                 native_Fc_glycan_chains, 
                                 jd.current_num, 
                                 metrics_dump_dir, 
                                 mc_acceptance )
-    
+
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics
-    
+
     # dump the decoy
     jd.output_decoy( testing_pose )
     cur_decoy_num += 1

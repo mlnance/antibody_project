@@ -328,17 +328,24 @@ while not jd.job_complete:
     ################################
 
     # for each residue except the core GlcNAc in Fc glycan
-    for res_num in Fc_sugar_nums_except_core_GlcNAc:
+    # subtracting one because this list skips the core GlcNAc                                           
+    for res_num in Fc_sugar_nums_except_core_GlcNAc[ : ( size_of_one_glycan - 1 ) ]:
         # pick three random integers between 0 and 360
         reset_phi_num = float( random_range( 0, 360 ) )
         reset_psi_num = float( random_range( 0, 360 ) )
         reset_omega_num = float( random_range( 0, 360 ) )
-        
+
         # reset the phi, psi, and omega values for the residue
+        # side A
         testing_pose.set_phi( res_num, reset_phi_num )
         testing_pose.set_psi( res_num, reset_psi_num )
         #testing_pose.set_omega( res_num, reset_omega_num )
-        
+
+        # side B
+        testing_pose.set_phi( res_num + size_of_one_glycan - 1, reset_phi_num )
+        testing_pose.set_psi( res_num + size_of_one_glycan - 1, reset_phi_num )
+        #testing_pose.set_omega( res_num + size_of_one_glycan - 1, reset_phi_num )
+
     pmm.apply( testing_pose )
     if input_args.verbose:
         print "score of random reset", sf( testing_pose )

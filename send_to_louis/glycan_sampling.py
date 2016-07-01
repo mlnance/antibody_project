@@ -90,6 +90,8 @@ if not os.path.isdir( lowest_E_structs_dir ):
 print
 print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
 print "Working PDB filename:\t\t", input_args.working_pdb_file.split( '/' )[-1]
+print "Sugar filename:\t\t\t", input_args.glyco_file.split( '/' )[-1]
+print "Creating this many decoys:\t", input_args.nstruct
 print "Main structure directory:\t", main_structure_dir
 print "Base structures directory:\t", base_structs_dir
 print "Lowest E structures directory:\t", lowest_E_structs_dir
@@ -404,8 +406,7 @@ while not jd.job_complete:
                                 Fc_glycan_chains, 
                                 native_Fc_glycan_chains, 
                                 jd.current_num, 
-                                metrics_dump_dir, 
-                                mc_acceptance )
+                                metrics_dump_dir )
 
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics

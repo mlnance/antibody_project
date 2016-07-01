@@ -92,6 +92,10 @@ if not os.path.isdir( lowest_E_structs_dir ):
 print
 print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
 print "Working PDB filename:\t\t", input_args.working_pdb_file.split( '/' )[-1]
+print "Sugar filename:\t\t\t", input_args.glyco_file.split( '/' )[-1]
+print "Number of small move trials:\t", input_args.num_small_move_trials, "( 1 trial = 5 moves )"
+print "Using score ramping?:\t\t", input_args.ramp_sf
+print "Creating this many decoys:\t", input_args.nstruct
 print "Main structure directory:\t", main_structure_dir
 print "Base structures directory:\t", base_structs_dir
 print "Lowest E structures directory:\t", lowest_E_structs_dir

@@ -460,6 +460,10 @@ while not jd.job_complete:
                                           input_args.num_shear_move_trials )
             mc.score_function( sugar_sf )
 
+        # print current score
+        if input_args.verbose:
+            print "starting score", sf( testing_pose )
+
         # apply the ShearMover
         sm.apply( testing_pose )        
         if input_args.verbose:

@@ -460,6 +460,10 @@ while not jd.job_complete:
                                           input_args.num_LCM_trials )
             mc.score_function( sugar_sf )
 
+        # print current score
+        if input_args.verbose:
+            print "starting score", sf( testing_pose )
+
         # apply the LinkageConformerMover
         lcm.apply( testing_pose )        
         if input_args.verbose:
@@ -505,7 +509,6 @@ while not jd.job_complete:
         num_mc_checks += 1
         mc_acceptance = round( ( float( num_lcm_accept ) / float( num_mc_checks ) * 100 ), 3 )
         if input_args.verbose:
-            print
             print "Moves made so far:", num_mc_checks, 
             print "  Moves accepted:", num_lcm_accept, 
             print "  Acceptance rate:", mc_acceptance

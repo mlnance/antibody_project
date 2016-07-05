@@ -4,7 +4,7 @@ from gzip import GzipFile
 from StringIO import StringIO
 import os
 import urllib2
-import string
+import string, random
 from io import BytesIO
 from os.path import isfile
 
@@ -84,18 +84,18 @@ def renumber_PDB( pdb_filename, new_filename = None, reverse  = False ):
         f = open( pdb_filename, 'r' )
         pdb = f.readlines()
         f.close()
-            
+
     except IOError:
         print pdb_filename, "doesn't exist in this directory. Did you mean to download it? Exiting."
         sys.exit()
-        
+
     # make a smart whitespace checker  --  needed whitespace is as per PDB file formatting
     full_whitespace_needed = 4
-    
+
     # start the residue counters
     res_num = 1
     num_of_uniq_residues = 1  # starts at one because indexed at 1
-    
+
     # get the unique name of the first residue to begin the renumbering process
     for line in pdb:
         # make sure the line starts with ATOM or HETATM
@@ -104,7 +104,7 @@ def renumber_PDB( pdb_filename, new_filename = None, reverse  = False ):
             uniq_res_name = line[17:20].replace( ' ', '' ) + line[21:22].replace( ' ', '' ) + line[22:26].replace( ' ', '' )
             num_of_uniq_residues += 1
             break
-        
+
     # count how many uniq residues there are if the user wants to number in reverse
     if reverse:
         for line in pdb:
@@ -118,7 +118,7 @@ def renumber_PDB( pdb_filename, new_filename = None, reverse  = False ):
 
         # change the starting res_num to the number of unique residues
         res_num = num_of_uniq_residues
-        
+
     # if a new filename was not given, make new_filename = pdb_filename
     if new_filename is None:
         new_filename = pdb_filename
@@ -139,13 +139,13 @@ def renumber_PDB( pdb_filename, new_filename = None, reverse  = False ):
                     else:
                         # going up to max
                         res_num += 1
-                
+
                 # get first unique residue identifier (resname + reschain + resnum)
                 whitespace_needed = full_whitespace_needed - len( str( res_num ) )
-                
+
                 # update the line's residue number
                 line = line[0:22] + ( ( ' ' * whitespace_needed ) + str( res_num ) ) + line[26:]
-                
+
                 # print line to file
                 pdb_fh.write( line )
 
@@ -169,19 +169,21 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num, dump_dir = None ):
     #################
     #### IMPORTS ####
     #################
-    
+
     import os, sys
     from line_definitions import PDB_line, HETNAM_line, \
         LINK_line, SSBOND_line
-    
-    
+
+
     # check validity of input args
     if not ( isinstance( chains, list ) or isinstance( chains, str ) ):
         print
         print "You didn't pass me a list or a string for the <chains> argument. Exiting."
         sys.exit()
-        
+
     # dump the given pose to get access to its PDB lines
+    # make a random, 4-character suffix for the dump files because Jazz gets sassy?
+
     # if given a dump_dir
     if dump_dir is not None:
         if dump_dir.endswith( '/' ):
@@ -192,35 +194,35 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num, dump_dir = None ):
     else:
         dump_name = os.getcwd() + "/dump_%s.pdb" %str( decoy_num )
     pose.dump_pdb( dump_name )
-    
+
     # grab the dumped PDB lines
     with open( dump_name, "rb" ) as fh:
         pdb_lines = fh.readlines()
-        
+
     # remove the dumped pdb
     cmd = "rm %s" %dump_name
     try:
         os.popen( cmd )
     except:
         pass
-            
+
     # for each line, check the residues chain id and decide whether to keep it
     keep_these_lines = []
     for line in pdb_lines:
         # if this is a residue line
         if line.startswith( "ATOM" ):
             _PDB_line = PDB_line( line )
-            
+
             # if you were given a list of chain id's to keep
             if isinstance( chains, list ):
                 if _PDB_line.res_chain in chains:
                     keep_these_lines.append( line )
-                    
+
             # if you were given one chain to keep
             elif isinstance( chains, str ):
                 if _PDB_line.res_chain == chains:
                     keep_these_lines.append( line )
-            
+
         # otherwise it's some other kind of line, just keep it
         else:
             # if you were given a list of chain id's to keep
@@ -230,19 +232,19 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num, dump_dir = None ):
                     _HETNAM_line = HETNAM_line( line )
                     if _HETNAM_line.res_chain in chains:
                         keep_these_lines.append( line )
-                        
+
                 # SSBOND lines
                 if line.startswith( "SSBOND" ):
                     _SSBOND_line = SSBOND_line( line )
                     if _SSBOND_line.res1_chain in chains and _SSBOND_line.res2_chain in chains:
                         keep_these_lines.append( line )
-                        
+
                 # LINK lines
                 if line.startswith( "LINK" ):
                     _LINK_line = LINK_line( line )
                     if _LINK_line.res1_chain in chains and _LINK_line.res2_chain in chains:
                         keep_these_lines.append( line )
-            
+
     # if no residues were selected, return False
     if len( keep_these_lines ) == 0:
         print "No residues matched your chain ID. I won't be dumping a file for you."
@@ -255,7 +257,7 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num, dump_dir = None ):
         return True
     except:
         raise
-    
+
 
     
 
@@ -272,23 +274,23 @@ def fancy_dump_pdb_by_chain( filename, pose, chains ):
     #################
     #### IMPORTS ####
     #################
-    
+
     from rosetta.utility import vector1_Size, ostream
-    
-    
-    
+
+
+
     # check validity of input args
     if not ( isinstance( chains, list ) or isinstance( chains, str ) ):
         print
         print "You didn't pass me a list or a string for the <chains> argument. Exiting."
         sys.exit()
-        
+
     # for each residue, check its chain id and keep it in a vector1_Size list if desired
     keep_these_residues = vector1_Size()
     pdb_info = pose.pdb_info()
     for res in pose:
         chain_id = pdb_info.pose2pdb( res.seqpos() ).split( ' ' )[1]
-        
+
         # if you were given a list of chains to keep
         if isinstance( chains, list ):
             if chain_id in chains:
@@ -309,7 +311,25 @@ def fancy_dump_pdb_by_chain( filename, pose, chains ):
         pose.dump_pdb( ostream( fh ), keep_these_residues )
         fh.close()        
         return True
-    
+
     except:
         fh.close()    
         return False
+
+
+
+def id_generator( size=4, chars=string.ascii_uppercase + string.digits ):
+    '''
+    Return an id of length <size> using the characters from <chars>
+    :param size: int( desired length of id )
+    :param chars: string( characters with which to choose from to create id )
+    :return: string( unique id of size <size> )
+    '''
+    # if SystemRandom is available
+    try:
+        id = ''.join( random.SystemRandom().choice( chars ) for x in range( size ) )
+    # otherwise, use standard random.choice
+    except:
+        id = ''.join( random.choice( chars ) for x in range( size ) )
+
+    return id

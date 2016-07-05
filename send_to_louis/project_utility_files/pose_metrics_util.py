@@ -52,20 +52,19 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
         native_filename = "%s/temp_native_%s.pdb" %( dump_dir, str( decoy_num ) )
     dump_pdb_by_chain( working_filename, working, working_Fc_glycan_chains, decoy_num, dump_dir )
     dump_pdb_by_chain( native_filename, native, native_Fc_glycan_chains, decoy_num, dump_dir )
-    
+
     temp_working = Pose()
     try:
         temp_working.assign( load_pose( working_filename ) )
-        os.popen( "rm %s" %working_filename )
     except:
         pass
+
     temp_native = Pose()
     try:
         temp_native.assign( load_pose( native_filename ) )
-        os.popen( "rm %s" %native_filename )
     except:
         pass
-    
+
     try:
         glycan_rmsd = non_peptide_heavy_atom_RMSD( temp_working, temp_native )
     except:
@@ -74,7 +73,14 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     metric_data.append( "glycan_rmsd:" )
     metric_data.append( str( glycan_rmsd ) )
     
-    
+    # delete the files
+    try:
+        os.popen( "rm %s" %working_filename )
+        os.popen( "rm %s" %native_filename )
+    except:
+        pass
+
+
     # delta interaction energy
     working_interaction_energy = calc_interaction_energy( working, sf, Vector1( [ JUMP_NUM ] ) )
     native_interaction_energy = calc_interaction_energy( native, sf, Vector1( [ JUMP_NUM ] ) )
@@ -82,7 +88,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     metric_data.append( "delta_interface_interaction_energy:" )
     metric_data.append( str( delta_interaction_energy ) )
 
-    
+
     # delta hbonds
     working_hbonds = get_hbonds( working )
     native_hbonds = get_hbonds( native )
@@ -171,7 +177,7 @@ def read_fasc_file( fasc_filename ):
                 line = line.replace( "pdb name", "pdb_name" )
                 
                 # replace X amount of spaces that follow ':'
-                arr = re.split( "[:\s]+", line)
+                arr = re.split( "[:\s]+", line )
             
     # turn the list of line data into an iterator
     iterator = iter( arr )

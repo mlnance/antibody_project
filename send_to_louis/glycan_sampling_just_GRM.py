@@ -89,17 +89,24 @@ if not os.path.isdir( lowest_E_structs_dir ):
         pass
 
 # relay information to user
-print
-print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
-print "Working PDB filename:\t\t", input_args.working_pdb_file.split( '/' )[-1]
-print "Using this sugar:\t\t", input_args.glyco_file.split( '/' )[-1]
-print "Creating this many decoys:\t", input_args.nstruct
-print "Number of GRM moves:\t\t", input_args.num_GRM_moves
-print "Random reset of Fc glycan?:\t", input_args.random_reset
-print "Main structure directory:\t", main_structure_dir
-print "Base structures directory:\t", base_structs_dir
-print "Lowest E structures directory:\t", lowest_E_structs_dir
-print
+info_file_details = []
+info_file_details.append( "Native PDB filename:\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
+info_file_details.append( "Working PDB filename:\t\t%s\n" %input_args.working_pdb_file.split( '/' )[-1] )
+info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
+info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
+info_file_details.append( "Number of GRM moves:\t\t%s\n" %str( input_args.num_GRM_moves ) )
+info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
+info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
+info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )
+info_file_details.append( "Lowest E structure directory:\t%s\n" %lowest_E_structs_dir )
+info_file = ''.join( info_file_details )
+print "\n", info_file, "\n"
+
+# write out the info file with the collected info from above
+info_filename = main_structure_dir + "protocol_run.info"
+with open( info_filename, "wb" ) as fh:
+    fh.write( "Info for this run of %s\n\n" %__file__ )
+    fh.write( info_file )
 
 
 

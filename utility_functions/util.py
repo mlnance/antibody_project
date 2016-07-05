@@ -174,37 +174,30 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num, dump_dir = None ):
     from line_definitions import PDB_line, HETNAM_line, \
         LINK_line, SSBOND_line
 
-
     # check validity of input args
     if not ( isinstance( chains, list ) or isinstance( chains, str ) ):
         print
         print "You didn't pass me a list or a string for the <chains> argument. Exiting."
         sys.exit()
 
-    # dump the given pose to get access to its PDB lines
     # make a random, 4-character suffix for the dump files because Jazz gets sassy?
+    id = id_generator()
 
+    # dump the given pose to get access to its PDB lines
     # if given a dump_dir
     if dump_dir is not None:
         if dump_dir.endswith( '/' ):
-            dump_name = dump_dir + "dump_%s.pdb" %str( decoy_num )
+            dump_name = dump_dir + "%s_dump_%s.pdb" %( id, str( decoy_num ) )
         else:
-            dump_name = dump_dir + "/dump_%s.pdb" %str( decoy_num )
+            dump_name = dump_dir + "/%s_dump_%s.pdb" %( id, str( decoy_num ) )
     # else dump in the current working directory
     else:
-        dump_name = os.getcwd() + "/dump_%s.pdb" %str( decoy_num )
+        dump_name = os.getcwd() + "/%s_dump_%s.pdb" %( id, str( decoy_num ) )
     pose.dump_pdb( dump_name )
 
     # grab the dumped PDB lines
     with open( dump_name, "rb" ) as fh:
         pdb_lines = fh.readlines()
-
-    # remove the dumped pdb
-    cmd = "rm %s" %dump_name
-    try:
-        os.popen( cmd )
-    except:
-        pass
 
     # for each line, check the residues chain id and decide whether to keep it
     keep_these_lines = []
@@ -244,6 +237,13 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num, dump_dir = None ):
                     _LINK_line = LINK_line( line )
                     if _LINK_line.res1_chain in chains and _LINK_line.res2_chain in chains:
                         keep_these_lines.append( line )
+
+    # remove the dumped pdb
+    cmd = "rm %s" %dump_name
+    try:
+        os.popen( cmd )
+    except:
+        pass
 
     # if no residues were selected, return False
     if len( keep_these_lines ) == 0:

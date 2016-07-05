@@ -50,8 +50,8 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     else:
         working_filename = "%s/temp_working_%s.pdb" %( dump_dir, str( decoy_num ) )
         native_filename = "%s/temp_native_%s.pdb" %( dump_dir, str( decoy_num ) )
-    dump_pdb_by_chain( working_filename, working, working_Fc_glycan_chains, decoy_num, dump_dir )
-    dump_pdb_by_chain( native_filename, native, native_Fc_glycan_chains, decoy_num, dump_dir )
+    dump_pdb_by_chain( working_filename, working, working_Fc_glycan_chains, decoy_num, dump_dir = dump_dir )
+    dump_pdb_by_chain( native_filename, native, native_Fc_glycan_chains, decoy_num, dump_dir = dump_dir )
 
     temp_working = Pose()
     try:

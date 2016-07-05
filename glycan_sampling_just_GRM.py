@@ -461,14 +461,18 @@ while not jd.job_complete:
         print "score after min", sf( testing_pose )
 
     # collect additional metric data
-    metrics = get_pose_metrics( testing_pose, 
-                                native_pose, 
-                                sugar_sf, 
-                                2, # interface JUMP_NUM
-                                Fc_glycan_chains, 
-                                native_Fc_glycan_chains, 
-                                jd.current_num, 
-                                metrics_dump_dir )
+    try:
+        metrics = get_pose_metrics( testing_pose, 
+                                    native_pose, 
+                                    sugar_sf, 
+                                    2, # interface JUMP_NUM
+                                    Fc_glycan_chains, 
+                                    native_Fc_glycan_chains, 
+                                    jd.current_num, 
+                                    metrics_dump_dir )
+    except:
+        metrics = ''
+        pass
 
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics

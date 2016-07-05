@@ -31,6 +31,7 @@ parser.add_argument("utility_dir", type=str, help="where do your utility files l
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_GRM_moves", type=int, help="how many moves do you want to make within the Fc glycan during one GlycanRelaxMover trial?")
+parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
 input_args = parser.parse_args()
 
@@ -92,8 +93,9 @@ print
 print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
 print "Working PDB filename:\t\t", input_args.working_pdb_file.split( '/' )[-1]
 print "Using this sugar:\t\t", input_args.glyco_file.split( '/' )[-1]
-print "Number of GRM moves:\t\t", input_args.num_GRM_moves
 print "Creating this many decoys:\t", input_args.nstruct
+print "Number of GRM moves:\t\t", input_args.num_GRM_moves
+print "Random reset of Fc glycan?:\t", input_args.random_reset
 print "Main structure directory:\t", main_structure_dir
 print "Base structures directory:\t", base_structs_dir
 print "Lowest E structures directory:\t", lowest_E_structs_dir
@@ -332,30 +334,32 @@ while not jd.job_complete:
     ################################
     #### Fc GLYCAN RANDOM RESET ####
     ################################
-    '''
-    # for each residue except the core GlcNAc in Fc glycan
-    # subtracting one because this list skips the core GlcNAc
-    for res_num in Fc_sugar_nums_except_core_GlcNAc[ : ( size_of_one_glycan - 1 ) ]:
-        # pick three random integers between 0 and 360
-        reset_phi_num = float( random_range( 0, 360 ) )
-        reset_psi_num = float( random_range( 0, 360 ) )
-        reset_omega_num = float( random_range( 0, 360 ) )
 
-        # reset the phi, psi, and omega values for the residue
-        # side A
-        testing_pose.set_phi( res_num, reset_phi_num )
-        testing_pose.set_psi( res_num, reset_psi_num )
-        #testing_pose.set_omega( res_num, reset_omega_num )
+    if input_args.random_reset:
+        # for each residue except the core GlcNAc in Fc glycan
+        # this method gives the range for the first Fc glycan without core GlcNAc
+        # this will only work if the two glycans are the same on both sides
+        for res_num in Fc_sugar_nums_except_core_GlcNAc[ : ( size_of_one_glycan - 1 ) ]:
+            # pick three random integers between 0 and 360
+            reset_phi_num = float( random_range( 0, 360 ) )
+            reset_psi_num = float( random_range( 0, 360 ) )
+            reset_omega_num = float( random_range( 0, 360 ) )
 
-        # side B
-        testing_pose.set_phi( res_num + size_of_one_glycan - 1, reset_phi_num )
-        testing_pose.set_psi( res_num + size_of_one_glycan - 1, reset_phi_num )
-        #testing_pose.set_omega( res_num + size_of_one_glycan - 1, reset_phi_num )
-        
-    pmm.apply( testing_pose )
-    if input_args.verbose:
-        print "score of random reset", sf( testing_pose )
-    '''
+            # reset the phi, psi, and omega values for the residue
+            # side A
+            testing_pose.set_phi( res_num, reset_phi_num )
+            testing_pose.set_psi( res_num, reset_psi_num )
+            #testing_pose.set_omega( res_num, reset_omega_num )
+
+            # side B
+            testing_pose.set_phi( res_num + size_of_one_glycan - 1, reset_phi_num )
+            testing_pose.set_psi( res_num + size_of_one_glycan - 1, reset_phi_num )
+            #testing_pose.set_omega( res_num + size_of_one_glycan - 1, reset_phi_num )
+
+        pmm.apply( testing_pose )
+        if input_args.verbose:
+            print "score of random reset", sf( testing_pose )
+
 
 
     #################################

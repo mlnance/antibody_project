@@ -9,10 +9,10 @@ run rmsd_vs_score_with_fasc.py pdb_copies_dont_touch/lowest_E_double_pack_and_mi
 
 import argparse
 
-parser = argparse.ArgumentParser(description="Use Rosetta to calculate RMSD between a native pose\and a directory of structures")
-parser.add_argument("native_pdb_filename", help="the filename of the PDB structure to serve as th\ native structure")
+parser = argparse.ArgumentParser(description="Use Rosetta to calculate RMSD between a native pose and a directory of structures")
+parser.add_argument("native_pdb_filename", help="the filename of the PDB structure to serve as the native structure")
 parser.add_argument("fasc_file", help="the path to the .fasc file with the relevant data.")
-parser.add_argument("resulting_filename", type=str, help="what do you want the resulting csv file\to be called? This program will add the .csv extension for you")
+parser.add_argument("resulting_filename", type=str, help="what do you want the resulting csv file to be called? This program will add the .csv extension for you")
 parser.add_argument("utility_dir", type=str, help="the path to the utility functions directory.")
 input_args = parser.parse_args()
 
@@ -58,15 +58,15 @@ else:
 fasc_data_dict = read_fasc_file( fasc_file )
 
 # get the ligand_rmsd data from the .fasc file
-lig_rmsd_data = get_score_term_from_fasc_data_dict( fasc_data_dict, "ligand_rmsd" )
-#lig_rmsd = lig_rmsd_data.values()
+glycan_rmsd_data = get_score_term_from_fasc_data_dict( fasc_data_dict, "glycan_rmsd" )
+#lig_rmsd = glycan_rmsd_data.values()
 
 # get the total_score data from the .fasc file
 tot_score_data = get_score_term_from_fasc_data_dict( fasc_data_dict, "total_score" )
 #tot_score = tot_score_data.values()
 
 # prepare a .csv data file
-header = [ "pdb_names", "score", "rmsd" ]
+header = [ "pdb_names", "score", "glycan_rmsd" ]
 df_data = []
 df_data.append( header )
 
@@ -75,10 +75,10 @@ for decoy_num in fasc_data_dict.decoy_nums:
     try:
         pdb_name_temp = fasc_data_dict[ decoy_num ][ "filename" ]
         pdb_name = '_'.join( pdb_name_temp.split('/')[-1].split('_')[-4:] )
-        rmsd = fasc_data_dict[ decoy_num ][ "ligand_rmsd" ]
+        glycan_rmsd = fasc_data_dict[ decoy_num ][ "glycan_rmsd" ]
         score = fasc_data_dict[ decoy_num ][ "total_score" ]
     
-        data = [ pdb_name, score, rmsd ]
+        data = [ pdb_name, score, glycan_rmsd ]
         df_data.append( data )
         
     # skip the entry if there is an issue

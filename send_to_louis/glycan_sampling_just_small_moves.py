@@ -548,12 +548,6 @@ while not jd.job_complete:
     cur_decoy_num += 1
 
 
-# remove the metrics_dump_dir
-try:
-    os.rmdir( metrics_dump_dir )
-except:
-    pass
-
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 fasc_filename = working_pose_decoy_name + ".fasc"
 lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 5 )

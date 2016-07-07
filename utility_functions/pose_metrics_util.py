@@ -214,11 +214,17 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
 
     # pseduo-inferface energy 
     # ( full protein score - Fc-FcR glycan score [ except the short glycan away from interface ] )
-    pseudo_interface_score = pseudo_interface_score_3ay4( working, sf, 
-                                                          native = False, 
-                                                          pmm = None )
+    working_pseudo_interface_score = pseudo_interface_score_3ay4( working, sf, 
+                                                                  native = False, 
+                                                                  pmm = None )
+    native_pseudo_interface_score = pseudo_interface_score_3ay4( native, sf, 
+                                                                 native = True, 
+                                                                 pmm = None )
+    delta_pseudo_interface_score = working_pseudo_interface_score - native_pseudo_interface_score
     metric_data.append( "pseudo_interface_energy:" )
     metric_data.append( str( pseudo_interface_score ) )
+    metric_data.append( "delta_pseudo_interface_energy:" )
+    metric_data.append( str( delta_pseudo_interface_score ) )
 
 
     # delta standard interaction energy

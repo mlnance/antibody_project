@@ -3,6 +3,132 @@ __author__ = "morganlnance"
 
 
 
+def pseudo_interface_score_3ay4( pose, sf, native = False, pmm = None ):
+    """
+    Attempts to get pseudo-interface score of a glycosylated 3ay4 decoy
+    Lots of hard coding here - works on a decoy pose as Rosetta renumbers the Pose a bit
+    Makes the two ASN connections to the Fc A and B glycans JUMPs instead of chemical EDGEs
+    :return: 
+    """
+    from rosetta import FoldTree, Pose
+    from rosetta.numeric import xyzVector_Real
+
+    # save the original FoldTree
+    orig_ft = pose.fold_tree()
+
+    # get the score of the whole complex
+    start_score = sf( pose )
+
+    # hard code the new FoldTree specific to a glycosylated decoy of 3ay4
+    if not native:
+        ft = FoldTree()
+        ft.add_edge( 1, 215, -1 )
+        ft.add_edge( 1, 216, 1 )
+        ft.add_edge( 216, 431, -1 )
+        ft.add_edge( 1, 432, 2 )
+        ft.add_edge( 432, 591, -1 )
+        ft.add_edge( 579, 592, "ND2", "C1" )
+        ft.add_edge( 592, 596, -1 )
+        ft.add_edge( 594, 597, "O6", "C1" )
+        ft.add_edge( 597, 598, -1 )
+        ft.add_edge( 592, 599, "O6", "C1" )
+        ft.add_edge( 462, 600, "ND2", "C1" )
+        ft.add_edge( 600, 602, -1 )
+        ft.add_edge( 69, 603, 3 )
+        ft.add_edge( 603, 607, -1 )
+        ft.add_edge( 605, 608, "O6", "C1" )
+        ft.add_edge( 608, 610, -1 )
+        ft.add_edge( 281, 611, 4 )
+        ft.add_edge( 611, 615, -1 )
+        ft.add_edge( 613, 616, "O6", "C1" )
+        ft.add_edge( 616, 618, -1 )
+
+    # hard code the new FoldTree specific to the native 3ay4
+    else:
+        ft = FoldTree()
+        ft.add_edge( 1, 215, -1 )
+        ft.add_edge( 69, 216, 1 )
+        ft.add_edge( 216, 220, -1 )
+        ft.add_edge( 218, 221, "O6", "C1" )
+        ft.add_edge( 221, 223, -1 )
+        ft.add_edge( 1, 224, 2 )
+        ft.add_edge( 224, 439, -1 )
+        ft.add_edge( 292, 440, 3 )
+        ft.add_edge( 440, 444, -1 )
+        ft.add_edge( 442, 445, "O6", "C1" )
+        ft.add_edge( 445, 447, -1 )
+        ft.add_edge( 1, 448, 4 )
+        ft.add_edge( 448, 607, -1 )
+        ft.add_edge( 595, 608, "ND2", "C1" )
+        ft.add_edge( 608, 612, -1 )
+        ft.add_edge( 610, 613, "O6", "C1" )
+        ft.add_edge( 613, 614, -1 )
+        ft.add_edge( 608, 615, "O6", "C1" )
+        ft.add_edge( 478, 616, "ND2", "C1" )
+        ft.add_edge( 616, 618, -1 )
+        
+    # make a temporary Pose and give the new FoldTree to it
+    #try:
+    #    pmm.keep_history( True )
+    #except:
+    #    pass
+    temp_pose = Pose()
+    temp_pose.assign( pose )
+    #try:
+    #    pmm.apply( temp_pose )
+    #except:
+    #    pass
+    temp_pose.fold_tree( ft )
+
+    # split apart the two Fc sugars one-by-one
+    # if decoy structure
+    if not native:
+        jump = temp_pose.jump( 3 ) # sugar A
+        vec = xyzVector_Real( 1000, 1000, 1000 )
+        jump.set_translation( vec )
+        temp_pose.set_jump( 3, jump )
+        #try:
+        #    pmm.apply( temp_pose )
+        #except:
+        #    pass
+        jump = temp_pose.jump( 4 ) # sugar B
+        vec = xyzVector_Real( 1000, 1000, 1000 )
+        jump.set_translation( vec )
+        temp_pose.set_jump( 4, jump )
+        #try:
+        #    pmm.apply( temp_pose )
+        #except:
+        #    pass
+
+    # else native structure
+    else:
+        jump = temp_pose.jump( 1 ) # sugar A
+        vec = xyzVector_Real( 1000, 1000, 1000 )
+        jump.set_translation( vec )
+        temp_pose.set_jump( 1, jump )
+        #try:
+        #    pmm.apply( temp_pose )
+        #except:
+        #    pass
+        jump = temp_pose.jump( 3 ) # sugar B
+        vec = xyzVector_Real( 1000, 1000, 1000 )
+        jump.set_translation( vec )
+        temp_pose.set_jump( 3, jump )
+        #try:
+        #    pmm.apply( temp_pose )
+        #except:
+        #    pass        
+
+    # score the split-apart Pose
+    split_score = sf( temp_pose )
+
+    # get the pseduo-interface score
+    pseudo_interface_score = start_score - split_score
+
+    return pseudo_interface_score
+
+
+
 def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, native_Fc_glycan_chains, decoy_num, dump_dir, MC_acceptance_rate = None ):
     """
     Return a space-delimited string containing various pose metrics.
@@ -79,6 +205,12 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
         os.popen( "rm %s" %native_filename )
     except:
         pass
+
+    # pseduo-inferface energy 
+    # ( full protein score - Fc-FcR glycan score [ except the short glycan away from interface ] )
+    pseudo_interface_score = pseudo_interface_score_3ay4( working, sf, native = False, pmm = None ):    
+    metric_data.append( "pseudo_interface_energy:" )
+    metric_data.append( str( pseudo_interface_score ) )
 
 
     # delta interaction energy

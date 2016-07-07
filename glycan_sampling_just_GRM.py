@@ -88,26 +88,6 @@ if not os.path.isdir( lowest_E_structs_dir ):
     except:
         pass
 
-# relay information to user
-info_file_details = []
-info_file_details.append( "Native PDB filename:\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
-info_file_details.append( "Working PDB filename:\t\t%s\n" %input_args.working_pdb_file.split( '/' )[-1] )
-info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
-info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
-info_file_details.append( "Number of GRM moves:\t\t%s\n" %str( input_args.num_GRM_moves ) )
-info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
-info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
-info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )
-info_file_details.append( "Lowest E structure directory:\t%s\n" %lowest_E_structs_dir )
-info_file = ''.join( info_file_details )
-print "\n", info_file, "\n"
-
-# write out the info file with the collected info from above
-info_filename = main_structure_dir + "protocol_run.info"
-with open( info_filename, "wb" ) as fh:
-    fh.write( "Info for this run of %s\n\n" %__file__ )
-    fh.write( info_file )
-
 
 
 #################
@@ -177,12 +157,18 @@ if not os.path.isdir( structure_dir ):
         os.mkdir( structure_dir )
     except:
         pass
-working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_%s_grm" %input_args.num_GRM_moves
+working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_%s_GRM" %input_args.num_GRM_moves
 
 
 # collect the core GlcNAc values from the native pose
 A_phi, A_psi, A_omega = get_phi_psi_omega_of_res( native_pose, 216 )
 B_phi, B_psi, B_omega = get_phi_psi_omega_of_res( native_pose, 440 )
+
+# collect the two chi angles from both ASN 297 residues from the native pose
+A_chi_1 = native_pose.chi( 1, 69 )   # 69 = ASN 297 A
+A_chi_2 = native_pose.chi( 2, 69 )   # 69 = ASN 297 A
+B_chi_1 = native_pose.chi( 1, 292 )  # 292 = ASN 297 B
+B_chi_2 = native_pose.chi( 2, 292 )  # 292 = ASN 297 B
 
 # collect the chain id's of the Fc glycan from the native pose
 native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
@@ -213,11 +199,8 @@ for res in working_pose:
 # get the number of chains because the Pose renumbers its chains after glycosylation
 num_working_pose_chains = len( working_pose_chains )
 
-# get a standard fa_scorefxn for protein stuff
-sf = get_fa_scorefxn()
-
-# adjust the standard fa_scorefxn for sugar stuff
-sugar_sf = get_fa_scorefxn_with_given_weights( "fa_intra_rep", 0.440 )
+# adjust a standard fa_scorefxn with certain weights for protocol usage
+main_sf = get_fa_scorefxn_with_given_weights( "fa_intra_rep", 0.440 )
 
 
 
@@ -229,12 +212,35 @@ pmm.apply( working_pose )
 
 
 
+# relay information to user
+info_file_details = []
+info_file_details.append( "Native PDB filename:\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
+info_file_details.append( "Working PDB filename:\t\t%s\n" %input_args.working_pdb_file.split( '/' )[-1] )
+info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
+info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
+info_file_details.append( "Number of GRM moves:\t\t%s\n" %str( input_args.num_GRM_moves ) )
+info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
+info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
+info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )
+info_file_details.append( "Lowest E structure directory:\t%s\n" %lowest_E_structs_dir )
+info_file_details.append( "\nScore weights used in main_sf:\n%s\n" %( "\n".join( [ "%s: %s" %( str( name ), main_sf.get_weight( name ) ) for name in main_sf.get_nonzero_weighted_scoretypes() ] ) ) )
+info_file = ''.join( info_file_details )
+print "\n", info_file, "\n"
+
+# write out the info file with the collected info from above
+info_filename = main_structure_dir + "protocol_run.info"
+with open( info_filename, "wb" ) as fh:
+    fh.write( "Info for this run of %s\n\n" %__file__ )
+    fh.write( info_file )
+
+
+
 #########################
 #### JOB DISTRIBUTOR ####
 #########################
 
 # create and use the PyJobDistributor object
-jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, sugar_sf )
+jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, main_sf )
 jd.native_pose = native_pose
 cur_decoy_num = 0
 
@@ -261,7 +267,7 @@ while not jd.job_complete:
     pmm.apply( testing_pose )
     if input_args.verbose:
         print
-        print "score of glycosylated pose", sf( testing_pose )
+        print "score of glycosylated pose", main_sf( testing_pose )
 
 
 
@@ -274,7 +280,7 @@ while not jd.job_complete:
     num_sugars_added = n_res_Fc_glycan - n_res_no_Fc_glycan
     size_of_one_glycan = num_sugars_added / 2
     A_core_GlcNAc = n_res_no_Fc_glycan + 1
-    B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1    
+    B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1
 
     # get the res nums and branch points of the Fc sugars added
     Fc_sugar_nums = []
@@ -332,9 +338,18 @@ while not jd.job_complete:
     testing_pose.set_psi( B_core_GlcNAc, B_psi )
     testing_pose.set_omega( B_core_GlcNAc, B_omega )
 
+    ## reset both of the linking ASN residues of the glycosylated testing_pose
+    # chain A
+    testing_pose.set_chi( 1, 69, A_chi_1 )   # 69 = ASN 297 A
+    testing_pose.set_chi( 2, 69, A_chi_2 )   # 69 = ASN 297 A
+
+    # chain B
+    testing_pose.set_chi( 1, 284, B_chi_1 )  # 284 = ASN 297 B
+    testing_pose.set_chi( 2, 284, B_chi_2 )  # 284 = ASN 297 B
+
     pmm.apply( testing_pose )
     if input_args.verbose:
-        print "score of glyco reset", sf( testing_pose )
+        print "score of core glyco reset", main_sf( testing_pose )
 
 
 
@@ -365,8 +380,7 @@ while not jd.job_complete:
 
         pmm.apply( testing_pose )
         if input_args.verbose:
-            print "score of random reset", sf( testing_pose )
-
+            print "score of random reset", main_sf( testing_pose )
 
 
     #################################
@@ -384,13 +398,13 @@ while not jd.job_complete:
 
     # make and apply MinMover
     min_mover = MinMover( movemap_in = min_mm, 
-                          scorefxn_in = sugar_sf, 
+                          scorefxn_in = main_sf, 
                           min_type_in = "dfpmin_strong_wolfe", 
                           tolerance_in = 0.01, 
                           use_nb_list_in = True )
 
     # pack the Fc sugars and around them within 20 Angstroms
-    pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
+    pack_rotamers_mover = make_pack_rotamers_mover( main_sf, testing_pose, 
                                                     apply_sf_sugar_constraints = False,
                                                     pack_branch_points = True, 
                                                     residue_range = Fc_sugar_nums, 
@@ -403,12 +417,12 @@ while not jd.job_complete:
         # pack
         pack_rotamers_mover.apply( testing_pose )
         if input_args.verbose:
-            print "score of pack", sf( testing_pose )
+            print "score of pack", main_sf( testing_pose )
 
         # minimize
         min_mover.apply( testing_pose )
         if input_args.verbose:
-            print "score of min", sf( testing_pose )
+            print "score of min", main_sf( testing_pose )
         
         pmm.apply( testing_pose )
 
@@ -429,28 +443,25 @@ while not jd.job_complete:
         grm_mm.set_branches( branch_point, True )
 
     # make an appropriate GlycanRelaxMover
-    grm = GlycanRelaxMover( mm = grm_mm, scorefxn = sugar_sf, rounds = input_args.num_GRM_moves )
-
-    # make an appropriate MonteCarlo object
-    mc = MonteCarlo( testing_pose, sugar_sf, kT )
+    grm = GlycanRelaxMover( mm = grm_mm, scorefxn = main_sf, rounds = input_args.num_GRM_moves )
 
     # apply the GlycanRelaxMover
     grm.apply( testing_pose )
 
     # pack the Fc sugars and around them within 20 Angstroms
-    pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
+    pack_rotamers_mover = make_pack_rotamers_mover( main_sf, testing_pose,
                                                     apply_sf_sugar_constraints = False,
-                                                    pack_branch_points = True, 
-                                                    residue_range = Fc_sugar_nums, 
-                                                    use_pack_radius = True, 
+                                                    pack_branch_points = True,
+                                                    residue_range = Fc_sugar_nums,
+                                                    use_pack_radius = True,
                                                     pack_radius = 20 )
     pack_rotamers_mover.apply( testing_pose )
     if input_args.verbose:
         print "score after pack", sf( testing_pose )
 
     # make MoveMap for the Fc sugars
-    min_mm = make_movemap_for_range( Fc_sugar_nums, 
-                                     allow_bb_movement = True, 
+    min_mm = make_movemap_for_range( Fc_sugar_nums,
+                                     allow_bb_movement = True,
                                      allow_chi_movement = True )
 
     # add in the branch points myself ( does not include the two ASN residues )
@@ -458,10 +469,10 @@ while not jd.job_complete:
         min_mm.set_branches( branch_point, True )
 
     # make and apply MinMover
-    min_mover = MinMover( movemap_in = min_mm, 
-                          scorefxn_in = sugar_sf, 
-                          min_type_in = "dfpmin_strong_wolfe", 
-                          tolerance_in = 0.01, 
+    min_mover = MinMover( movemap_in = min_mm,
+                          scorefxn_in = main_sf,
+                          min_type_in = "dfpmin_strong_wolfe",
+                          tolerance_in = 0.01,
                           use_nb_list_in = True )
     min_mover.apply( testing_pose )
     if input_args.verbose:
@@ -471,7 +482,7 @@ while not jd.job_complete:
     try:
         metrics = get_pose_metrics( testing_pose, 
                                     native_pose, 
-                                    sugar_sf, 
+                                    main_sf, 
                                     2, # interface JUMP_NUM
                                     Fc_glycan_chains, 
                                     native_Fc_glycan_chains, 

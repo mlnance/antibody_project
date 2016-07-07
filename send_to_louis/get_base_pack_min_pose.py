@@ -82,7 +82,7 @@ from antibody_functions import load_pose, make_all_mutations, \
     initialize_rosetta, apply_sugar_constraints_to_sf
 from antibody_protocols import make_base_pack_min_pose
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
-from rosetta import Pose, get_fa_scorefxn, PyJobDistributor
+from rosetta import Pose, get_fa_scorefxn, PyJobDistributor, PyMOL_Mover
 
 # initialize Rosetta ( comes from antibody_functions )
 initialize_rosetta()
@@ -102,10 +102,16 @@ decoy_pdb_name = structure_dir + '/' + orig_pdb_name
 # sets up the input native PDB as being the base pose
 native_pose = Pose()
 native_pose.assign( load_pose( orig_pdb_filename_full_path ) )
+native_pose.pdb_info().name( "base" )
 
 # make the necessary score function
 sf = get_fa_scorefxn()
 sf = apply_sugar_constraints_to_sf( sf, native_pose )
+
+# pymol stuff
+pmm = PyMOL_Mover()
+pmm.keep_history( True )
+pmm.apply( native_pose )
 
 
 
@@ -122,11 +128,14 @@ print "Making a low E base pose by packing and minimizing the passed native pose
 decoy_num = 1
 while not jd.job_complete:
     # grab a fresh copy of the native pose
+    fresh_native = Pose()
+    fresh_native.assign( native_pose )
+
+    # make a working pose
     working_pose = Pose()
-    working_pose.assign( native_pose )
     
     # pack and minimize
-    working_pose.assign( make_base_pack_min_pose( sf, working_pose, trials = 2, verbose = True ) )
+    working_pose.assign( make_base_pack_min_pose( sf, fresh_native, trials = 2, verbose = True, pmm = pmm ) )
     
     # inform user of decoy number
     print "\tFinished with decoy %s" %str( decoy_num )

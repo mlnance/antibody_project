@@ -13,7 +13,7 @@ import random
 # TODO -- add "watch" possibility for each protocol (take in an arg for a pymol mover)
 
 
-# all relevant imports and function calls should be made possible after importing from mutational_analysis.py
+# all relevant imports and function calls should be made possible after importing from antibody_functions.py
 from antibody_functions import *
 
 
@@ -35,22 +35,27 @@ def make_base_pack_min_pose( sf, pose, trials = 2, dump_best_pose = False, dump_
     
     for ii in range( trials ):
         # pack
-        pack_rotamers_mover = make_pack_rotamers_mover( sf,
-                                                        working_pose,
-                                                        pack_branch_points = True,
-                                                        residue_range = None,
-                                                        use_pack_radius = False,
-                                                        verbose = False )
+        pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose,
+                                                        apply_sf_sugar_constraints = False,
+                                                        pack_branch_points = True )
         pack_rotamers_mover.apply( working_pose )
-        
+
         # minimize
-        min_mover = make_min_mover( sf,
-                                    working_pose,
-                                    # jumps = None actually means minimize all jumps
-                                    jumps = None,
-                                    allow_sugar_chi = False,
-                                    verbose = False )
+        mm = MoveMap()
+        mm.set_bb( True )
+        mm.set_chi( True )
+        mm.set_branches( True )
+
+        min_mover = MinMover( movemap_in = mm,
+                              scorefxn_in = sf,
+                              min_type_in = "dfpmin_strong_wolfe",
+                              tolerance_in = 0.01,
+                              use_nb_list_in = True )
         min_mover.apply( working_pose )
+        try:
+            pmm.apply( working_pose )
+        except:
+            pass
 
     return working_pose
 

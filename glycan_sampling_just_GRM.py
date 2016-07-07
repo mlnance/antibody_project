@@ -433,10 +433,10 @@ while not jd.job_complete:
     ##########################
 
     ## use the GlycanRelaxMover find a local sugar minima
-    # make a MoveMap for these Fc sugars allowing only bb movement
+    # make a MoveMap for these Fc sugars
     grm_mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, 
                                      allow_bb_movement = True, 
-                                     allow_chi_movement = False )
+                                     allow_chi_movement = True )
 
     # add in the branch points myself ( does not include the two ASN residues )
     for branch_point in Fc_glycan_branch_point_nums:

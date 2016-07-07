@@ -57,20 +57,19 @@ else:
 # get the fasc_data_dict
 fasc_data_dict = read_fasc_file( fasc_file )
 
+'''
 # get the ligand_rmsd data from the .fasc file
 glycan_rmsd_data = get_score_term_from_fasc_data_dict( fasc_data_dict, "glycan_rmsd" )
-#lig_rmsd = glycan_rmsd_data.values()
+#glycan_rmsd = glycan_rmsd_data.values()
 
-# get the pseudo-interface data from the .fasc file
-pseudo_interface_energy_data = get_score_term_from_fasc_data_dict( fasc_data_dict, "pseudo_interface_energy" )
-'''
 # get the total_score data from the .fasc file
 tot_score_data = get_score_term_from_fasc_data_dict( fasc_data_dict, "total_score" )
 #tot_score = tot_score_data.values()
 '''
 
 # prepare a .csv data file
-header = [ "pdb_names", "pseudo_interface_energy", "glycan_rmsd" ]
+#header = [ "pdb_names", "pseudo_interface_energy", "glycan_rmsd" ]
+header = [ "pdb_names", "total_score", "glycan_rmsd" ]
 df_data = []
 df_data.append( header )
 
@@ -80,11 +79,11 @@ for decoy_num in fasc_data_dict.decoy_nums:
         pdb_name_temp = fasc_data_dict[ decoy_num ][ "filename" ]
         pdb_name = '_'.join( pdb_name_temp.split('/')[-1].split('_')[-4:] )
         glycan_rmsd = fasc_data_dict[ decoy_num ][ "glycan_rmsd" ]
-        pseudo_interface_energy = fasc_data_dict[ decoy_num ][ "pseudo_interface_energy" ]
-        #score = fasc_data_dict[ decoy_num ][ "total_score" ]
+        #pseudo_interface_energy = fasc_data_dict[ decoy_num ][ "pseudo_interface_energy" ]
+        score = fasc_data_dict[ decoy_num ][ "total_score" ]
     
-        data = [ pdb_name, pseudo_interface_energy, glycan_rmsd ]
-        #data = [ pdb_name, score, glycan_rmsd ]
+        #data = [ pdb_name, pseudo_interface_energy, glycan_rmsd ]
+        data = [ pdb_name, score, glycan_rmsd ]
         df_data.append( data )
         
     # skip the entry if there is an issue

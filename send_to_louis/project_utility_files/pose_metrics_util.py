@@ -169,11 +169,6 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     # holds all relevant metric data and corresponding label
     metric_data = []
     
-    # total score using the given ScoreFxn
-    tot_score = sf( working )
-    metric_data.append( "score_with_given_sf:" )
-    metric_data.append( str( tot_score ) )
-
 
     # glycan RMSD calculation
     if dump_dir.endswith( '/' ):

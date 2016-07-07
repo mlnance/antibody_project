@@ -38,7 +38,7 @@ def pseudo_interface_score_3ay4( pose, sf, native = False, pmm = None ):
         ft.add_edge( 603, 607, -1 )
         ft.add_edge( 605, 608, "O6", "C1" )
         ft.add_edge( 608, 610, -1 )
-        ft.add_edge( 281, 611, 4 )
+        ft.add_edge( 284, 611, 4 )
         ft.add_edge( 611, 615, -1 )
         ft.add_edge( 613, 616, "O6", "C1" )
         ft.add_edge( 616, 618, -1 )

@@ -169,6 +169,12 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     # holds all relevant metric data and corresponding label
     metric_data = []
     
+    # total score using the given ScoreFxn
+    tot_score = sf( working )
+    metric_data.append( "score_with_given_sf" )
+    metric_data.append( str( tot_score ) )
+
+
     # glycan RMSD calculation
     if dump_dir.endswith( '/' ):
         working_filename = "%stemp_working_%s.pdb" %( dump_dir, str( decoy_num ) )
@@ -208,7 +214,9 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
 
     # pseduo-inferface energy 
     # ( full protein score - Fc-FcR glycan score [ except the short glycan away from interface ] )
-    pseudo_interface_score = pseudo_interface_score_3ay4( working, sf, native = False, pmm = None ):    
+    pseudo_interface_score = pseudo_interface_score_3ay4( working, sf, 
+                                                          native = False, 
+                                                          pmm = None )
     metric_data.append( "pseudo_interface_energy:" )
     metric_data.append( str( pseudo_interface_score ) )
 
@@ -254,7 +262,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     if MC_acceptance_rate is not None:
         metric_data.append( "MonteCarlo_acceptance_rate:" )
         metric_data.append( str( MC_acceptance_rate ) )
-    
+
     # create metrics string
     metrics = ' '.join( metric_data )    
     

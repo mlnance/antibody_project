@@ -436,9 +436,6 @@ while not jd.job_complete:
 
     ## use the LinkageConformerMover find a local sugar minima
     # make a MoveMap for these Fc sugars
-    # chi = True, just do it and for Small
-    # bb = phi, psi, and omega
-    # 1 move = 1 move SmallMover
     lcm_mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, 
                                      allow_bb_movement = True, 
                                      allow_chi_movement = True )

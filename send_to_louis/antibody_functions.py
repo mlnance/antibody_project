@@ -125,7 +125,8 @@ def initialize_rosetta():
     print "Initializing Rosetta with sugar flags"
 
     # makes Rosetta quiet and sugar I/O ready
-    init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
+    #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
+    init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
 
 
 
@@ -355,8 +356,7 @@ def get_score_by_scoretype( sf, input_scoretype, pose, weight = 1.0, verbose = F
 
     # if has_scoretype is False, add the <input_scoretype> to the <sf> with weight <weight>
     if not has_scoretype:
-        if verbose:
-            print "It appears the ScoreType is not already included in your ScoreFunction, adding", input_scoretype, "with a weight of", weight
+        print "It appears the ScoreType is not already included in your ScoreFunction, adding", input_scoretype, "with a weight of", weight
         sf.set_weight( scoretype, weight )
 
     # score the <pose> with the specified <input_scoretype> and return the value
@@ -2926,7 +2926,8 @@ if __name__ == '__main__':
     from rosetta import init
     
     print "Initializing Rosetta with sugar flags"
-    init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
+    #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
+    init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
 
 ############################
 #### INITIALIZE ROSETTA ####

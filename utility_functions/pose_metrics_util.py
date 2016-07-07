@@ -222,7 +222,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
                                                                  pmm = None )
     delta_pseudo_interface_score = working_pseudo_interface_score - native_pseudo_interface_score
     metric_data.append( "pseudo_interface_energy:" )
-    metric_data.append( str( pseudo_interface_score ) )
+    metric_data.append( str( working_pseudo_interface_score ) )
     metric_data.append( "delta_pseudo_interface_energy:" )
     metric_data.append( str( delta_pseudo_interface_score ) )
 
@@ -242,7 +242,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     native_hbonds = get_hbonds( native )
     delta_hbonds = working_hbonds.nhbonds() - native_hbonds.nhbonds()
     metric_data.append( "hbonds:" )
-    metric_data.append( str( working_hbonds ) )
+    metric_data.append( str( working_hbonds.nhbonds() ) )
     metric_data.append( "delta_hbonds:" )
     metric_data.append( str( delta_hbonds ) )
 
@@ -257,7 +257,7 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
                                                                                   cutoff = cutoff )
     delta_interface_res_contacts = working_intf_contacts - native_intf_contacts
     metric_data.append( "interface_res_contacts_%s_A:" %( str( cutoff ) ) )
-    metric_data.append( str( working_interface_res_contacts ) )
+    metric_data.append( str( working_intf_contacts ) )
     metric_data.append( "delta_interface_res_contacts_%s_A:" %( str( cutoff ) ) )
     metric_data.append( str( delta_interface_res_contacts ) )
 

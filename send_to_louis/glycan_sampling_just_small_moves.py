@@ -30,7 +30,7 @@ parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan fil
 parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
-parser.add_argument("num_small_move_trials", type=int, help="how many trials of 5 SmallMoves do you want to make within the Fc glycan?")
+parser.add_argument("num_small_moves", type=int, help="how many SmallMoves do you want to make within the Fc glycan?")
 parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
@@ -46,7 +46,7 @@ import os, sys
 
 # collect and create necessary directories for use in metric calculations
 working_dir = os.getcwd() + '/'
-metrics_dump_dir = working_dir + "small_%s_dir" %str( input_args.num_small_move_trials )
+metrics_dump_dir = working_dir + "small_%s_dir" %str( input_args.num_small_moves )
 try:
     os.mkdir( metrics_dump_dir )
 except:
@@ -157,7 +157,7 @@ if not os.path.isdir( structure_dir ):
         os.mkdir( structure_dir )
     except:
         pass
-working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_%s_small_moves" %input_args.num_small_move_trials
+working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_%s_small_moves" %input_args.num_small_moves
 
 
 # collect the core GlcNAc values from the native pose
@@ -218,7 +218,7 @@ info_file_details.append( "Native PDB filename:\t\t%s\n" %input_args.native_pdb_
 info_file_details.append( "Working PDB filename:\t\t%s\n" %input_args.working_pdb_file.split( '/' )[-1] )
 info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
 info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
-info_file_details.append( "Number of small move trials:\t%s ( 1 trial = 5 moves )\n" %str( input_args.num_small_move_trials ) )
+info_file_details.append( "Number of small moves:\t\t%s\n" %str( input_args.num_small_moves ) )
 info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
 info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
 info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
@@ -447,7 +447,7 @@ while not jd.job_complete:
     mc = MonteCarlo( testing_pose, main_sf, kT )
 
     # make an appropriate SmallMover
-    sm = SmallMover( movemap_in = small_mm, temperature_in = kT, nmoves_in = 5 )
+    sm = SmallMover( movemap_in = small_mm, temperature_in = kT, nmoves_in = 1 )
     sm.scorefxn( main_sf )
 
     # store scoring terms in case score ramping is desired
@@ -469,7 +469,7 @@ while not jd.job_complete:
     # run the SmallMover 10-100 times using a MonteCarlo object to accept or reject the move
     num_sm_accept = 0
     num_mc_checks = 0
-    for ii in range( 1, input_args.num_small_move_trials + 1 ):
+    for ii in range( 1, input_args.num_small_moves + 1 ):
         # if score ramping is desired
         if input_args.ramp_sf:
             # ramp up or down the appropriate scoring terms and get it back to the MonteCarlo object
@@ -477,12 +477,12 @@ while not jd.job_complete:
                                          "fa_atr", 
                                          FA_ATR_ORIG, 
                                          ii - 1, 
-                                         input_args.num_small_move_trials )
+                                         input_args.num_small_moves )
             main_sf = ramp_score_weight( main_sf, 
                                          "fa_rep", 
                                          FA_REP_ORIG, 
                                          ii - 1, 
-                                         input_args.num_small_move_trials )
+                                         input_args.num_small_moves )
             mc.score_function( main_sf )
 
         # print current score

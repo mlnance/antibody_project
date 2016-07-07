@@ -3,18 +3,16 @@ __author__ = "morganlnance"
 
 
 
-def pseudo_interface_score_3ay4( pose, sf, native = False, pmm = None ):
+def pseduo_interface_energy_3ay4( pose, sf, native = False, pmm = None ):
     """
-    Attempts to get pseudo-interface score of a glycosylated 3ay4 decoy
+    Attempts to get pseudo-interface energy of a glycosylated 3ay4 decoy
     Lots of hard coding here - works on a decoy pose as Rosetta renumbers the Pose a bit
     Makes the two ASN connections to the Fc A and B glycans JUMPs instead of chemical EDGEs
-    :return: 
+    :return: float( pseudo interface energy )
     """
     from rosetta import FoldTree, Pose
     from rosetta.numeric import xyzVector_Real
 
-    # save the original FoldTree
-    orig_ft = pose.fold_tree()
 
     # get the score of the whole complex
     start_score = sf( pose )
@@ -124,9 +122,9 @@ def pseudo_interface_score_3ay4( pose, sf, native = False, pmm = None ):
 
     # get the pseduo-interface score
     # total - split = interface ( ie. interface + split = total )
-    pseudo_interface_score = start_score - split_score
+    pseduo_interface_energy = start_score - split_score
 
-    return pseudo_interface_score
+    return pseduo_interface_energy
 
 
 
@@ -244,17 +242,17 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
 
     # pseduo-inferface energy 
     # ( full protein score - Fc-FcR glycan score [ except the short glycan away from interface ] )
-    working_pseudo_interface_score = pseudo_interface_score_3ay4( working, sf, 
+    working_pseduo_interface_energy = pseduo_interface_energy_3ay4( working, sf, 
                                                                   native = False, 
                                                                   pmm = None )
-    native_pseudo_interface_score = pseudo_interface_score_3ay4( native, sf, 
+    native_pseduo_interface_energy = pseduo_interface_energy_3ay4( native, sf, 
                                                                  native = True, 
                                                                  pmm = None )
-    delta_pseudo_interface_score = working_pseudo_interface_score - native_pseudo_interface_score
+    delta_pseduo_interface_energy = working_pseduo_interface_energy - native_pseduo_interface_energy
     metric_data.append( "pseudo_interface_energy:" )
-    metric_data.append( str( working_pseudo_interface_score ) )
+    metric_data.append( str( working_pseduo_interface_energy ) )
     metric_data.append( "delta_pseudo_interface_energy:" )
-    metric_data.append( str( delta_pseudo_interface_score ) )
+    metric_data.append( str( delta_pseduo_interface_energy ) )
 
 
     # delta standard interaction energy

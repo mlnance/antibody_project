@@ -221,11 +221,13 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     metric_data.append( str( pseudo_interface_score ) )
 
 
-    # delta interaction energy
+    # delta standard interaction energy
     working_interaction_energy = calc_interaction_energy( working, sf, Vector1( [ JUMP_NUM ] ) )
     native_interaction_energy = calc_interaction_energy( native, sf, Vector1( [ JUMP_NUM ] ) )
     delta_interaction_energy = working_interaction_energy - native_interaction_energy
-    metric_data.append( "delta_interface_interaction_energy:" )
+    metric_data.append( "std_interface_interaction_energy:" )
+    metric_data.append( str( working_interaction_energy ) )
+    metric_data.append( "delta_std_interface_interaction_energy:" )
     metric_data.append( str( delta_interaction_energy ) )
 
 
@@ -233,6 +235,8 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     working_hbonds = get_hbonds( working )
     native_hbonds = get_hbonds( native )
     delta_hbonds = working_hbonds.nhbonds() - native_hbonds.nhbonds()
+    metric_data.append( "hbonds:" )
+    metric_data.append( str( working_hbonds ) )
     metric_data.append( "delta_hbonds:" )
     metric_data.append( str( delta_hbonds ) )
 
@@ -246,6 +250,8 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
                                                                                   native, 
                                                                                   cutoff = cutoff )
     delta_interface_res_contacts = working_intf_contacts - native_intf_contacts
+    metric_data.append( "interface_res_contacts_%s_A:" %( str( cutoff ) ) )
+    metric_data.append( str( working_interface_res_contacts ) )
     metric_data.append( "delta_interface_res_contacts_%s_A:" %( str( cutoff ) ) )
     metric_data.append( str( delta_interface_res_contacts ) )
 
@@ -254,6 +260,8 @@ def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, n
     working_interface_sasa = calc_interface_sasa( working, JUMP_NUM )
     native_interface_sasa = calc_interface_sasa( native, JUMP_NUM )
     delta_interface_sasa = working_interface_sasa - native_interface_sasa
+    metric_data.append( "interface_sasa:" )
+    metric_data.append( str( working_interface_sasa ) )
     metric_data.append( "delta_interface_sasa:" )
     metric_data.append( str( delta_interface_sasa ) )
 

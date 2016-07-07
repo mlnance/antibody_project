@@ -123,6 +123,7 @@ def pseudo_interface_score_3ay4( pose, sf, native = False, pmm = None ):
     split_score = sf( temp_pose )
 
     # get the pseduo-interface score
+    # total - split = interface ( ie. interface + split = total )
     pseudo_interface_score = start_score - split_score
 
     return pseudo_interface_score

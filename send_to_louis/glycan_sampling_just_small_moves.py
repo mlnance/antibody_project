@@ -89,27 +89,6 @@ if not os.path.isdir( lowest_E_structs_dir ):
     except:
         pass
 
-# relay information to user
-info_file_details = []
-info_file_details.append( "Native PDB filename:\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
-info_file_details.append( "Working PDB filename:\t\t%s\n" %input_args.working_pdb_file.split( '/' )[-1] )
-info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
-info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
-info_file_details.append( "Number of small move trials:\t%s ( 1 trial = 5 moves )\n" %str( input_args.num_small_move_trials ) )
-info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
-info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
-info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
-info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )
-info_file_details.append( "Lowest E structure directory:\t%s\n" %lowest_E_structs_dir )
-info_file = ''.join( info_file_details )
-print "\n", info_file, "\n"
-
-# write out the info file with the collected info from above
-info_filename = main_structure_dir + "protocol_run.info"
-with open( info_filename, "wb" ) as fh:
-    fh.write( "Info for this run of %s\n\n" %__file__ )
-    fh.write( info_file )
-
 
 
 #################
@@ -185,6 +164,12 @@ working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylate
 A_phi, A_psi, A_omega = get_phi_psi_omega_of_res( native_pose, 216 )
 B_phi, B_psi, B_omega = get_phi_psi_omega_of_res( native_pose, 440 )
 
+# collect the two chi angles from both ASN 297 residues from the native pose
+A_chi_1 = native_pose.chi( 1, 69 )   # 69 = ASN 297 A
+A_chi_2 = native_pose.chi( 2, 69 )   # 69 = ASN 297 A
+B_chi_1 = native_pose.chi( 1, 292 )  # 292 = ASN 297 B
+B_chi_2 = native_pose.chi( 2, 292 )  # 292 = ASN 297 B
+
 # collect the chain id's of the Fc glycan from the native pose
 native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
 
@@ -214,11 +199,8 @@ for res in working_pose:
 # get the number of chains because the Pose renumbers its chains after glycosylation
 num_working_pose_chains = len( working_pose_chains )
 
-# get a standard fa_scorefxn for protein stuff
-sf = get_fa_scorefxn()
-
-# adjust the standard fa_scorefxn for sugar stuff
-sugar_sf = get_fa_scorefxn_with_given_weights( "fa_intra_rep", 0.440 )
+# adjust a standard fa_scorefxn with certain weights for protocol usage
+main_sf = get_fa_scorefxn_with_given_weights( "fa_intra_rep", 0.440 )
 
 
 
@@ -230,12 +212,36 @@ pmm.apply( working_pose )
 
 
 
+# relay information to user
+info_file_details = []
+info_file_details.append( "Native PDB filename:\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
+info_file_details.append( "Working PDB filename:\t\t%s\n" %input_args.working_pdb_file.split( '/' )[-1] )
+info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
+info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
+info_file_details.append( "Number of small move trials:\t%s ( 1 trial = 5 moves )\n" %str( input_args.num_small_move_trials ) )
+info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
+info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
+info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
+info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )
+info_file_details.append( "Lowest E structure directory:\t%s\n" %lowest_E_structs_dir )
+info_file_details.append( "\nScore weights used in main_sf:\n%s\n" %( "\n".join( [ "%s: %s" %( str( name ), main_sf.get_weight( name ) ) for name in main_sf.get_nonzero_weighted_scoretypes() ] ) ) )
+info_file = ''.join( info_file_details )
+print "\n", info_file, "\n"
+
+# write out the info file with the collected info from above
+info_filename = main_structure_dir + "protocol_run.info"
+with open( info_filename, "wb" ) as fh:
+    fh.write( "Info for this run of %s\n\n" %__file__ )
+    fh.write( info_file )
+
+
+
 #########################
 #### JOB DISTRIBUTOR ####
 #########################
 
 # create and use the PyJobDistributor object
-jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, sugar_sf )
+jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, main_sf )
 jd.native_pose = native_pose
 cur_decoy_num = 0
 
@@ -262,7 +268,7 @@ while not jd.job_complete:
     pmm.apply( testing_pose )
     if input_args.verbose:
         print
-        print "score of glycosylated pose", sf( testing_pose )
+        print "score of glycosylated pose", main_sf( testing_pose )
 
 
 
@@ -275,7 +281,7 @@ while not jd.job_complete:
     num_sugars_added = n_res_Fc_glycan - n_res_no_Fc_glycan
     size_of_one_glycan = num_sugars_added / 2
     A_core_GlcNAc = n_res_no_Fc_glycan + 1
-    B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1    
+    B_core_GlcNAc = n_res_no_Fc_glycan + size_of_one_glycan + 1
 
     # get the res nums and branch points of the Fc sugars added
     Fc_sugar_nums = []
@@ -333,9 +339,18 @@ while not jd.job_complete:
     testing_pose.set_psi( B_core_GlcNAc, B_psi )
     testing_pose.set_omega( B_core_GlcNAc, B_omega )
 
+    ## reset both of the linking ASN residues of the glycosylated testing_pose
+    # chain A
+    testing_pose.set_chi( 1, 69, A_chi_1 )   # 69 = ASN 297 A
+    testing_pose.set_chi( 2, 69, A_chi_2 )   # 69 = ASN 297 A
+
+    # chain B
+    testing_pose.set_chi( 1, 284, B_chi_1 )  # 284 = ASN 297 B
+    testing_pose.set_chi( 2, 284, B_chi_2 )  # 284 = ASN 297 B
+
     pmm.apply( testing_pose )
     if input_args.verbose:
-        print "score of glyco reset", sf( testing_pose )
+        print "score of core glyco reset", main_sf( testing_pose )
 
 
 
@@ -363,11 +378,10 @@ while not jd.job_complete:
             testing_pose.set_phi( res_num + size_of_one_glycan - 1, reset_phi_num )
             testing_pose.set_psi( res_num + size_of_one_glycan - 1, reset_phi_num )
             #testing_pose.set_omega( res_num + size_of_one_glycan - 1, reset_phi_num )
-        
+
         pmm.apply( testing_pose )
         if input_args.verbose:
-            print "score of random reset", sf( testing_pose )
-
+            print "score of random reset", main_sf( testing_pose )
 
 
     #################################
@@ -385,13 +399,13 @@ while not jd.job_complete:
 
     # make and apply MinMover
     min_mover = MinMover( movemap_in = min_mm, 
-                          scorefxn_in = sugar_sf, 
+                          scorefxn_in = main_sf, 
                           min_type_in = "dfpmin_strong_wolfe", 
                           tolerance_in = 0.01, 
                           use_nb_list_in = True )
 
     # pack the Fc sugars and around them within 20 Angstroms
-    pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
+    pack_rotamers_mover = make_pack_rotamers_mover( main_sf, testing_pose, 
                                                     apply_sf_sugar_constraints = False,
                                                     pack_branch_points = True, 
                                                     residue_range = Fc_sugar_nums, 
@@ -404,12 +418,12 @@ while not jd.job_complete:
         # pack
         pack_rotamers_mover.apply( testing_pose )
         if input_args.verbose:
-            print "score of pack", sf( testing_pose )
+            print "score of pack", main_sf( testing_pose )
 
         # minimize
         min_mover.apply( testing_pose )
         if input_args.verbose:
-            print "score of min", sf( testing_pose )
+            print "score of min", main_sf( testing_pose )
         
         pmm.apply( testing_pose )
 
@@ -430,27 +444,27 @@ while not jd.job_complete:
         small_mm.set_branches( branch_point, True )
 
     # make an appropriate MonteCarlo object
-    mc = MonteCarlo( testing_pose, sugar_sf, kT )
+    mc = MonteCarlo( testing_pose, main_sf, kT )
 
     # make an appropriate SmallMover
     sm = SmallMover( movemap_in = small_mm, temperature_in = kT, nmoves_in = 5 )
-    sm.scorefxn( sugar_sf )
+    sm.scorefxn( main_sf )
 
     # store scoring terms in case score ramping is desired
     # store the original fa_atr, fa_rep, and fa_elec weights
-    FA_ATR_ORIG = sugar_sf.get_weight( score_type_from_name( "fa_atr" ) )
-    FA_REP_ORIG = sugar_sf.get_weight( score_type_from_name( "fa_rep" ) )
+    FA_ATR_ORIG = main_sf.get_weight( score_type_from_name( "fa_atr" ) )
+    FA_REP_ORIG = main_sf.get_weight( score_type_from_name( "fa_rep" ) )
 
     # raise the fa_atr term and lower the fa_rep term in the ScoreFunction for ramping
     # if score ramping is desired
     if input_args.ramp_sf:
         #FA_ATR_NEW = FA_ATR_ORIG * 2
         FA_ATR_NEW = FA_ATR_ORIG * 0.5
-        sugar_sf.set_weight( score_type_from_name( "fa_atr" ), FA_ATR_NEW )
+        main_sf.set_weight( score_type_from_name( "fa_atr" ), FA_ATR_NEW )
 
         #FA_REP_NEW = FA_REP_ORIG * 0.5
         FA_REP_NEW = FA_REP_ORIG * 2
-        sugar_sf.set_weight( score_type_from_name( "fa_rep" ), FA_REP_NEW )
+        main_sf.set_weight( score_type_from_name( "fa_rep" ), FA_REP_NEW )
 
     # run the SmallMover 10-100 times using a MonteCarlo object to accept or reject the move
     num_sm_accept = 0
@@ -459,30 +473,30 @@ while not jd.job_complete:
         # if score ramping is desired
         if input_args.ramp_sf:
             # ramp up or down the appropriate scoring terms and get it back to the MonteCarlo object
-            sugar_sf = ramp_score_weight( sugar_sf, 
-                                          "fa_atr", 
-                                          FA_ATR_ORIG, 
-                                          ii - 1, 
-                                          input_args.num_small_move_trials )
-            sugar_sf = ramp_score_weight( sugar_sf, 
-                                          "fa_rep", 
-                                          FA_REP_ORIG, 
-                                          ii - 1, 
-                                          input_args.num_small_move_trials )
-            mc.score_function( sugar_sf )
+            main_sf = ramp_score_weight( main_sf, 
+                                         "fa_atr", 
+                                         FA_ATR_ORIG, 
+                                         ii - 1, 
+                                         input_args.num_small_move_trials )
+            main_sf = ramp_score_weight( main_sf, 
+                                         "fa_rep", 
+                                         FA_REP_ORIG, 
+                                         ii - 1, 
+                                         input_args.num_small_move_trials )
+            mc.score_function( main_sf )
 
         # print current score
         if input_args.verbose:
-            print "starting score", sf( testing_pose )
+            print "starting score", main_sf( testing_pose )
 
         # apply the SmallMover
         sm.apply( testing_pose )        
         if input_args.verbose:
-            print "score after move", sf( testing_pose )
+            print "score after move", main_sf( testing_pose )
 
         # pack the Fc sugars and around them within 20 Angstroms every other trial
         if ii % 2 == 0:
-            pack_rotamers_mover = make_pack_rotamers_mover( sugar_sf, testing_pose, 
+            pack_rotamers_mover = make_pack_rotamers_mover( main_sf, testing_pose, 
                                                             apply_sf_sugar_constraints = False,
                                                             pack_branch_points = True, 
                                                             residue_range = Fc_sugar_nums, 
@@ -490,7 +504,7 @@ while not jd.job_complete:
                                                             pack_radius = 20 )
             pack_rotamers_mover.apply( testing_pose )
             if input_args.verbose:
-                print "score after pack", sf( testing_pose )
+                print "score after pack", main_sf( testing_pose )
 
         # make MoveMap for the Fc sugars
         min_mm = make_movemap_for_range( Fc_sugar_nums, 
@@ -503,13 +517,13 @@ while not jd.job_complete:
 
         # make and apply MinMover
         min_mover = MinMover( movemap_in = min_mm, 
-                              scorefxn_in = sugar_sf, 
+                              scorefxn_in = main_sf, 
                               min_type_in = "dfpmin_strong_wolfe", 
                               tolerance_in = 0.01, 
                               use_nb_list_in = True )
         min_mover.apply( testing_pose )
         if input_args.verbose:
-            print "score after min", sf( testing_pose )
+            print "score after min", main_sf( testing_pose )
 
         # accept or reject the move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):
@@ -520,7 +534,6 @@ while not jd.job_complete:
         num_mc_checks += 1
         mc_acceptance = round( ( float( num_sm_accept ) / float( num_mc_checks ) * 100 ), 3 )
         if input_args.verbose:
-            print
             print "Moves made so far:", num_mc_checks, 
             print "  Moves accepted:", num_sm_accept, 
             print "  Acceptance rate:", mc_acceptance
@@ -529,7 +542,7 @@ while not jd.job_complete:
     try:
         metrics = get_pose_metrics( testing_pose, 
                                     native_pose, 
-                                    sugar_sf, 
+                                    main_sf, 
                                     2, # interface JUMP_NUM
                                     Fc_glycan_chains, 
                                     native_Fc_glycan_chains, 

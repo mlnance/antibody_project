@@ -476,15 +476,15 @@ while not jd.job_complete:
         if input_args.ramp_sf:
             # ramp up or down the appropriate scoring terms and get it back to the MonteCarlo object
             main_sf = ramp_score_weight( main_sf, 
-                                          "fa_atr", 
-                                          FA_ATR_ORIG, 
-                                          ii - 1, 
-                                          input_args.num_LCM_trials )
+                                         "fa_atr", 
+                                         FA_ATR_ORIG, 
+                                         ii - 1, 
+                                         input_args.num_LCM_trials )
             main_sf = ramp_score_weight( main_sf, 
-                                          "fa_rep", 
-                                          FA_REP_ORIG, 
-                                          ii - 1, 
-                                          input_args.num_LCM_trials )
+                                         "fa_rep", 
+                                         FA_REP_ORIG, 
+                                         ii - 1, 
+                                         input_args.num_LCM_trials )
             mc.score_function( main_sf )
 
         # print current score

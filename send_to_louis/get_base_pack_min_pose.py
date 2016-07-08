@@ -63,6 +63,15 @@ if not os.path.isdir( base_structs_dir ):
 if not os.path.isdir( lowest_E_structs_dir ):
     os.mkdir( lowest_E_structs_dir )
 
+# collect and create necessary directories for use in metric calculations
+working_dir = os.getcwd() + '/'
+metrics_dump_dir = working_dir + "base_metrics_dir"
+try:
+    os.mkdir( metrics_dump_dir )
+except:
+    pass
+
+
 # relay information to user
 print
 print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
@@ -82,6 +91,7 @@ from antibody_functions import load_pose, \
     initialize_rosetta, apply_sugar_constraints_to_sf, \
     make_pack_rotamers_mover 
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
+from get_pose_metrics import main as get_pose_metrics
 from rosetta import Pose, get_fa_scorefxn, PyJobDistributor, \
     PyMOL_Mover, MoveMap, MinMover
 
@@ -159,6 +169,26 @@ while not jd.job_complete:
     # inform user of decoy number
     print "\tFinished with decoy %s" %str( decoy_num )
     decoy_num += 1
+
+    # TODO: needs to be checked and fixed. pseudo-interface energy comes out really negative
+    '''
+    # collect additional metric data
+    try:
+        metrics = get_pose_metrics( working_pose,
+                                    native_pose,
+                                    sf,
+                                    2, # interface JUMP_NUM
+                                    [ 'D', 'E', 'F', 'G' ],
+                                    [ 'D', 'E', 'F', 'G' ],
+                                    decoy_num,
+                                    metrics_dump_dir )
+    except:
+        metrics = ''
+        pass
+    '''
+
+    # add the metric data to the .fasc file
+    jd.additional_decoy_info = metrics
     
     # dump the decoy
     jd.output_decoy( working_pose )

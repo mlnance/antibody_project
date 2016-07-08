@@ -185,10 +185,10 @@ while not jd.job_complete:
     except:
         metrics = ''
         pass
-    '''
 
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics
+    '''
     
     # dump the decoy
     jd.output_decoy( working_pose )

@@ -38,7 +38,7 @@ try:
 except:
     print "It seems like you gave me an incorrect path to the utility directory, exiting"
     sys.exit()    
-from pose_metrics_util import *
+from util import read_fasc_file
 
 
 

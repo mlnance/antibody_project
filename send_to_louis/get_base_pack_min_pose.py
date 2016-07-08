@@ -78,11 +78,12 @@ print
 ################################
 
 # good to go, import needed functions
-from antibody_functions import load_pose, make_all_mutations, \
-    initialize_rosetta, apply_sugar_constraints_to_sf
-from antibody_protocols import make_base_pack_min_pose
+from antibody_functions import load_pose, \
+    initialize_rosetta, apply_sugar_constraints_to_sf, \
+    make_pack_rotamers_mover 
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
-from rosetta import Pose, get_fa_scorefxn, PyJobDistributor, PyMOL_Mover
+from rosetta import Pose, get_fa_scorefxn, PyJobDistributor, \
+    PyMOL_Mover, MoveMap, MinMover
 
 # initialize Rosetta ( comes from antibody_functions )
 initialize_rosetta()
@@ -102,7 +103,7 @@ decoy_pdb_name = structure_dir + '/' + orig_pdb_name
 # sets up the input native PDB as being the base pose
 native_pose = Pose()
 native_pose.assign( load_pose( orig_pdb_filename_full_path ) )
-native_pose.pdb_info().name( "base" )
+native_pose.pdb_info().name( "native" )
 
 # make the necessary score function
 sf = get_fa_scorefxn()
@@ -127,16 +128,34 @@ jd.native_pose = native_pose
 print "Making a low E base pose by packing and minimizing the passed native pose..."
 decoy_num = 1
 while not jd.job_complete:
-    # grab a fresh copy of the native pose
-    fresh_native = Pose()
-    fresh_native.assign( native_pose )
-
     # make a working pose
     working_pose = Pose()
-    
-    # pack and minimize
-    working_pose.assign( make_base_pack_min_pose( sf, fresh_native, trials = 2, verbose = True, pmm = pmm ) )
-    
+    working_pose.assign( native_pose )
+    working_pose.pdb_info().name( "base_%s" %str( decoy_num ) )
+    pmm.apply( working_pose )
+
+    for ii in range( 2 ):
+        # pack
+        pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose,
+                                                        apply_sf_sugar_constraints = False,
+                                                        pack_branch_points = True )
+        pack_rotamers_mover.apply( working_pose )
+
+        # minimize
+        mm = MoveMap()
+        mm.set_bb( True )
+        mm.set_chi( True )
+        mm.set_branches( True )
+
+        min_mover = MinMover( movemap_in = mm,
+                              scorefxn_in = sf,
+                              min_type_in = "dfpmin_strong_wolfe",
+                              tolerance_in = 0.01,
+                              use_nb_list_in = True )
+        min_mover.apply( working_pose )
+
+    pmm.apply( working_pose )
+
     # inform user of decoy number
     print "\tFinished with decoy %s" %str( decoy_num )
     decoy_num += 1

@@ -111,7 +111,7 @@ from antibody_functions import initialize_rosetta, \
 
 # utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
-from pose_metrics_util import get_pose_metrics
+from get_pose_metrics import main as get_pose_metrics
 import random
 
 

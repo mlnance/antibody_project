@@ -8,6 +8,8 @@ import string, random
 from io import BytesIO
 from os.path import isfile
 
+
+
 def download_pdb(pdb_id, dest_dir):
     '''
     downloads pdbs, from yifans rosettacm py script
@@ -262,6 +264,7 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num, dump_dir = None ):
     
 
 def fancy_dump_pdb_by_chain( filename, pose, chains ):
+    # TODO: figure this one out
     """
     Dump a .pdb file of <pose> including only the specified <chains>
     Sample input -- dump_pdb_by_chain( "test_out.pdb", my_pose, [ 'A', 'C', 'E' ]
@@ -333,3 +336,129 @@ def id_generator( size=4, chars=string.ascii_uppercase + string.digits ):
         id = ''.join( random.choice( chars ) for x in range( size ) )
 
     return id
+
+
+
+class fasc_dict( dict ):
+    """
+    Allows you to create your own version of a dictionary so you can add attributes to it
+    """
+    pass
+
+
+
+def read_fasc_file( fasc_filename ):
+    """
+    Read the <fasc_filename> and return a dictionary of the scoring data
+    :param fasc_filename: str( /path/to/.fasc file
+    :return: dict( .fasc scoring data )
+    """
+    #################
+    #### IMPORTS ####
+    #################
+
+    import re
+    
+    try:
+        import pandas
+    except:
+        import csv
+    
+    
+    ##########################
+    #### FASC FILE READER ####
+    ##########################
+     
+    # create the dictionary that will hold the fasc_data_dict and its corresponding attributes
+    fasc_data_dict = fasc_dict()
+    fasc_data_dict.nstruct = None
+    fasc_data_dict.pdb_name = None
+    
+    # open up the fasc_file
+    with open( fasc_filename, "rb" ) as fh:
+        for line in fh:
+            # remove newline characters
+            line = line.rstrip()
+            
+            # this should be the very first line of the .fasc file only
+            if line.startswith( "pdb" ):
+                # need to replace this specific space for clarity
+                line = line.replace( "pdb name", "pdb_name" )
+                
+                # replace X amount of spaces that follow ':'
+                arr = re.split( "[:\s]+", line )
+            
+    # turn the list of line data into an iterator
+    iterator = iter( arr )
+    
+    # cycle through the first iterator to get the pdb_name and the nstruct
+    # first iterator should always have this data
+    for ii in iterator:
+        key = str( ii )
+        try:
+            value = str( next( iterator ) )
+            if key == "pdb_name":
+                fasc_data_dict.pdb_name = value
+            elif key == "nstruct":
+                fasc_data_dict.nstruct = value
+        except:
+            pass
+        
+    # will hold valid decoy numbers in the fasc_data_dict object for easy access
+    fasc_data_dict.decoy_nums = []
+        
+    # cycle through the .fasc file again to get the scoring terms and their values
+    with open( fasc_filename, 'r' ) as fh:
+        for line in fh:
+            line = line.rstrip()
+
+            # if the line is NOT the first line of the .fasc file
+            if not line.startswith( "pdb" ):
+                # split on multiple spaces after the ':' again
+                arr = re.split( "[:\s]+", line )
+                
+                iterator = iter( arr )
+                data_holder = {}
+                for ii in iterator:
+                    key = str( ii )
+                    try:
+                        # put the decoy data in the temporary holder
+                        value = str( next( iterator ) )
+                        data_holder[ key ] = value
+                        
+                        # pull out the filename decoy number
+                        if key == "filename":
+                            decoy_num = int( value.replace( ".pdb", '' ).split( '_' )[-1] )
+                            fasc_data_dict.decoy_nums.append( decoy_num )
+                    except:
+                        pass
+                    
+                # add the decoy data to the fasc_data_dict object given the decoy number
+                fasc_data_dict[ decoy_num ] = data_holder
+                
+    # just because I'm picky - sort the decoy_nums
+    fasc_data_dict.decoy_nums.sort()
+    
+    return fasc_data_dict
+
+
+
+def get_score_term_from_fasc_data_dict( fasc_data_dict, score_term ):
+    """
+    After getting a <fasc_data_dict> from running read_fasc_file, pull out the <score_term> for each decoy in the .fasc file
+    :param fasc_data_dict: dict( data dictionary from .fasc file )
+    :param score_term: str( the score term you want back for each decoy
+    :return: dict( decoy : score_term value )
+    """
+    # iterate through the dictionary skipping decoys that don't have that term
+    score_term_dict = {}
+    for decoy_num in fasc_data_dict.decoy_nums:
+        try:
+            score_term_dict[ decoy_num ] = float( fasc_data_dict[ decoy_num ][ score_term ] )
+        # if it can only be a string
+        except ValueError:
+            score_term_dict[ decoy_num ] = fasc_data_dict[ decoy_num ][ score_term ]
+        except:
+            pass
+        
+    return score_term_dict

@@ -3,11 +3,15 @@ __author__ = "morganlnance"
 
 
 
-def pseduo_interface_energy_3ay4( pose, sf, native = False, pmm = None ):
+def pseudo_interface_energy_3ay4( pose, sf, native = False, pmm = None ):
     """
     Attempts to get pseudo-interface energy of a glycosylated 3ay4 decoy
     Lots of hard coding here - works on a decoy pose as Rosetta renumbers the Pose a bit
     Makes the two ASN connections to the Fc A and B glycans JUMPs instead of chemical EDGEs
+    :param pose: Pose
+    :param sf: ScoreFunction
+    :param native: bool( is this the native 3ay4 or a decoy? Answer determines how FoldTree gets coded )
+    :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
     :return: float( pseudo interface energy )
     """
     from rosetta import FoldTree, Pose
@@ -120,17 +124,17 @@ def pseduo_interface_energy_3ay4( pose, sf, native = False, pmm = None ):
     # score the split-apart Pose
     split_score = sf( temp_pose )
 
-    # get the pseduo-interface score
+    # get the pseudo-interface score
     # total - split = interface ( ie. interface + split = total )
-    pseduo_interface_energy = start_score - split_score
+    pseudo_interface_energy = start_score - split_score
 
-    return pseduo_interface_energy
+    return pseudo_interface_energy
 
 
 
 def Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_chains, decoy_num, dump_dir ):
     '''
-    Return the glycan RMSD of the two Fc glycans in 3ay4 (may work for others, but I don't know yet)
+    Return the glycan RMSD of the two Fc glycans in 3ay4 (may work for other PDBs, but I don't know yet)
     :param working: decoy Pose()
     :param native: native Pose()
     :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
@@ -196,242 +200,3 @@ def Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_
         pass
 
     return glycan_rmsd
-
-
-def get_pose_metrics( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, native_Fc_glycan_chains, decoy_num, dump_dir, MC_acceptance_rate = None ):
-    """
-    Return a space-delimited string containing various pose metrics.
-    :param working: decoy Pose()
-    :param native: native Pose()
-    :param sf: ScoreFunction()
-    :param JUMP_NUM: int( JUMP_NUM that defines the interface )
-    :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
-    :param native_Fc_glycan_chains: list( the chain id's for the native Fc glycan ). Ex = [ 'D', 'E' ]
-    :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
-    :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
-    :param MC_acceptance_rate: float( the MonteCarlo acceptance rate of your protocol, if relevant ). Default = None
-    :return: str( pose metrics )
-    """
-    #################
-    #### IMPORTS ####
-    #################
-    
-    # Rosetta functions
-    from rosetta import Vector1, calc_interaction_energy
-    from toolbox import get_hbonds
-    
-    # Rosetta functions I wrote out
-    from antibody_functions import count_interface_residue_contacts, \
-        calc_interface_sasa
-    
-    
-    
-    #############################
-    #### METRIC CALCULATIONS ####
-    #############################
-    
-    # holds all relevant metric data and corresponding label
-    metric_data = []
-    
-
-    # glycan RMSD calculation
-    glycan_rmsd = Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_chains, decoy_num, dump_dir )
-    metric_data.append( "glycan_rmsd:" )
-    metric_data.append( str( glycan_rmsd ) )
-
-
-    # pseduo-inferface energy 
-    # ( full protein score - Fc-FcR glycan score [ except the short glycan away from interface ] )
-    working_pseduo_interface_energy = pseduo_interface_energy_3ay4( working, sf, 
-                                                                  native = False, 
-                                                                  pmm = None )
-    native_pseduo_interface_energy = pseduo_interface_energy_3ay4( native, sf, 
-                                                                 native = True, 
-                                                                 pmm = None )
-    delta_pseduo_interface_energy = working_pseduo_interface_energy - native_pseduo_interface_energy
-    metric_data.append( "pseudo_interface_energy:" )
-    metric_data.append( str( working_pseduo_interface_energy ) )
-    metric_data.append( "delta_pseudo_interface_energy:" )
-    metric_data.append( str( delta_pseduo_interface_energy ) )
-
-
-    # delta standard interaction energy
-    working_interaction_energy = calc_interaction_energy( working, sf, Vector1( [ JUMP_NUM ] ) )
-    native_interaction_energy = calc_interaction_energy( native, sf, Vector1( [ JUMP_NUM ] ) )
-    delta_interaction_energy = working_interaction_energy - native_interaction_energy
-    metric_data.append( "std_interface_interaction_energy:" )
-    metric_data.append( str( working_interaction_energy ) )
-    metric_data.append( "delta_std_interface_interaction_energy:" )
-    metric_data.append( str( delta_interaction_energy ) )
-
-
-    # delta hbonds
-    working_hbonds = get_hbonds( working )
-    native_hbonds = get_hbonds( native )
-    delta_hbonds = working_hbonds.nhbonds() - native_hbonds.nhbonds()
-    metric_data.append( "hbonds:" )
-    metric_data.append( str( working_hbonds.nhbonds() ) )
-    metric_data.append( "delta_hbonds:" )
-    metric_data.append( str( delta_hbonds ) )
-
-    
-    # delta interface residue contacts
-    cutoff = 8
-    working_intf_contacts, working_contact_list = count_interface_residue_contacts( JUMP_NUM, 
-                                                                                    working, 
-                                                                                    cutoff = cutoff )
-    native_intf_contacts, native_contact_list = count_interface_residue_contacts( JUMP_NUM, 
-                                                                                  native, 
-                                                                                  cutoff = cutoff )
-    delta_interface_res_contacts = working_intf_contacts - native_intf_contacts
-    metric_data.append( "interface_res_contacts_%s_A:" %( str( cutoff ) ) )
-    metric_data.append( str( working_intf_contacts ) )
-    metric_data.append( "delta_interface_res_contacts_%s_A:" %( str( cutoff ) ) )
-    metric_data.append( str( delta_interface_res_contacts ) )
-
-    
-    # delta interface sasa
-    working_interface_sasa = calc_interface_sasa( working, JUMP_NUM )
-    native_interface_sasa = calc_interface_sasa( native, JUMP_NUM )
-    delta_interface_sasa = working_interface_sasa - native_interface_sasa
-    metric_data.append( "interface_sasa:" )
-    metric_data.append( str( working_interface_sasa ) )
-    metric_data.append( "delta_interface_sasa:" )
-    metric_data.append( str( delta_interface_sasa ) )
-
-    
-    # MonteCarlo acceptance rate - if relevant
-    if MC_acceptance_rate is not None:
-        metric_data.append( "MonteCarlo_acceptance_rate:" )
-        metric_data.append( str( MC_acceptance_rate ) )
-
-    # create metrics string
-    metrics = ' '.join( metric_data )    
-    
-    return metrics
-
-
-
-class fasc_dict( dict ):
-    """
-    Allows you to create your own version of a dictionary so you can add attributes to it
-    """
-    pass
-
-
-
-def read_fasc_file( fasc_filename ):
-    """
-    Read the <fasc_filename> and return a dictionary of the scoring data
-    :param fasc_filename: str( /path/to/.fasc file
-    :return: dict( .fasc scoring data )
-    """
-    #################
-    #### IMPORTS ####
-    #################
-
-    import re
-    
-    try:
-        import pandas
-    except:
-        import csv
-    
-    
-    ##########################
-    #### FASC FILE READER ####
-    ##########################
-     
-    # create the dictionary that will hold the fasc_data_dict and its corresponding attributes
-    fasc_data_dict = fasc_dict()
-    fasc_data_dict.nstruct = None
-    fasc_data_dict.pdb_name = None
-    
-    # open up the fasc_file
-    with open( fasc_filename, "rb" ) as fh:
-        for line in fh:
-            # remove newline characters
-            line = line.rstrip()
-            
-            # this should be the very first line of the .fasc file only
-            if line.startswith( "pdb" ):
-                # need to replace this specific space for clarity
-                line = line.replace( "pdb name", "pdb_name" )
-                
-                # replace X amount of spaces that follow ':'
-                arr = re.split( "[:\s]+", line )
-            
-    # turn the list of line data into an iterator
-    iterator = iter( arr )
-    
-    # cycle through the first iterator to get the pdb_name and the nstruct
-    # first iterator should always have this data
-    for ii in iterator:
-        key = str( ii )
-        try:
-            value = str( next( iterator ) )
-            if key == "pdb_name":
-                fasc_data_dict.pdb_name = value
-            elif key == "nstruct":
-                fasc_data_dict.nstruct = value
-        except:
-            pass
-        
-    # will hold valid decoy numbers in the fasc_data_dict object for easy access
-    fasc_data_dict.decoy_nums = []
-        
-    # cycle through the .fasc file again to get the scoring terms and their values
-    with open( fasc_filename, 'r' ) as fh:
-        for line in fh:
-            line = line.rstrip()
-
-            # if the line is NOT the first line of the .fasc file
-            if not line.startswith( "pdb" ):
-                # split on multiple spaces after the ':' again
-                arr = re.split( "[:\s]+", line )
-                
-                iterator = iter( arr )
-                data_holder = {}
-                for ii in iterator:
-                    key = str( ii )
-                    try:
-                        # put the decoy data in the temporary holder
-                        value = str( next( iterator ) )
-                        data_holder[ key ] = value
-                        
-                        # pull out the filename decoy number
-                        if key == "filename":
-                            decoy_num = int( value.replace( ".pdb", '' ).split( '_' )[-1] )
-                            fasc_data_dict.decoy_nums.append( decoy_num )
-                    except:
-                        pass
-                    
-                # add the decoy data to the fasc_data_dict object given the decoy number
-                fasc_data_dict[ decoy_num ] = data_holder
-                
-    # just because I'm picky - sort the decoy_nums
-    fasc_data_dict.decoy_nums.sort()
-    
-    return fasc_data_dict
-
-
-
-def get_score_term_from_fasc_data_dict( fasc_data_dict, score_term ):
-    """
-    After getting a <fasc_data_dict> from running read_fasc_file, pull out the <score_term> for each decoy in the .fasc file
-    :param fasc_data_dict: dict( data dictionary from .fasc file )
-    :param score_term: str( the score term you want back for each decoy
-    :return: dict( decoy : score_term value )
-    """
-    # iterate through the dictionary skipping decoys that don't have that term
-    score_term_dict = {}
-    for decoy_num in fasc_data_dict.decoy_nums:
-        try:
-            score_term_dict[ decoy_num ] = float( fasc_data_dict[ decoy_num ][ score_term ] )
-        # if it can only be a string
-        except ValueError:
-            score_term_dict[ decoy_num ] = fasc_data_dict[ decoy_num ][ score_term ]
-        except:
-            pass
-        
-    return score_term_dict

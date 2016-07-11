@@ -197,7 +197,13 @@ for res in working_pose:
 num_working_pose_chains = len( working_pose_chains )
 
 # adjust a standard fa_scorefxn with certain weights for protocol usage
-main_sf = get_fa_scorefxn_with_given_weights( "fa_intra_rep", 0.440 )
+hbond_terms = [ "hbond_sr_bb", "hbond_lr_bb", "hbond_bb_sc", "hbond_sc" ]
+hbond_weight = 2
+
+main_sf = get_fa_scorefxn()
+main_sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
+for hbond_term in hbond_terms:
+    main_sf.set_weight( score_type_from_name( hbond_term ), main_sf.get_weight( score_type_from_name( hbond_term ) ) * hbond_weight )
 
 
 

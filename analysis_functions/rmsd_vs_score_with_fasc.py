@@ -10,8 +10,9 @@ run rmsd_vs_score_with_fasc.py pdb_copies_dont_touch/lowest_E_double_pack_and_mi
 import argparse
 
 parser = argparse.ArgumentParser(description="Use Rosetta to calculate RMSD between a native pose and a directory of structures")
-parser.add_argument("native_pdb_filename", help="the filename of the PDB structure to serve as the native structure")
-parser.add_argument("fasc_file", help="the path to the .fasc file with the relevant data.")
+parser.add_argument("native_pdb_filename", type=str, help="the filename of the PDB structure to serve as the native structure")
+parser.add_argument("fasc_file", type=str, help="the path to the .fasc file with the relevant data.")
+parser.add_argument("metric_name", type=str, help="what is the name of the score metric in the .fasc file you want to compare against glycan_rmsd?")
 parser.add_argument("resulting_filename", type=str, help="what do you want the resulting csv file to be called? This program will add the .csv extension for you")
 parser.add_argument("utility_dir", type=str, help="the path to the utility functions directory.")
 input_args = parser.parse_args()
@@ -22,9 +23,6 @@ input_args = parser.parse_args()
 #################
 #### IMPORTS ####
 #################
-
-from antibody_functions import initialize_rosetta, load_pose
-from rosetta import Pose, get_fa_scorefxn
 
 import os, sys, csv
 try:
@@ -38,7 +36,7 @@ try:
 except:
     print "It seems like you gave me an incorrect path to the utility directory, exiting"
     sys.exit()    
-from util import read_fasc_file
+from util import read_fasc_file, get_score_term_from_fasc_data_dict
 
 
 
@@ -67,23 +65,39 @@ tot_score_data = get_score_term_from_fasc_data_dict( fasc_data_dict, "total_scor
 #tot_score = tot_score_data.values()
 '''
 
+# check that the passed metric exists in the .fasc file
+try:
+    metric = get_score_term_from_fasc_data_dict( fasc_data_dict, input_args.metric_name )
+except:
+    print "\nIt appears that '%s' is not a valid metric in the given .fasc file. Please check your input.\n" %input_args.metric_name
+    sys.exit()
+
 # prepare a .csv data file
 #header = [ "pdb_names", "pseudo_interface_energy", "glycan_rmsd" ]
-header = [ "pdb_names", "total_score", "glycan_rmsd" ]
+#header = [ "pdb_names", "total_score", "glycan_rmsd" ]
+header = [ "pdb_names", input_args.metric_name, "glycan_rmsd" ]
 df_data = []
 df_data.append( header )
 
 # loop over each decoy and pull out desired data
 for decoy_num in fasc_data_dict.decoy_nums:
     try:
+        # get the pdb names
         pdb_name_temp = fasc_data_dict[ decoy_num ][ "filename" ]
         pdb_name = '_'.join( pdb_name_temp.split('/')[-1].split('_')[-4:] )
+
+        # get the glycan_rmsd
         glycan_rmsd = fasc_data_dict[ decoy_num ][ "glycan_rmsd" ]
+
+        # get the comparing metric
         #pseudo_interface_energy = fasc_data_dict[ decoy_num ][ "pseudo_interface_energy" ]
-        score = fasc_data_dict[ decoy_num ][ "total_score" ]
-    
+        #score = fasc_data_dict[ decoy_num ][ "total_score" ]
+        metric = fasc_data_dict[ decoy_num ][ input_args.metric_name ]
+
+        # add the data together to append to the data frame
         #data = [ pdb_name, pseudo_interface_energy, glycan_rmsd ]
-        data = [ pdb_name, score, glycan_rmsd ]
+        #data = [ pdb_name, score, glycan_rmsd ]
+        data = [ pdb_name, metric, glycan_rmsd ]
         df_data.append( data )
         
     # skip the entry if there is an issue

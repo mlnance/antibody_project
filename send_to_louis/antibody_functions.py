@@ -158,147 +158,56 @@ def load_pose( pose_filename ):
 
 
 
-def get_fa_scorefxn_with_given_weights( scoretypes, weights, verbose = False ):
+def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
     """
     Return an sf from get_fa_scoretype but with adjusted weights <scoretypes> with given <weights>
-    NOTE: if altering more than 1 ScoreType, the <scoretypes> and <weights> arguments should BOTH be lists with each value of weights corresponding to the corresponding index in <scoretypes>. See below for example inputs
     If <input_scoretype> is not already part of the <sf>, this function will add it to <sf> with a weight of <weight>, and then get the score
     Will exit if the string( <input_scoretype> ) is not a valid ScoreType
-    Example input: [ "fa_atr", "fa_rep" ], [ 1.5, 0.5 ]  -->  ( fa_atr = 1.5, fa_rep = 0.5 )
-    Example input: [ "fa_atr", ScoreType( fa_rep ) ], [ 1.5, 0.5 ]  -->  ( fa_atr = 1.5, fa_rep = 0.5 )
-    Example input: ScoreType( fa_elec ), 0.75  -->  ( fa_elec = 0.75 )
-    Example input: "fa_intra_rep", 1  -->  ( fa_intra_rep = 1 )
-    :param scoretypes: list( or str( or ScoreType( can be a list or a single name or object of a valid ScoreType  ) ) )
-    :param weights: int( or float( weight of the desired ScoreType ) )
-    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    "return: ScoreFunction( fa_scorefxn with adjusted <weights> of given <scoretypes> )
+    :param weights_dict: dict( ScoreType or str of ScoreType name : int( or float( weight ) ) )
+    :param verbose: bool( print the final weights of the returned ScoreFunction? ) Default = False
+    "return: ScoreFunction( fa_scorefxn with adjusted weights of given scoretypes )
     """
-    # argument check - if one argument is a list, ensure the other is as well
-    if isinstance( scoretypes, list ) and not isinstance( weights, list ):
-        print "You gave me a list for <scoretypes> but not for <weights>, I can't handle this situation. Please give me both lists. Exiting"
+    # argument check - check the passed argument is a dict
+    if not isinstance( weights_dict, dict ):
+        print "You didn't give me a dictionary for your input. I need a dict of ScoreType (or name) : weight. Exiting."
         sys.exit()
-            
-    # check the same case ( that they're both strings ), but the opposite way
-    if isinstance( weights, list ) and not isinstance( scoretypes, list ):
-        print "You gave me a list for <weights> but not for <scoretypes>, I can't handle this situation. Please give me both lists. Exiting"
-        sys.exit()
-        
-    # if they're both lists, ensure that they're the same size lists
-    if isinstance( scoretypes, list ) and isinstance( weights, list ):
-        if len( scoretypes ) != len( weights ):
-            print "You passed me lists for <scoretypes> and <weights> of unequal length. Check your input - each scoretype in <scoretypes> needs to have a corresponding weight in <weights>. Exiting."
-            sys.exit()
-            
         
     # get a standard fa_scorefxn to start with
     sf = get_fa_scorefxn()
     
     # make a dummy ScoreType to use for isinstance() checking
     fa_dun = score_type_from_name( "fa_dun" )
-    
-    # used for index referencing if user passed lists
-    corresponding_weight_index = 0
-    
-    ## next steps depend on the types of arguments the user passed
-    # if the user passed a list for <scoretypes>
-    if isinstance( scoretypes, list ):
-        # apply the new weights to each ScoreType given
-        for scoretype in scoretypes:
-            # if the argument is a string and a valid ScoreType name
-            if isinstance( scoretype, str ):
-                # turn the argument into a ScoreType object
-                try:
-                    scoretype = score_type_from_name( scoretype )
-                except:
-                    print
-                    print
-                    print "The string name:", scoretype, "does not appear to be a valid ScoreType. Exiting"
-                    sys.exit()
-                    
-                # grab the corresponding weight term from <weights>
-                weight = weights[ corresponding_weight_index ]
-                
-                # if the weight given is a float or an int
-                if isinstance( weight, float ) or isinstance( weight, int ):
-                    # adjust the weight in the scorefxn using the corresponding weight given
-                    sf.set_weight( scoretype, weight )
-                    
-                    # increase the corresponding_weight_index counter
-                    corresponding_weight_index += 1
-                    
-                # else, exit because it needs to be a float or an int
-                else:
-                    print "You gave me a non-float/non-int in your <weights> argument. Check your input. Exiting."
-                    sys.exit()
-                
-            # if the argument is a ScoreType object
-            elif isinstance( scoretype, type( fa_dun ) ):
-                # grab the corresponding weight term from <weights>
-                weight = weights[ corresponding_weight_index ]
-                
-                # if the weight given is a float or an int
-                if isinstance( weight, float ) or isinstance( weight, int ):
-                    # adjust the weight in the scorefxn using the corresponding weight given
-                    sf.set_weight( scoretype, weight )
-                    
-                    # increase the corresponding_weight_index counter
-                    corresponding_weight_index += 1
-                
-                # else, exit because it needs to be a float or an int
-                else:
-                    print "You gave me a non-float/non-int in your <weights> argument. Check your input. Exiting."
-                    sys.exit()
-                    
-            # else, I don't know what they gave me as a scoretype
-            else: 
-                print "I'm not sure what '%s' is from your <scoretypes> argument. Exiting" %scoretype
+
+    # for each entry of the dictionary, change the weight
+    for scoretype_name in weights_dict:
+        # if the key is a string
+        if isinstance( scoretype_name, str ):
+            try:
+                scoretype = score_type_from_name( scoretype_name )
+            except:
+                print "\nThe string name: '%s' does not appear to be a valid ScoreType. Exiting" %scoretype_name
                 sys.exit()
-               
-    # if the user passed a str as the <scoretypes> argument
-    elif isinstance( scoretypes, str ):
-        # turn the argument into a ScoreType object
-        try:
-            scoretype = score_type_from_name( scoretypes )
-        except:
-            print
-            print
-            print "The string name:", scoretypes, "does not appear to be a valid ScoreType. Exiting"
-            sys.exit()
-        
-        # if the weight given is a float or an int
-        if isinstance( weights, float ) or isinstance( weights, int ):
+            
+            # get the corresponding weight
+            weight = weights_dict[ scoretype_name ]
+
+            # set the weight
+            sf.set_weight( scoretype, weight )
+
+        # if the argument is a ScoreType object
+        elif isinstance( scoretype_name, type( fa_dun ) ):
             # adjust the weight in the scorefxn using the corresponding weight given
-            sf.set_weight( scoretype, weights )
-            
-        # else, exit because it needs to be a float or an int
-        else:
-            print "You gave me a non-float/non-int in your <weights> argument. Check your input. Exiting."
+            sf.set_weight( scoretype, weight )
+
+        # else, I don't know what they gave me as a scoretype
+        else: 
+            print "I'm not sure what '%s' is from your ScoreType key in your <weights_dict> argument. Exiting" %scoretype_name
             sys.exit()
-            
-    # lastly, if the user passed a ScoreType object as the <scoretypes> argument
-    elif isinstance( scoretypes, type( fa_dun ) ):
-        # if the weight given is a float or an int
-        if isinstance( weights, float ) or isinstance( weights, int ):
-            # adjust the weight in the scorefxn using the corresponding weight given
-            sf.set_weight( scoretypes, weights )
-        
-        # else, exit because it needs to be a float or an int
-        else:
-            print "You gave me a non-float/non-int in your <weights> argument. Check your input. Exiting."
-            sys.exit()
-            
-    # print the new scorefxn using an Alanine if the user set verbose to True
+
+    # if verbose, print out the weights of the new ScoreFunction
     if verbose:
-        # get a dummy pose to do the sf.show( pose ) functionality
-        from rosetta import pose_from_sequence
-        dummy_pose = pose_from_sequence( 'A' )
-        
-        # show the weights in the new scorefxn
-        print
-        print "Showing the score of an Alanine using an fa_scorefxn with the adjusted weights given"
-        print
-        sf.show( dummy_pose )
-    
+        print "\nNew score weights sf:\n%s\n" %( "\n".join( [ "%s: %s" %( str( name ), sf.get_weight( name ) ) for name in sf.get_nonzero_weighted_scoretypes() ] ) )
+
     # return the newly weighted fa_scorefxn
     return sf
 

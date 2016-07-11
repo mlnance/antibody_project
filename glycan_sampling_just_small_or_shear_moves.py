@@ -201,7 +201,8 @@ for res in working_pose:
 num_working_pose_chains = len( working_pose_chains )
 
 # adjust a standard fa_scorefxn with certain weights for protocol usage
-main_sf = get_fa_scorefxn_with_given_weights( "fa_intra_rep", 0.440 )
+weights_desired = { "fa_intra_rep" : 0.440 }
+main_sf = get_fa_scorefxn_with_given_weights( weights_desired )
 
 
 

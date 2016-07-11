@@ -463,7 +463,7 @@ while not jd.job_complete:
     FA_ATR_ORIG = main_sf.get_weight( score_type_from_name( "fa_atr" ) )
     FA_REP_ORIG = main_sf.get_weight( score_type_from_name( "fa_rep" ) )
 
-    # raise the fa_atr term and lower the fa_rep term in the ScoreFunction for ramping
+    # raise the fa_rep term and lower the fa_atr term in the ScoreFunction for ramping
     # if score ramping is desired
     if input_args.ramp_sf:
         #FA_ATR_NEW = FA_ATR_ORIG * 2

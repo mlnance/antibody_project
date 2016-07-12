@@ -33,6 +33,7 @@ parser.add_argument("nstruct", type=int, help="how many decoys do you want to ma
 parser.add_argument("num_shear_moves", type=int, help="how many ShearMoves do you want to make within the Fc glycan?")
 parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
+parser.add_argument("--angle_multiplier", type=float, default=1.0, help="by how much do you want to increase the angle_max for the ShearMover? Default is 1.0 (standard value)" )
 parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
 input_args = parser.parse_args()
 
@@ -205,8 +206,8 @@ hbond_weight = 2
 
 main_sf = get_fa_scorefxn()
 main_sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
-for hbond_term in hbond_terms:
-    main_sf.set_weight( score_type_from_name( hbond_term ), main_sf.get_weight( score_type_from_name( hbond_term ) ) * hbond_weight )
+#for hbond_term in hbond_terms:
+#    main_sf.set_weight( score_type_from_name( hbond_term ), main_sf.get_weight( score_type_from_name( hbond_term ) ) * hbond_weight )
 
 
 
@@ -227,6 +228,7 @@ info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.ns
 info_file_details.append( "Number of shear moves:\t\t%s\n" %str( input_args.num_shear_moves ) )
 info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
 info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
+info_file_details.append( "Angle multiplier used:\t\t%s\n" %str( input_args.angle_multiplier ) )
 info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
 info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )
 info_file_details.append( "Lowest E structure directory:\t%s\n" %lowest_E_structs_dir )
@@ -455,6 +457,7 @@ while not jd.job_complete:
     # make an appropriate ShearMover
     sh = ShearMover( movemap_in = shear_mm, temperature_in = kT, nmoves_in = 1 )
     sh.scorefxn( main_sf )
+    sh.angle_max( 'L', sh.get_angle_max( 'L' ) * input_args.angle_multiplier )
 
     # store scoring terms in case score ramping is desired
     # store the original fa_atr, fa_rep, and fa_elec weights

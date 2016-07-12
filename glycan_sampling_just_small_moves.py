@@ -31,6 +31,7 @@ parser.add_argument("utility_dir", type=str, help="where do your utility files l
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_small_moves", type=int, help="how many SmallMoves do you want to make within the Fc glycan?")
+parser.add_argument("--use_omega", action="store_true", help="when reseting the glycan and making SmallMoves, do you want to include the omega torsion? Default = False")
 parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--angle_multiplier", type=float, default=1.0, help="by how much do you want to increase the angle_max for the SmallMover? Default is 1.0 (standard value)" )
@@ -43,7 +44,7 @@ input_args = parser.parse_args()
 #### CHECK ALL INPUTS ####
 ##########################
 
-import os, sys
+import os, sys, random
 
 # collect and create necessary directories for use in metric calculations
 working_dir = os.getcwd() + '/'
@@ -108,7 +109,7 @@ from rosetta import SmallMover, MinMover
 from antibody_functions import initialize_rosetta, \
     get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
     make_movemap_for_range, load_pose, get_phi_psi_omega_of_res, \
-    ramp_score_weight
+    ramp_score_weight, SugarSmallMover
 
 # utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
@@ -232,6 +233,7 @@ info_file_details.append( "Working PDB filename:\t\t%s\n" %input_args.working_pd
 info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
 info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
 info_file_details.append( "Number of small moves:\t\t%s\n" %str( input_args.num_small_moves ) )
+info_file_details.append( "Using the omega torsion:\t%s\n" %str( input_args.use_omega ) )
 info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
 info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
 info_file_details.append( "Angle multiplier used:\t\t%s\n" %str( input_args.angle_multiplier ) )
@@ -385,7 +387,8 @@ while not jd.job_complete:
             # reset the phi, psi, and omega values for the residue
             testing_pose.set_phi( res_num, reset_phi_num )
             testing_pose.set_psi( res_num, reset_psi_num )
-            testing_pose.set_omega( res_num, reset_omega_num )
+            if input_args.use_omega:
+                testing_pose.set_omega( res_num, reset_omega_num )
 
         pmm.apply( testing_pose )
         if input_args.verbose:
@@ -499,10 +502,22 @@ while not jd.job_complete:
         if input_args.verbose:
             print "starting score", main_sf( testing_pose )
 
-        # apply the SmallMover
-        sm.apply( testing_pose )        
+        # apply the SugarSmallMover
+        # choose a random residue to use
+        resnum = random.choice( Fc_sugar_nums_except_core_GlcNAc )
+
+        # reset phi, psi, and omega
+        angle_max = sm.get_angle_max( 'L' ) * input_args.angle_multiplier
+        if input_args.use_omega:
+            testing_pose.assign( SugarSmallMover( resnum, testing_pose, angle_max ) )
+        else:
+            testing_pose.assign( SugarSmallMover( resnum, testing_pose, angle_max, set_omega = False ) )
+
+        '''
+        sm.apply( testing_pose )
         if input_args.verbose:
             print "score after move", main_sf( testing_pose )
+        '''
 
         # pack the Fc sugars and around them within 20 Angstroms every other trial
         if ii % 2 == 0:

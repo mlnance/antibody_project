@@ -233,7 +233,7 @@ info_file_details.append( "Working PDB filename:\t\t%s\n" %input_args.working_pd
 info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
 info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
 info_file_details.append( "Number of small moves:\t\t%s\n" %str( input_args.num_small_moves ) )
-info_file_details.append( "Using the omega torsion:\t%s\n" %str( input_args.use_omega ) )
+info_file_details.append( "Use the omega torsion?:\t\t%s\n" %str( input_args.use_omega ) )
 info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
 info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
 info_file_details.append( "Angle multiplier used:\t\t%s\n" %str( input_args.angle_multiplier ) )

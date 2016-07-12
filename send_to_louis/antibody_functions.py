@@ -441,6 +441,51 @@ def apply_sugar_constraints_to_sf( sf, pose, weight = 1.0, verbose = False ):
 
 
 
+def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True, set_omega = True ):
+    """
+    Randomly resets the phi, psi, and omega values of the sugar residue <seqpos> in <pose> to old_value +/- angle_max/2
+    Emulates the SmallMover but with the additional omega mover
+    :param seqpos: int( the pose number for the residue )
+    :param in_pose: Pose
+    :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
+    :param set_phi: bool( do you want to change the phi angle? ) Default = True
+    :param set_psi: bool( do you want to change the psi angle? ) Default = True
+    :param set_omega: bool( do you want to change the omega angle? ) Default = True
+    :return: Pose
+    """
+    # imports
+    from rosetta.basic import periodic_range
+    from rosetta.numeric.random import rg
+
+    # copy the input pose
+    pose = Pose()
+    pose.assign( in_pose )
+
+    # from BackboneMover.cc file for SmallMover
+    big_angle = angle_max
+    small_angle = big_angle / 2.0
+
+    # get current phi, psi, and omega
+    old_phi = pose.phi( seqpos )
+    old_psi = pose.psi( seqpos )
+    old_omega = pose.omega( seqpos )
+
+    # get random values for phi, psi, and omega
+    new_phi = periodic_range( old_phi - small_angle + rg().uniform() * big_angle, 360.0 )
+    new_psi = periodic_range( old_psi - small_angle + rg().uniform() * big_angle, 360.0 )
+    new_omega = periodic_range( old_omega - small_angle + rg().uniform() * big_angle, 360.0 )
+
+    # set the new values
+    if set_phi:
+        pose.set_phi( seqpos, new_phi )
+    if set_psi:
+        pose.set_psi( seqpos, new_psi )
+    if set_omega:
+        pose.set_omega( seqpos, new_omega )
+
+    return pose
+
+
 def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
     """
     Returns a standard pack_rotamers_mover restricted to repacking and allows for sampling of current residue conformations for the <pose>

@@ -2289,7 +2289,7 @@ def make_my_new_asymmetric_antibody( mutation_string, sf, input_pose, apply_sf_s
 #### DATA FUNCTIONS ####
 ########################
 
-def calculate_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+def get_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
     """
     Returns a dictionary of each residue in <pose> that has a contact with another residue in the <pose> less than the given <cutoff> distance
     :param pose: Pose
@@ -2331,6 +2331,46 @@ def calculate_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
 
 
 
+def get_contact_map_between_range1_range2( range1, range2, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+    """
+    Returns a dictionary of each residue in <pose> that has a contact with another residue in the <pose> less than the given <cutoff> distance
+    :param range1: list( residue pose numbers in range 1 )
+    :param range2: list( residue pose numbers in range 2 )
+    :param pose: Pose
+    :param cutoff: int( or float( distance cutoff for what defines a contact). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :return: dictionary of 0s and 1s for each residue position to every other residue position
+    """
+    if verbose:
+        print "Getting the residue contact map for the Pose"
+
+    # holds the resulting contact map
+    return_dict = {}
+
+    for seqpos_1 in range1:
+        # holder for the residue numbers of residues within the given <cutoff> distance
+        contacts = []
+
+        # get the center for residue one
+        center_1 = list( pose.residue( seqpos_1 ).nbr_atom_xyz() )
+
+        # for every residue in the <pose>
+        for seqpos_2 in range2:
+            # get the center of the second residue
+            center_2 = list( pose.residue( seqpos_2 ).nbr_atom_xyz() )
+
+            # calculate the distance and store the residue number if it's below the given <cutoff>
+            if calc_distance( center_1, center_2 ) < cutoff:
+                contacts.append( seqpos_2 )
+
+        # fill the return_dict with the contacts to that residue, only if there any
+        if len( contacts ) != 0:
+            return_dict[ seqpos_1 ] = contacts
+
+    return return_dict
+
+
+
 def count_interface_residue_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
     """
     Counts the number of residue "contacts" in a <pose> between interface residues given a <cutoff>
@@ -2363,6 +2403,61 @@ def count_interface_residue_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, 
         print "It appears that the jump number", JUMP_NUM, "does not actually define an interface"
         sys.exit()
 
+    # instantiate counter and the list to hold the unique contact names
+    contacts = 0
+    contact_list = []
+    
+    # loop through each residue of each residue of side 1 specified and see if its within <cutoff> distance of any residue from side 2
+    for res_num_1 in range1:
+        # get the chain and seqpos of this residue
+        res1 = pose.residue( res_num_1 )
+        res1_name = res1.name3()
+        res1_chain = pose.pdb_info().chain( res_num_1 )
+        res1_pdb_num = pose.pdb_info().pose2pdb( res_num_1 ).split( ' ' )[0]
+        
+        # get the center of res_num_1
+        res1_center = res1.nbr_atom_xyz()
+        
+        # loop over each residue on side 2
+        for res_num_2 in range2:
+            # get the chain and seqpos of this residue
+            res2 = pose.residue( res_num_2 )
+            res2_name = res2.name3()
+            res2_chain = pose.pdb_info().chain( res_num_2 )
+            res2_pdb_num = pose.pdb_info().pose2pdb( res_num_2 ).split( ' ' )[0]
+            
+            # get the center of res_num_2
+            res2_center = res2.nbr_atom_xyz()
+
+            # if the two residues are within the appropriate distance given by <cutoff>
+            dist = res1_center.distance( res2_center )
+            if dist <= cutoff:
+                # makes unique names for each contact for ease of analysis
+                uniq_name_res1 = res1_name + '_' + res1_chain + '_' + str( res1_pdb_num )
+                uniq_name_res2 = res2_name + '_' + res2_chain + '_' + str( res2_pdb_num )
+
+                # unique name is the combination of the information from both res1 and res2
+                unique_name = uniq_name_res1 + '+' + uniq_name_res2
+                
+                # if this specific contact has not already been found, add it to the list and up the contacts counter
+                if unique_name not in contact_list:
+                    contact_list.append( unique_name )
+                    contacts += 1
+
+    return contacts, contact_list
+
+
+
+def count_residue_contacts_between_range1_range2( range1, range2, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+    """
+    Counts the number of residue "contacts" in a <pose> between <range1> and <range2>
+    :param range1: list( residue pose numbers in range 1 )
+    :param range2: list( residue pose numbers in range 2 )
+    :param pose: Pose
+    :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :return: float( number of residue contacts at interface ), list( str( res1resname_res1chain_res1pdbnum+res2resname_res2chain_res2pdbnum ) )
+    """
     # instantiate counter and the list to hold the unique contact names
     contacts = 0
     contact_list = []

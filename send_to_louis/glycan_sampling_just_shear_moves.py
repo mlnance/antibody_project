@@ -173,6 +173,11 @@ B_chi_2 = native_pose.chi( 2, 292 )  # 292 = ASN 297 B
 
 # collect the chain id's of the Fc glycan from the native pose
 native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
+native_Fc_glycan_nums = [ 216, 217, 218, 219, 220, 221, 222, 223, 440, 441, 442, 443, 444, 445, 446, 447 ]
+
+# collect the chain id's and residue numbers of the FcR glycan
+native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
+native_FcR_glycan_nums = [ 608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 618 ]
 
 ## get some numbers that will be used in pieces of this protocol
 # this number is used later for resetting the core glycan
@@ -180,13 +185,13 @@ n_res_no_Fc_glycan = working_pose.n_residue()
 
 # these numbers are of just the receptor glycan - they should be ignored sometimes
 # and get the residue numbers of branch points - they should also be ignored sometimes
-FcR_seqpos_nums = []
+FcR_sugar_nums = []
 FcR_branch_point_nums = []
 working_pose_chains = []
 for res in working_pose:
     # residue numbers
     if res.is_carbohydrate():
-        FcR_seqpos_nums.append( res.seqpos() )
+        FcR_sugar_nums.append( res.seqpos() )
         
     # branch points
     if res.is_branch_point():
@@ -300,7 +305,7 @@ while not jd.job_complete:
         # if the residue is a carbohydrate
         if res.is_carbohydrate():
             # if the residue number is not in the FcR
-            if res.seqpos() not in FcR_seqpos_nums:
+            if res.seqpos() not in FcR_sugar_nums:
                 Fc_sugar_nums.append( res.seqpos() )
 
             # if the residue is a branch point
@@ -544,14 +549,18 @@ while not jd.job_complete:
 
     # collect additional metric data
     try:
-        metrics = get_pose_metrics( testing_pose, 
-                                    native_pose, 
-                                    main_sf, 
+        metrics = get_pose_metrics( testing_pose,
+                                    native_pose,
+                                    main_sf,
                                     2, # interface JUMP_NUM
-                                    Fc_glycan_chains, 
-                                    native_Fc_glycan_chains, 
-                                    jd.current_num, 
-                                    metrics_dump_dir, 
+                                    Fc_glycan_chains,
+                                    Fc_sugar_nums,
+                                    FcR_sugar_nums,
+                                    native_Fc_glycan_chains,
+                                    native_Fc_glycan_nums,
+                                    native_FcR_glycan_nums,
+                                    jd.current_num,
+                                    metrics_dump_dir,
                                     mc_acceptance )
     except:
         metrics = ''

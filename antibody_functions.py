@@ -2503,7 +2503,6 @@ def count_residue_contacts_between_range1_range2( range1, range2, pose, cutoff =
 
 
 
-# TODO-make this function but for residue contacts based on distance between their centers
 def count_atomic_contacts_between_range1_range2( range1, range2, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
     """
     Counts the number of non-hydrogen atomic contacts in a <pose> between residues of <range1> and <range2> given the <cutoff> distance

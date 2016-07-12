@@ -3,7 +3,7 @@ __author__ = "morganlnance"
 
 
 
-def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, native_Fc_glycan_chains, decoy_num, dump_dir, MC_acceptance_rate = None ):
+def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_glycan_resnums, working_FcR_glycan_resnums, native_Fc_glycan_chains, native_Fc_glycan_resnums, native_FcR_glycan_resnums, decoy_num, dump_dir, MC_acceptance_rate = None ):
     """
     Return a space-delimited string containing various pose metrics.
     :param working: decoy Pose()
@@ -11,7 +11,11 @@ def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, native_Fc_gly
     :param sf: ScoreFunction()
     :param JUMP_NUM: int( JUMP_NUM that defines the interface )
     :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
+    :param working_Fc_glycan_resnums: list( pose residue numbers for the working Fc glycans ).
+    :param working_FcR_glycan_resnums: list( pose residue numbers for the working FcR glycans ).
     :param native_Fc_glycan_chains: list( the chain id's for the native Fc glycan ). Ex = [ 'D', 'E' ]
+    :param native_Fc_glycan_resnums: list( pose residue numbers for the native Fc glycans ).
+    :param native_FcR_glycan_resnums: list( pose residue numbers for the native FcR glycans ).
     :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
     :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
     :param MC_acceptance_rate: float( the MonteCarlo acceptance rate of your protocol, if relevant ). Default = None
@@ -34,7 +38,7 @@ def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, native_Fc_gly
     
     # Rosetta functions I wrote out
     from antibody_functions import count_interface_residue_contacts, \
-        calc_interface_sasa
+        calc_interface_sasa, count_residue_contacts_between_range1_range2
     from pose_metrics_util import Fc_glycan_rmsd, pseudo_interface_energy_3ay4
     
     
@@ -87,6 +91,42 @@ def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, native_Fc_gly
     metric_data.append( "delta_hbonds:" )
     metric_data.append( str( delta_hbonds ) )
 
+
+    ## delta Fc-glycan to protein contacts
+    # get the protein residue numbers for the working and native pose
+    working_protein_resnums = []
+    for res in working:
+        if not res.is_carbohydrate():
+            working_protein_resnums.append( res.seqpos() )
+    native_protein_resnums = []
+    for res in native:
+        if not res.is_carbohydrate():
+            native_protein_resnums.append( res.seqpos() )
+
+    working_Fc_glycan_to_protein_contacts, working_Fc_contact_map = count_residue_contacts_between_range1_range2( working_Fc_glycan_resnums, working_protein_resnums, working, cutoff = 10 )
+    native_Fc_glycan_to_protein_contacts, native_Fc_contact_map = count_residue_contacts_between_range1_range2( native_Fc_glycan_resnums, native_protein_resnums, native, cutoff = 10 )
+    delta_Fc_glycan_to_protein_contacts = working_Fc_glycan_to_protein_contacts - native_Fc_glycan_to_protein_contacts
+    glycan_to_protein_contacts_Frecovered = round( ( float( working_Fc_glycan_to_protein_contacts ) / float( native_Fc_glycan_to_protein_contacts ) ) * 100, 3 )
+    metric_data.append( "glycan_to_protein_contacts:" )
+    metric_data.append( str( working_Fc_glycan_to_protein_contacts ) )
+    metric_data.append( "delta_glycan_to_protein_contacts:" )
+    metric_data.append( str( delta_Fc_glycan_to_protein_contacts ) )
+    metric_data.append( "glycan_to_protein_contacts_Frecovered" )
+    metric_data.append( str( glycan_to_protein_contacts_Frecovered ) )
+
+
+    # delta Fc-glycan to FcR glycan contacts
+    working_Fc_glycan_to_FcR_glycan_contacts, working_FcR_contact_map = count_residue_contacts_between_range1_range2( working_Fc_glycan_resnums, working_FcR_glycan_resnums, working, cutoff = 10 )
+    native_Fc_glycan_to_FcR_glycan_contacts, native_FcR_contact_map = count_residue_contacts_between_range1_range2( native_Fc_glycan_resnums, native_FcR_glycan_resnums, native, cutoff = 10 )
+    delta_Fc_glycan_to_FcR_glycan_contacts = working_Fc_glycan_to_FcR_glycan_contacts - native_Fc_glycan_to_FcR_glycan_contacts
+    glycan_to_FcR_glycan_contacts_Frecovered = round( ( float( working_Fc_glycan_to_FcR_glycan_contacts ) / float( native_Fc_glycan_to_FcR_glycan_contacts ) ) * 100, 3 )
+    metric_data.append( "glycan_to_FcR_glycan_contacts:" )
+    metric_data.append( str( working_Fc_glycan_to_FcR_glycan_contacts ) )
+    metric_data.append( "delta_glycan_to_FcR_glycan_contacts:" )
+    metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_contacts ) )
+    metric_data.append( "glycan_to_FcR_glycan_contacts_Frecovered" )
+    metric_data.append( str( glycan_to_FcR_glycan_contacts_Frecovered ) )
+
     
     # delta interface residue contacts
     cutoff = 8
@@ -101,6 +141,10 @@ def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, native_Fc_gly
     metric_data.append( str( working_intf_contacts ) )
     metric_data.append( "delta_interface_res_contacts_%s_A:" %( str( cutoff ) ) )
     metric_data.append( str( delta_interface_res_contacts ) )
+
+
+    # delta Fc-glycan to protein contacts
+    
 
     
     # delta interface sasa

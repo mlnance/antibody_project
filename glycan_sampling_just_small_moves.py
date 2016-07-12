@@ -539,7 +539,7 @@ while not jd.job_complete:
         if mc.boltzmann( testing_pose ):
             num_sm_accept += 1
             pmm.apply( testing_pose )
-        print "Score", main_sf( testing_pose ), "moves", ii, "accepted", num_sm_accept
+
         # calculate and print out the MC acceptance rate
         num_mc_checks += 1
         mc_acceptance = round( ( float( num_sm_accept ) / float( num_mc_checks ) * 100 ), 3 )

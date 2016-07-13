@@ -464,15 +464,13 @@ while not jd.job_complete:
     FA_ATR_ORIG = main_sf.get_weight( score_type_from_name( "fa_atr" ) )
     FA_REP_ORIG = main_sf.get_weight( score_type_from_name( "fa_rep" ) )
 
-    # raise the fa_rep term and lower the fa_atr term in the ScoreFunction for ramping
+    # raise the fa_atr term and lower the fa_rep term in the ScoreFunction for ramping
     # if score ramping is desired
     if input_args.ramp_sf:
-        #FA_ATR_NEW = FA_ATR_ORIG * 2
-        FA_ATR_NEW = FA_ATR_ORIG * 0.5
+        FA_ATR_NEW = FA_ATR_ORIG * 2
         main_sf.set_weight( score_type_from_name( "fa_atr" ), FA_ATR_NEW )
 
-        #FA_REP_NEW = FA_REP_ORIG * 0.5
-        FA_REP_NEW = FA_REP_ORIG * 2
+        FA_REP_NEW = FA_REP_ORIG * 0.5
         main_sf.set_weight( score_type_from_name( "fa_rep" ), FA_REP_NEW )
 
     # run the ShearMover 10-100 times using a MonteCarlo object to accept or reject the move

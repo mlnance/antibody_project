@@ -32,7 +32,6 @@ parser.add_argument("structure_dir", type=str, help="where do you want to dump t
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_sugar_small_moves", type=int, help="how many SugarSmallMoves do you want to make within the Fc glycan?")
 parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
-parser.add_argument("--use_omega", action="store_true", help="when randomly resetting the Fc glycan and when uing the SugarSmallMover, do you want to use the omega torsion angle? Default = False")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--angle_multiplier", type=float, default=1.0, help="by how much do you want to increase the angle_max for the SugarSmallMover? Default is 1.0 (standard value)" )
 parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
@@ -238,7 +237,6 @@ info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.spl
 info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
 info_file_details.append( "Number of sugar small moves:\t%s\n" %str( input_args.num_sugar_small_moves ) )
 info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
-info_file_details.append( "Using omega angle?:\t\t%s\n" %str( input_args.use_omega ) )
 info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
 info_file_details.append( "Angle multiplier used:\t\t%s\n" %str( input_args.angle_multiplier ) )
 info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
@@ -391,8 +389,7 @@ while not jd.job_complete:
             # reset the phi, psi, and omega values for the residue
             testing_pose.set_phi( res_num, reset_phi_num )
             testing_pose.set_psi( res_num, reset_psi_num )
-            if input_args.use_omega:
-                testing_pose.set_omega( res_num, reset_omega_num )
+            testing_pose.set_omega( res_num, reset_omega_num )
 
         pmm.apply( testing_pose )
         if input_args.verbose:
@@ -500,13 +497,7 @@ while not jd.job_complete:
         resnum = random.choice( Fc_sugar_nums_except_core_GlcNAc )
 
         # apply the SugarSmallMover and change phi, psi, and omega
-        if input_args.use_omega:
-            testing_pose.assign( SugarSmallMover( resnum, testing_pose, angle_max ) )
-
-        # or apply the SugarSmallMover and change only phi and psi
-        else:
-            testing_pose.assign( SugarSmallMover( resnum, testing_pose, angle_max, set_omega = False ) )
-
+        testing_pose.assign( SugarSmallMover( resnum, testing_pose, angle_max ) )
         if input_args.verbose:
             print "score after move", main_sf( testing_pose )
 

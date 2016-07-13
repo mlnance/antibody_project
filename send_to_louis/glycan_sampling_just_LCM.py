@@ -373,23 +373,17 @@ while not jd.job_complete:
     if input_args.random_reset:
         # for each residue except the core GlcNAc in Fc glycan
         # this method gives the range for the first Fc glycan without core GlcNAc
-        # this will only work if the two glycans are the same on both sides
-        for res_num in Fc_sugar_nums_except_core_GlcNAc[ : ( size_of_one_glycan - 1 ) ]:
+        # setting omega for sugars w/o an omega will not do anything, so this is okay
+        for res_num in Fc_sugar_nums_except_core_GlcNAc:
             # pick three random integers between 0 and 360
             reset_phi_num = float( random_range( 0, 360 ) )
             reset_psi_num = float( random_range( 0, 360 ) )
             reset_omega_num = float( random_range( 0, 360 ) )
 
             # reset the phi, psi, and omega values for the residue
-            # side A
             testing_pose.set_phi( res_num, reset_phi_num )
             testing_pose.set_psi( res_num, reset_psi_num )
-            #testing_pose.set_omega( res_num, reset_omega_num )
-
-            # side B
-            testing_pose.set_phi( res_num + size_of_one_glycan - 1, reset_phi_num )
-            testing_pose.set_psi( res_num + size_of_one_glycan - 1, reset_phi_num )
-            #testing_pose.set_omega( res_num + size_of_one_glycan - 1, reset_phi_num )
+            testing_pose.set_omega( res_num, reset_omega_num )
 
         pmm.apply( testing_pose )
         if input_args.verbose:
@@ -542,7 +536,7 @@ while not jd.job_complete:
         if mc.boltzmann( testing_pose ):
             num_lcm_accept += 1
             pmm.apply( testing_pose )
-        print "Number of moves:", ii, "Number of accepts:", num_lcm_accept, "total_score:", main_sf( testing_pose )
+
         # calculate and print out the MC acceptance rate
         num_mc_checks += 1
         mc_acceptance = round( ( float( num_lcm_accept ) / float( num_mc_checks ) * 100 ), 3 )

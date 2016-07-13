@@ -106,7 +106,7 @@ def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_gl
     working_Fc_glycan_to_protein_contacts, working_Fc_contact_map = count_residue_contacts_between_range1_range2( working_Fc_glycan_resnums, working_protein_resnums, working, cutoff = 10 )
     native_Fc_glycan_to_protein_contacts, native_Fc_contact_map = count_residue_contacts_between_range1_range2( native_Fc_glycan_resnums, native_protein_resnums, native, cutoff = 10 )
     delta_Fc_glycan_to_protein_contacts = working_Fc_glycan_to_protein_contacts - native_Fc_glycan_to_protein_contacts
-    glycan_to_protein_contacts_Frecovered = round( ( float( working_Fc_glycan_to_protein_contacts ) / float( native_Fc_glycan_to_protein_contacts ) ) * 100, 3 )
+    glycan_to_protein_contacts_Frecovered = round( ( float( working_Fc_glycan_to_protein_contacts ) / float( native_Fc_glycan_to_protein_contacts ) ) * 100, 2 )
     metric_data.append( "glycan_to_protein_contacts:" )
     metric_data.append( str( working_Fc_glycan_to_protein_contacts ) )
     metric_data.append( "delta_glycan_to_protein_contacts:" )

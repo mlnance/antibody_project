@@ -281,7 +281,7 @@ sub4.set_ylim( [-480, -430 ] )
 
 # save the plot
 plt.tight_layout()
-plot_title = "3ay4-type glycosylation comparing with ramp protocols with metrics vs glycan rmsd"
+plot_title = "3ay4-type glycosylation comparing SmallMoves-50 and LCM-50 with ramp protocols with metrics vs glycan rmsd"
 plt.suptitle( plot_title, fontsize = 30 )
 plt.subplots_adjust(top=0.87)
 plt.savefig( plot_title, dpi=120, transparent=True )
@@ -329,7 +329,7 @@ sub4.set_ylim( [ -475, -430 ] )
 
 # save the plot
 plt.tight_layout()
-plot_title = "3ay4-type glycosylation comparing LCM-50 and -100 no ramp protocol with metrics vs glycan rmsd"
+plot_title = "3ay4-type glycosylation comparing LCM-50 and LCM-100 no ramp protocol with metrics vs glycan rmsd"
 plt.suptitle( plot_title, fontsize = 30 )
 plt.subplots_adjust(top=0.87)
 plt.savefig( plot_title, dpi=120, transparent=True )
@@ -377,11 +377,11 @@ plt.savefig( plot_title, dpi=120, transparent=True )
 fig = plt.figure(figsize=(30, 15))
 sub1 = plt.subplot(2, 2, 1)
 sub1.scatter( sugar_small_moves_50_rmsd_list_pseudo_interface_energy_data_random_reset_no_omega_no_ramp, sugar_small_moves_50_score_list_pseudo_interface_energy_data_random_reset_no_omega_no_ramp )
-sub1.set_title( "3ay4-type glycosylation with SugarSmallMoves-50 random reset no omega no ramp" )
+sub1.set_title( "3ay4-type glycosylation with SugarSmallMoves-50 random reset no omega" )
 sub1.set_xlabel( "glycan RMSD" )
 sub1.set_xlim( [ 0, 10 ] )
 sub1.set_ylabel( "pseudo_interface_energy" )
-#sub1.set_ylim( [-8, 0 ] )
+sub1.set_ylim( [-6, 0 ] )
 
 sub2 = plt.subplot(2, 2, 2)
 sub2.scatter( sugar_small_moves_50_rmsd_list_pseudo_interface_energy_data_random_reset_with_omega_no_ramp, sugar_small_moves_50_score_list_pseudo_interface_energy_data_random_reset_with_omega_no_ramp )
@@ -389,7 +389,7 @@ sub2.set_title( "3ay4-type glycosylation with SugarSmallMoves-50 random reset wi
 sub2.set_xlabel( "glycan RMSD" )
 sub2.set_xlim( [ 0, 10 ] )
 sub2.set_ylabel( "pseudo_interface_energy" )
-#sub2.set_ylim( [-8, 0 ] )
+sub2.set_ylim( [-6, 0 ] )
 
 sub3 = plt.subplot(2, 2, 3)
 sub3.scatter( sugar_small_moves_50_rmsd_list_total_score_data_random_reset_no_omega_no_ramp, sugar_small_moves_50_score_list_total_score_data_random_reset_no_omega_no_ramp )
@@ -397,7 +397,7 @@ sub3.set_title( "3ay4-type glycosylation with SugarSmallMoves-50 random reset no
 sub3.set_xlabel( "glycan RMSD" )
 sub3.set_xlim( [ 0, 10 ] )
 sub3.set_ylabel( "total_score" )
-#sub3.set_ylim( [ -470, -430 ] )
+sub3.set_ylim( [ -600, 0 ] )
 
 sub4 = plt.subplot(2, 2, 4)
 sub4.scatter( sugar_small_moves_50_rmsd_list_total_score_data_random_reset_with_omega_no_ramp, sugar_small_moves_50_score_list_total_score_data_random_reset_with_omega_no_ramp )
@@ -405,11 +405,59 @@ sub4.set_title( "3ay4-type glycosylation with SugarSmallMoves-50 random reset wi
 sub4.set_xlabel( "glycan RMSD" )
 sub4.set_xlim( [ 0, 10 ] )
 sub4.set_ylabel( "total_score" )
-#sub4.set_ylim( [-480, -430 ] )
+sub4.set_ylim( [-600, 0 ] )
 
 # save the plot
 plt.tight_layout()
-plot_title = "3ay4-type glycosylation comparing SugarSmallMover with random reset with-or-without omega protocol with metrics vs glycan rmsd"
+plot_title = "3ay4-type glycosylation comparing SugarSmallMover with random reset with-or-without omega no ramp protocol with metrics vs glycan rmsd"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+
+################
+#### PLOT 6 ####
+################
+# LCM-100 with and without random reset
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+sub1.scatter( LCM_100_rmsd_list_pseudo_interface_energy_data_random_reset_no_ramp, LCM_100_score_list_pseudo_interface_energy_data_random_reset_no_ramp )
+sub1.set_title( "3ay4-type glycosylation with LCM-100 random reset no ramp" )
+sub1.set_xlabel( "glycan RMSD" )
+sub1.set_xlim( [ 0, 10 ] )
+sub1.set_ylabel( "pseudo_interface_energy" )
+sub1.set_ylim( [-7, 0 ] )
+
+sub2 = plt.subplot(2, 2, 2)
+sub2.scatter( LCM_100_rmsd_list_pseudo_interface_energy_data_no_ramp, LCM_100_score_list_pseudo_interface_energy_data_no_ramp )
+sub2.set_title( "3ay4-type glycosylation with LCM-100 no ramp" )
+sub2.set_xlabel( "glycan RMSD" )
+sub2.set_xlim( [ 0, 10 ] )
+sub2.set_ylabel( "pseudo_interface_energy" )
+sub2.set_ylim( [-7, 0 ] )
+
+sub3 = plt.subplot(2, 2, 3)
+sub3.scatter( LCM_100_rmsd_list_total_score_data_random_reset_no_ramp, LCM_100_score_list_total_score_data_random_reset_no_ramp )
+sub3.set_title( "3ay4-type glycosylation with LCM-100 random reset no ramp" )
+sub3.set_xlabel( "glycan RMSD" )
+sub3.set_xlim( [ 0, 10 ] )
+sub3.set_ylabel( "total_score" )
+sub3.set_ylim( [ -480, -360 ] )
+
+sub4 = plt.subplot(2, 2, 4)
+sub4.scatter( LCM_100_rmsd_list_total_score_data_no_ramp, LCM_100_score_list_total_score_data_no_ramp )
+sub4.set_title( "3ay4-type glycosylation with LCM-100 no ramp" )
+sub4.set_xlabel( "glycan RMSD" )
+sub4.set_xlim( [ 0, 10 ] )
+sub4.set_ylabel( "total_score" )
+sub4.set_ylim( [-470, -440 ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4-type glycosylation comparing LCM-100 with-or-without random reset no ramp protocol with metrics vs glycan rmsd"
 plt.suptitle( plot_title, fontsize = 30 )
 plt.subplots_adjust(top=0.87)
 plt.savefig( plot_title, dpi=120, transparent=True )

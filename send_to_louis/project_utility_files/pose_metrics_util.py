@@ -163,11 +163,11 @@ def Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_
     # get temporary files to work with
     id = id_generator()
     if dump_dir.endswith( '/' ):
-        working_filename = "%s%s_temp_working_%s.pdb" %( id, dump_dir, str( decoy_num ) )
-        native_filename = "%s%s_temp_native_%s.pdb" %( id, dump_dir, str( decoy_num ) )
+        working_filename = "%s%s_temp_working_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+        native_filename = "%s%s_temp_native_%s.pdb" %( dump_dir, id, str( decoy_num ) )
     else:
-        working_filename = "%s/%s_temp_working_%s.pdb" %( id, dump_dir, str( decoy_num ) )
-        native_filename = "%s/%s_temp_native_%s.pdb" %( id, dump_dir, str( decoy_num ) )
+        working_filename = "%s/%s_temp_working_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+        native_filename = "%s/%s_temp_native_%s.pdb" %( dump_dir, id, str( decoy_num ) )
 
     # dump out the Fc glycans by their chain id's
     dump_pdb_by_chain( working_filename, working, working_Fc_glycan_chains, decoy_num, dump_dir = dump_dir )

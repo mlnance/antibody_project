@@ -171,13 +171,13 @@ A_chi_2 = native_pose.chi( 2, 69 )   # 69 = ASN 297 A
 B_chi_1 = native_pose.chi( 1, 292 )  # 292 = ASN 297 B
 B_chi_2 = native_pose.chi( 2, 292 )  # 292 = ASN 297 B
 
-# collect the chain id's of the Fc glycan from the native pose
+# collect the chain id's and residue numbers of the Fc glycan from the native pose
 native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
 native_Fc_glycan_nums = [ 216, 217, 218, 219, 220, 221, 222, 223, 440, 441, 442, 443, 444, 445, 446, 447 ]
 
 # collect the chain id's and residue numbers of the FcR glycan
-native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
-native_FcR_glycan_nums = [ 608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 618 ]
+native_FcR_glycan_chains = [ 'H', 'I', 'J' ]
+native_FcR_glycan_nums = [ 608, 609, 610, 611, 612, 613, 614, 615 ]
 
 ## get some numbers that will be used in pieces of this protocol
 # this number is used later for resetting the core glycan

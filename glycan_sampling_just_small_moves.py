@@ -177,8 +177,8 @@ native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
 native_Fc_glycan_nums = [ 216, 217, 218, 219, 220, 221, 222, 223, 440, 441, 442, 443, 444, 445, 446, 447 ]
 
 # collect the chain id's and residue numbers of the FcR glycan
-native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
-native_FcR_glycan_nums = [ 608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 618 ]
+native_FcR_interface_glycan_chains = [ 'H', 'I', 'J' ]
+native_FcR_interface_glycan_nums = [ 608, 609, 610, 611, 612, 613, 614, 615 ]
 
 ## get some numbers that will be used in pieces of this protocol
 # this number is used later for resetting the core glycan
@@ -186,13 +186,13 @@ n_res_no_Fc_glycan = working_pose.n_residue()
 
 # these numbers are of just the receptor glycan - they should be ignored sometimes
 # and get the residue numbers of branch points - they should also be ignored sometimes
-FcR_sugar_nums = []
+FcR_glycan_nums = []
 FcR_branch_point_nums = []
 working_pose_chains = []
 for res in working_pose:
     # residue numbers
     if res.is_carbohydrate():
-        FcR_sugar_nums.append( res.seqpos() )
+        FcR_glycan_nums.append( res.seqpos() )
         
     # branch points
     if res.is_branch_point():
@@ -202,6 +202,10 @@ for res in working_pose:
     res_chain = working_pose.pdb_info().chain( res.seqpos() )
     if res_chain not in working_pose_chains:
         working_pose_chains.append( res_chain )
+
+# get the numbers for the FcR interface glycan
+FcR_glycan_nums.sort()
+FcR_interface_glycan_nums = FcR_glycan_nums[ : -3 ]
 
 # get the number of chains because the Pose renumbers its chains after glycosylation
 num_working_pose_chains = len( working_pose_chains )
@@ -308,7 +312,7 @@ while not jd.job_complete:
         # if the residue is a carbohydrate
         if res.is_carbohydrate():
             # if the residue number is not in the FcR
-            if res.seqpos() not in FcR_sugar_nums:
+            if res.seqpos() not in FcR_interface_glycan_nums:
                 Fc_sugar_nums.append( res.seqpos() )
 
             # if the residue is a branch point
@@ -571,10 +575,10 @@ while not jd.job_complete:
                                     2, # interface JUMP_NUM
                                     Fc_glycan_chains, 
                                     Fc_sugar_nums, 
-                                    FcR_sugar_nums, 
+                                    FcR_interface_glycan_nums, 
                                     native_Fc_glycan_chains, 
                                     native_Fc_glycan_nums, 
-                                    native_FcR_glycan_nums, 
+                                    native_FcR_interface_glycan_nums, 
                                     jd.current_num, 
                                     metrics_dump_dir, 
                                     mc_acceptance )

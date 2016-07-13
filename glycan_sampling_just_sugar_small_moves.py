@@ -33,6 +33,7 @@ parser.add_argument("nstruct", type=int, help="how many decoys do you want to ma
 parser.add_argument("num_sugar_small_moves", type=int, help="how many SugarSmallMoves do you want to make within the Fc glycan?")
 parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
+parser.add_argument("--constraint_file", default=None, type=str, help="/path/to/the .cst constraint file you want to use for the protocol")
 parser.add_argument("--angle_multiplier", type=float, default=1.0, help="by how much do you want to increase the angle_max for the SugarSmallMover? Default is 1.0 (standard value)" )
 parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
 input_args = parser.parse_args()
@@ -102,6 +103,7 @@ from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
 from rosetta.numeric.random import random_range, uniform
 from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
 from rosetta.core.scoring import score_type_from_name
+from rosetta.protocols.simple_moves import ConstraintSetMover
 from rosetta import SmallMover, MinMover
 
 # Rosetta functions I wrote out
@@ -220,6 +222,21 @@ main_sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
 #    main_sf.set_weight( score_type_from_name( hbond_term ), main_sf.get_weight( score_type_from_name( hbond_term ) ) * hbond_weight )
 
 
+# set up constraints from the passed constraint file
+if input_args.constraint_file is not None:
+    # add the appropriate weight to the main_sf
+    main_sf.set_weight( score_type_from_name( "atom_pair_constraint" ), 1.0 )
+
+    if input_args.verbose:
+        print "Setting up a ConstraintSetMover"
+
+    # create ConstraintSetMover
+    constraint_file_used = True
+    constraint_setter = ConstraintSetMover()
+    constraint_setter.constraint_file( input_args.constraint_file )
+else:
+    constraint_file_used = False
+
 
 # pymol stuff
 pmm = PyMOL_Mover()
@@ -238,6 +255,7 @@ info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.ns
 info_file_details.append( "Number of sugar small moves:\t%s\n" %str( input_args.num_sugar_small_moves ) )
 info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
 info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
+info_file_details.append( "Constraint file used?:\t\t%s\n" %str( constraint_file_used ) )
 info_file_details.append( "Angle multiplier used:\t\t%s\n" %str( input_args.angle_multiplier ) )
 info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
 info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )
@@ -339,6 +357,20 @@ while not jd.job_complete:
     # Rosetta seems to just rename the chains, so the last X chains added should be the glycan
     num_chains_added = num_testing_pose_chains - num_working_pose_chains
     Fc_glycan_chains = testing_pose_chains[ ( -1 * num_chains_added ) : ]
+
+
+
+    #########################
+    #### ADD CONSTRAINTS ####
+    #########################
+
+    # apply the constraints to the pose if a .cst file was passed
+    if constraint_file_used:
+        try:
+            constraint_setter.apply( testing_pose )
+        except:
+            print "It appears there is something wrong with your constraint file. Please check your input."
+            sys.exit()
 
 
 

@@ -255,7 +255,7 @@ info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.ns
 info_file_details.append( "Number of sugar small moves:\t%s\n" %str( input_args.num_sugar_small_moves ) )
 info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
 info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
-info_file_details.append( "Constraint file used?:\t\t%s\n" %str( constraint_file_used ) )
+info_file_details.append( "Constraint file used?:\t\t%s\n" %str( input_args.constraint_file ).split( '/' )[-1] )
 info_file_details.append( "Angle multiplier used:\t\t%s\n" %str( input_args.angle_multiplier ) )
 info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
 info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )

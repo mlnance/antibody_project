@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling_just_small_moves.py project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb /Users/Research/antibody_project/send_to_louis/project_glyco_files/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ /Users/Research/pyrosetta_dir/test_pdb_dir/ 2 5
+run glycan_sampling_just_sugar_sugar_small_moves.py project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb /Users/Research/antibody_project/send_to_louis/project_glyco_files/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ /Users/Research/pyrosetta_dir/test_pdb_dir/ 2 5
 '''
 
 
@@ -30,10 +30,11 @@ parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan fil
 parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
-parser.add_argument("num_small_moves", type=int, help="how many SmallMoves do you want to make within the Fc glycan?")
+parser.add_argument("num_sugar_small_moves", type=int, help="how many SugarSmallMoves do you want to make within the Fc glycan?")
 parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
+parser.add_argument("--use_omega", action="store_true", help="when randomly resetting the Fc glycan and when uing the SugarSmallMover, do you want to use the omega torsion angle? Default = False")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
-parser.add_argument("--angle_multiplier", type=float, default=1.0, help="by how much do you want to increase the angle_max for the SmallMover? Default is 1.0 (standard value)" )
+parser.add_argument("--angle_multiplier", type=float, default=1.0, help="by how much do you want to increase the angle_max for the SugarSmallMover? Default is 1.0 (standard value)" )
 parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
 input_args = parser.parse_args()
 
@@ -47,7 +48,7 @@ import os, sys, random
 
 # collect and create necessary directories for use in metric calculations
 working_dir = os.getcwd() + '/'
-metrics_dump_dir = working_dir + "small_%s_dir" %str( input_args.num_small_moves )
+metrics_dump_dir = working_dir + "sugar_small_%s_dir" %str( input_args.num_sugar_small_moves )
 try:
     os.mkdir( metrics_dump_dir )
 except:
@@ -158,7 +159,7 @@ if not os.path.isdir( structure_dir ):
         os.mkdir( structure_dir )
     except:
         pass
-working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_%s_small_moves" %input_args.num_small_moves
+working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_%s_sugar_small_moves" %input_args.num_sugar_small_moves
 
 
 # collect the core GlcNAc values from the native pose
@@ -235,8 +236,9 @@ info_file_details.append( "Native PDB filename:\t\t%s\n" %input_args.native_pdb_
 info_file_details.append( "Working PDB filename:\t\t%s\n" %input_args.working_pdb_file.split( '/' )[-1] )
 info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
 info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
-info_file_details.append( "Number of small moves:\t\t%s\n" %str( input_args.num_small_moves ) )
+info_file_details.append( "Number of sugar small moves:\t%s\n" %str( input_args.num_sugar_small_moves ) )
 info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
+info_file_details.append( "Using omega angle?:\t\t%s\n" %str( input_args.use_omega ) )
 info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
 info_file_details.append( "Angle multiplier used:\t\t%s\n" %str( input_args.angle_multiplier ) )
 info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
@@ -263,7 +265,7 @@ jd = PyJobDistributor( working_pose_decoy_name, input_args.nstruct, main_sf )
 jd.native_pose = native_pose
 cur_decoy_num = 0
 
-print "Running SmallMover PyJobDistributor..."
+print "Running SugarSmallMover PyJobDistributor..."
 
 while not jd.job_complete:
     # get a fresh copy of the working pose to be used in this protocol
@@ -379,15 +381,18 @@ while not jd.job_complete:
     if input_args.random_reset:
         # for each residue except the core GlcNAc in Fc glycan
         # this method gives the range for the first Fc glycan without core GlcNAc
-        # not changing omega because SmallMover cannot sample omega
+        # changing omega on residues that don't have an omega torsion doesn't affect anything
         for res_num in Fc_sugar_nums_except_core_GlcNAc:
             # pick three random integers between 0 and 360
             reset_phi_num = float( random_range( 0, 360 ) )
             reset_psi_num = float( random_range( 0, 360 ) )
+            reset_omega_num = float( random_range( 0, 360 ) )
 
-            # reset the phi and psi values for the residue
+            # reset the phi, psi, and omega values for the residue
             testing_pose.set_phi( res_num, reset_phi_num )
             testing_pose.set_psi( res_num, reset_psi_num )
+            if input_args.use_omega:
+                testing_pose.set_omega( res_num, reset_omega_num )
 
         pmm.apply( testing_pose )
         if input_args.verbose:
@@ -440,27 +445,17 @@ while not jd.job_complete:
 
 
 
-    ####################
-    #### SmallMover ####
-    ####################
+    #########################
+    #### SugarSmallMover ####
+    #########################
 
-    ## use the SmallMover find a local sugar minima
-    # make a MoveMap for these Fc sugars
-    small_mm = make_movemap_for_range( Fc_sugar_nums_except_core_GlcNAc, 
-                                       allow_bb_movement = True, 
-                                       allow_chi_movement = True )
-
-    # add in the branch points myself ( does not include the two ASN residues )
-    for branch_point in Fc_glycan_branch_point_nums:
-        small_mm.set_branches( branch_point, True )
-
+    ## use the SugarSmallMover find a local sugar minima
     # make an appropriate MonteCarlo object
     mc = MonteCarlo( testing_pose, main_sf, kT )
 
-    # make an appropriate SmallMover
-    sm = SmallMover( movemap_in = small_mm, temperature_in = kT, nmoves_in = 1 )
-    sm.scorefxn( main_sf )
-    sm.angle_max( 'L', sm.get_angle_max( 'L' ) * input_args.angle_multiplier )
+    # make a SmallMover as to get the angle_max value
+    sm = SmallMover()
+    angle_max = sm.get_angle_max( 'L' ) * input_args.angle_multiplier
 
     # store scoring terms in case score ramping is desired
     # store the original fa_atr, fa_rep, and fa_elec weights
@@ -478,10 +473,10 @@ while not jd.job_complete:
         FA_REP_NEW = FA_REP_ORIG * 2
         main_sf.set_weight( score_type_from_name( "fa_rep" ), FA_REP_NEW )
 
-    # run the SmallMover 10-100 times using a MonteCarlo object to accept or reject the move
-    num_sm_accept = 0
+    # run the SugarSmallMover 10-100 times using a MonteCarlo object to accept or reject the move
+    num_ssm_accept = 0
     num_mc_checks = 0
-    for ii in range( 1, input_args.num_small_moves + 1 ):
+    for ii in range( 1, input_args.num_sugar_small_moves + 1 ):
         # if score ramping is desired
         if input_args.ramp_sf:
             # ramp up or down the appropriate scoring terms and get it back to the MonteCarlo object
@@ -489,20 +484,29 @@ while not jd.job_complete:
                                          "fa_atr", 
                                          FA_ATR_ORIG, 
                                          ii - 1, 
-                                         input_args.num_small_moves )
+                                         input_args.num_sugar_small_moves )
             main_sf = ramp_score_weight( main_sf, 
                                          "fa_rep", 
                                          FA_REP_ORIG, 
                                          ii - 1, 
-                                         input_args.num_small_moves )
+                                         input_args.num_sugar_small_moves )
             mc.score_function( main_sf )
 
         # print current score
         if input_args.verbose:
             print "starting score", main_sf( testing_pose )
 
-        # apply the SmallMover
-        sm.apply( testing_pose )
+        # pick a random Fc glycan residue except core GlcNAc
+        resnum = random.choice( Fc_sugar_nums_except_core_GlcNAc )
+
+        # apply the SugarSmallMover and change phi, psi, and omega
+        if input_args.use_omega:
+            testing_pose.assign( SugarSmallMover( resnum, testing_pose, angle_max ) )
+
+        # or apply the SugarSmallMover and change only phi and psi
+        else:
+            testing_pose.assign( SugarSmallMover( resnum, testing_pose, angle_max, set_omega = False ) )
+
         if input_args.verbose:
             print "score after move", main_sf( testing_pose )
 
@@ -539,15 +543,15 @@ while not jd.job_complete:
 
         # accept or reject the move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):
-            num_sm_accept += 1
+            num_ssm_accept += 1
             pmm.apply( testing_pose )
 
         # calculate and print out the MC acceptance rate
         num_mc_checks += 1
-        mc_acceptance = round( ( float( num_sm_accept ) / float( num_mc_checks ) * 100 ), 3 )
+        mc_acceptance = round( ( float( num_ssm_accept ) / float( num_mc_checks ) * 100 ), 3 )
         if input_args.verbose:
             print "Moves made so far:", num_mc_checks, 
-            print "  Moves accepted:", num_sm_accept, 
+            print "  Moves accepted:", num_ssm_accept, 
             print "  Acceptance rate:", mc_acceptance
 
     # collect additional metric data

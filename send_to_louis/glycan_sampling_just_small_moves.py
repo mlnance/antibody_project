@@ -310,7 +310,7 @@ while not jd.job_complete:
         # if the residue is a carbohydrate
         if res.is_carbohydrate():
             # if the residue number is not in the FcR
-            if res.seqpos() not in FcR_interface_glycan_nums:
+            if res.seqpos() not in FcR_glycan_nums:
                 Fc_sugar_nums.append( res.seqpos() )
 
             # if the residue is a branch point
@@ -385,7 +385,7 @@ while not jd.job_complete:
             reset_phi_num = float( random_range( 0, 360 ) )
             reset_psi_num = float( random_range( 0, 360 ) )
 
-            # reset the phi, psi, and omega values for the residue
+            # reset the phi and psi values for the residue
             testing_pose.set_phi( res_num, reset_phi_num )
             testing_pose.set_psi( res_num, reset_psi_num )
 

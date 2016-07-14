@@ -16,6 +16,7 @@ def pseudo_interface_energy_3ay4( pose, sf, native = False, pmm = None ):
     """
     from rosetta import FoldTree, Pose
     from rosetta.numeric import xyzVector_Real
+    from rosetta.core.scoring import score_type_from_name
 
 
     # set atom_pair_constraint weight to 0

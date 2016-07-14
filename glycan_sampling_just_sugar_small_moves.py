@@ -236,7 +236,6 @@ if input_args.scorefxn_file is not None:
                 # if user wants a multiplier
                 if score_line_split[1] == '*':
                     score_weight = main_sf.get_weight( score_type_from_name( score_type ) ) * float( score_line_split[2] )
-                    print score_weight
                 # else user wants a specific value
                 else:
                     score_weight = float( score_line_split[1] )

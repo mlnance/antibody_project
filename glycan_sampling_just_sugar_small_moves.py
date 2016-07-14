@@ -34,6 +34,7 @@ parser.add_argument("num_sugar_small_moves", type=int, help="how many SugarSmall
 parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--constraint_file", default=None, type=str, help="/path/to/the .cst constraint file you want to use for the protocol")
+parser.add_argument("--scorefxn_file", default=None, type=str, help="/path/to/the .sf scorefxn space-delimited file that tells me which scoring weights beyond the norm you want to use")
 parser.add_argument("--angle_multiplier", type=float, default=1.0, help="by how much do you want to increase the angle_max for the SugarSmallMover? Default is 1.0 (standard value)" )
 parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
 input_args = parser.parse_args()
@@ -217,9 +218,38 @@ hbond_terms = [ "hbond_sr_bb", "hbond_lr_bb", "hbond_bb_sc", "hbond_sc" ]
 hbond_weight = 2
 
 main_sf = get_fa_scorefxn()
-main_sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
-#for hbond_term in hbond_terms:
-#    main_sf.set_weight( score_type_from_name( hbond_term ), main_sf.get_weight( score_type_from_name( hbond_term ) ) * hbond_weight )
+# use the scorefxn_file to set up additional weights
+if input_args.scorefxn_file is not None:
+    try:
+        with open( input_args.scorefxn_file, "rb" ) as fh:
+            score_lines = fh.readlines()
+    except:
+        print "Something seems to be wrong with your scorefxn_file ( %s ). Please check your input" %input_args.scorefxn_file
+        sys.exit()
+    for score_line in score_lines:
+        # ignore new line characters
+        score_line = score_line.rstrip()
+        # get the score type and weight from each line, which should be space delimited
+        if score_line != '':
+            if not score_line.startswith( '#' ):
+                score_line_split = score_line.split( ' ' )
+                score_type = str( score_line_split[0] )
+                # if user wants a multiplier
+                if score_line_split[1] == '*':
+                    score_weight = main_sf.get_weight( score_type_from_name( score_type ) ) * float( score_line_split[2] )
+                    print score_weight
+                # else user wants a specific value
+                else:
+                    score_weight = float( score_line_split[1] )
+        try:
+            main_sf.set_weight( score_type_from_name( score_type ), score_weight )
+        except:
+            print "It seems like you did not pass a valid ScoreType (or some other issue). Check your scorefxn_file (%s)" %input_args.scorefxn_file
+            sys.exit()
+
+# else no scorefxn_file was passed, but still need to set fa_intra_rep to 0.440 for now
+else:
+    main_sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
 
 
 # set up constraints from the passed constraint file
@@ -256,6 +286,7 @@ info_file_details.append( "Number of sugar small moves:\t%s\n" %str( input_args.
 info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
 info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
 info_file_details.append( "Constraint file used?:\t\t%s\n" %str( input_args.constraint_file ).split( '/' )[-1] )
+info_file_details.append( "ScoreFunction file used?:\t%s\n" %str( input_args.scorefxn_file ).split( '/' )[-1] )
 info_file_details.append( "Angle multiplier used:\t\t%s\n" %str( input_args.angle_multiplier ) )
 info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
 info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )

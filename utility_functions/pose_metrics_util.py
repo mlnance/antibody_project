@@ -18,6 +18,9 @@ def pseudo_interface_energy_3ay4( pose, sf, native = False, pmm = None ):
     from rosetta.numeric import xyzVector_Real
 
 
+    # set atom_pair_constraint weight to 0
+    sf.set_weight( score_type_from_name( "atom_pair_constraint" ), 0.0 )
+
     # get the score of the whole complex
     start_score = sf( pose )
 

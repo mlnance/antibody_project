@@ -213,6 +213,17 @@ def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
 
 
 
+def show_score_breakdown( sf, pose ):
+    """
+    Shows the breakdown of the <pose>'s total score by printing the score of each nonzero weighted ScoreType in <sf>
+    :param sf: ScoreFunction
+    :param pose: Pose
+    """
+    # print out each score
+    print "\n".join( [ "%s: %s" %( str( score_type ), sf.score_by_scoretype( pose, score_type ) ) for score_type in sf.get_nonzero_weighted_scoretypes() ] )
+
+
+
 def get_score_by_scoretype( sf, input_scoretype, pose, weight = 1.0, verbose = False ):
     """
     Return the specified <input_scoretype> value using <sf> on the <pose>

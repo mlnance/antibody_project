@@ -220,7 +220,7 @@ def show_score_breakdown( sf, pose ):
     :param pose: Pose
     """
     # print out each score
-    print "\n".join( [ "%s: %s" %( str( score_type ), sf.score_by_scoretype( pose, score_type ) ) for score_type in sf.get_nonzero_weighted_scoretypes() ] )
+    print "\n".join( [ "%s: %s" %( score_type, round( sf.score_by_scoretype( pose, score_type ), 3 ) ) for score_type in sf.get_nonzero_weighted_scoretypes() ] )
 
 
 

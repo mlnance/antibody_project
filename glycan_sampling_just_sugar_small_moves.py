@@ -260,7 +260,19 @@ info_file_details.append( "Angle multiplier used:\t\t%s\n" %str( input_args.angl
 info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
 info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )
 info_file_details.append( "Lowest E structure directory:\t%s\n" %lowest_E_structs_dir )
-info_file_details.append( "\nScore weights used in main_sf:\n%s\n" %( "\n".join( [ "%s: %s" %( str( name ), main_sf.get_weight( name ) ) for name in main_sf.get_nonzero_weighted_scoretypes() ] ) ) )
+if input_args.ramp_sf:
+    score_types = main_sf.get_nonzero_weighted_scoretypes()
+    info_file_details.append( "\nScore weights used in main_sf:\n" )
+    for score_type in score_types:
+        if str( score_type ) == "fa_atr": 
+            info_file_details.append( "%s: %s * 2 in ramp\n" %( str( score_type ), str( main_sf.get_weight( score_type ) ) ) )
+        elif str( score_type ) == "fa_rep": 
+            info_file_details.append( "%s: %s * 0.5 in ramp\n" %( str( score_type ), str( main_sf.get_weight( score_type ) ) ) )
+        else:
+            info_file_details.append( "%s: %s\n" %( str( score_type ), str( main_sf.get_weight( score_type ) ) ) )
+    
+else:
+    info_file_details.append( "\nScore weights used in main_sf:\n%s\n" %( "\n".join( [ "%s: %s" %( str( name ), main_sf.get_weight( name ) ) for name in main_sf.get_nonzero_weighted_scoretypes() ] ) ) )
 info_file = ''.join( info_file_details )
 print "\n", info_file, "\n"
 

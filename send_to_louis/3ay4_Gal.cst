@@ -1,2 +1,2 @@
-SiteConstraint  C1  610I A HARMONIC 7.5 1.0 2.5
-SiteConstraint  C1  618K B HARMONIC 7.5 1.0 2.5
+SiteConstraint  C1  610I A HARMONIC 5.0 1.0 2.5
+SiteConstraint  C1  618K B HARMONIC 5.0 1.0 2.5

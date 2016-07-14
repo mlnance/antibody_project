@@ -213,11 +213,10 @@ FcR_interface_glycan_nums = FcR_glycan_nums[ : -3 ]
 num_working_pose_chains = len( working_pose_chains )
 
 
-# adjust a standard fa_scorefxn with certain weights for protocol usage
-hbond_terms = [ "hbond_sr_bb", "hbond_lr_bb", "hbond_bb_sc", "hbond_sc" ]
-hbond_weight = 2
-
+# create a fa_scorefxn
 main_sf = get_fa_scorefxn()
+main_sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )  # should always be 0.440 since that's what I've been using
+
 # use the scorefxn_file to set up additional weights
 if input_args.scorefxn_file is not None:
     try:
@@ -246,10 +245,6 @@ if input_args.scorefxn_file is not None:
         except:
             print "It seems like you did not pass a valid ScoreType (or some other issue). Check your scorefxn_file (%s)" %input_args.scorefxn_file
             sys.exit()
-
-# else no scorefxn_file was passed, but still need to set fa_intra_rep to 0.440 for now
-else:
-    main_sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
 
 
 # set up constraints from the passed constraint file

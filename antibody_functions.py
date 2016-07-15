@@ -281,6 +281,19 @@ def show_score_breakdown( sf, pose ):
 
 
 
+def show_sf_weights_breakdown( scorefxn ):
+    """
+    Shows the breakdown of nonzeroweighted ScoreTypes in <scorefxn>
+    :param sf: ScoreFunction
+    :param pose: Pose
+    """
+    # print out each score
+    print
+    print "\n".join( [ "%s: %s" %( score_type, scorefxn.get_weight( score_type ) ) for score_type in scorefxn.get_nonzero_weighted_scoretypes() ] )
+    print
+
+
+
 def get_score_by_scoretype( sf, input_scoretype, pose, weight = 1.0, verbose = False ):
     """
     Return the specified <input_scoretype> value using <sf> on the <pose>

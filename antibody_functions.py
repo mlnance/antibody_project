@@ -260,6 +260,10 @@ def make_fa_scorefxn_from_file( scorefxn_file, verbose = False ):
             print "It seems like you did not pass a valid ScoreType (or some other issue). Check your scorefxn_file (%s)" %input_args.scorefxn_file
             sys.exit()
 
+    # if verbose, print the final weights
+    if verbose:
+        print "\nScore weights used in this sf:\n%s\n" %( "\n".join( [ "%s: %s" %( str( name ), sf.get_weight( name ) ) for name in sf.get_nonzero_weighted_scoretypes() ] ) )
+
     return sf
 
 

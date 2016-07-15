@@ -10,7 +10,6 @@ run rmsd_vs_score_with_fasc.py pdb_copies_dont_touch/lowest_E_double_pack_and_mi
 import argparse
 
 parser = argparse.ArgumentParser(description="Use Rosetta to calculate RMSD between a native pose and a directory of structures")
-parser.add_argument("native_pdb_filename", type=str, help="the filename of the PDB structure to serve as the native structure")
 parser.add_argument("fasc_file", type=str, help="the path to the .fasc file with the relevant data.")
 parser.add_argument("metric_name", type=str, help="what is the name of the score metric in the .fasc file you want to compare against glycan_rmsd?")
 parser.add_argument("resulting_filename", type=str, help="what do you want the resulting csv file to be called? This program will add the .csv extension for you")

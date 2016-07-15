@@ -111,7 +111,7 @@ from rosetta import SmallMover, MinMover
 from antibody_functions import initialize_rosetta, \
     get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
     make_movemap_for_range, load_pose, get_phi_psi_omega_of_res, \
-    ramp_score_weight, SugarSmallMover
+    ramp_score_weight, make_fa_scorefxn_from_file, SugarSmallMover
 
 # utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
@@ -219,31 +219,7 @@ main_sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )  # should al
 
 # use the scorefxn_file to set up additional weights
 if input_args.scorefxn_file is not None:
-    try:
-        with open( input_args.scorefxn_file, "rb" ) as fh:
-            score_lines = fh.readlines()
-    except:
-        print "Something seems to be wrong with your scorefxn_file ( %s ). Please check your input" %input_args.scorefxn_file
-        sys.exit()
-    for score_line in score_lines:
-        # ignore new line characters
-        score_line = score_line.rstrip()
-        # get the score type and weight from each line, which should be space delimited
-        if score_line != '':
-            if not score_line.startswith( '#' ):
-                score_line_split = score_line.split( ' ' )
-                score_type = str( score_line_split[0] )
-                # if user wants a multiplier
-                if score_line_split[1] == '*':
-                    score_weight = main_sf.get_weight( score_type_from_name( score_type ) ) * float( score_line_split[2] )
-                # else user wants a specific value
-                else:
-                    score_weight = float( score_line_split[1] )
-        try:
-            main_sf.set_weight( score_type_from_name( score_type ), score_weight )
-        except:
-            print "It seems like you did not pass a valid ScoreType (or some other issue). Check your scorefxn_file (%s)" %input_args.scorefxn_file
-            sys.exit()
+    main_sf = make_fa_scorefxn_from_file( input_args.scorefxn_file )
 
 
 # set up constraints from the passed constraint file

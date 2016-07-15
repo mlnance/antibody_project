@@ -213,6 +213,58 @@ def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
 
 
 
+def make_fa_scorefxn_from_file( scorefxn_file, verbose = False ):
+    """
+    Return an sf from get_fa_scoretype but with adjusted weights read from the passed <scorefxn_file>
+    If a ScoreType is not already part of the sf, this function will add it to sf with the specified weight
+    :param scorefxn_file: str( path/to/scorefxn.sf file with ScoreTypes and weights )
+    :param verbose: bool( print the final weights of the returned ScoreFunction? ) Default = False
+    "return: ScoreFunction( fa_scorefxn with adjusted weights of given scoretypes )
+    """
+    # make a standard fa_scorefxn
+    sf = get_fa_scorefxn()
+
+    # edit the ScoreFunction
+    try:
+        with open( scorefxn_file, "rb" ) as fh:
+            score_lines = fh.readlines()
+    except:
+        print "Something seems to be wrong with your scorefxn_file ( %s ). Please check your input" %input_args.scorefxn_file
+        sys.exit()
+    for score_line in score_lines:
+        # ignore new line characters
+        score_line = score_line.rstrip()
+
+        # get the score type and weight from each line, which should be space delimited
+        if score_line != '':
+            # ignore commented lines
+            if not score_line.startswith( '#' ):
+                # check if the user followed the right format
+                try:
+                    score_line_split = score_line.split( ' ' )
+                    score_type = str( score_line_split[0] )
+
+                    # if user wants a multiplier
+                    if score_line_split[1] == '*':
+                        score_weight = sf.get_weight( score_type_from_name( score_type ) ) * float( score_line_split[2] )
+
+                    # else user wants a specific value
+                    else:
+                        score_weight = float( score_line_split[1] )
+                except:
+                    print "\nIt seems that your scorefxn_file did not follow the proper format. Please follow 'ScoreType Weight' or 'ScoreType * Multiplier'"
+                    sys.exit()
+        try:
+            sf.set_weight( score_type_from_name( score_type ), score_weight )
+        except:
+            print "It seems like you did not pass a valid ScoreType (or some other issue). Check your scorefxn_file (%s)" %input_args.scorefxn_file
+            sys.exit()
+
+    return sf
+
+
+
+
 def show_score_breakdown( sf, pose ):
     """
     Shows the breakdown of the <pose>'s total score by printing the score of each nonzero weighted ScoreType in <sf>
@@ -221,6 +273,7 @@ def show_score_breakdown( sf, pose ):
     """
     # print out each score
     print "\n".join( [ "%s: %s" %( score_type, round( sf.score_by_scoretype( pose, score_type ), 3 ) ) for score_type in sf.get_nonzero_weighted_scoretypes() ] )
+    print
 
 
 

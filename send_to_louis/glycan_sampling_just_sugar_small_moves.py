@@ -515,7 +515,7 @@ while not jd.job_complete:
     # run the SugarSmallMover 10-100 times using a MonteCarlo object to accept or reject the move
     num_ssm_accept = 0
     num_mc_checks = 0
-    for ii in range( 1, input_args.num_sugar_small_moves + 1 ):
+    for ii in range( input_args.num_sugar_small_moves ):
         # if score ramping is desired
         if input_args.ramp_sf:
             # ramp up or down the appropriate scoring terms and get it back to the MonteCarlo object
@@ -544,7 +544,7 @@ while not jd.job_complete:
             print "score after move", main_sf( testing_pose )
 
         # pack the Fc sugars and around them within 20 Angstroms every other trial
-        if ii % 2 == 0:
+        if ii % 2 == 0 or ii == 0:
             pack_rotamers_mover = make_pack_rotamers_mover( main_sf, testing_pose, 
                                                             apply_sf_sugar_constraints = False,
                                                             pack_branch_points = True, 

@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling_just_sugar_small_moves.py project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb /Users/Research/antibody_project/send_to_louis/project_glyco_files/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ /Users/Research/pyrosetta_dir/test_pdb_dir/ 2 5
+run glycan_sampling_just_sugar_small_moves.py project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb /Users/Research/antibody_project/send_to_louis/project_glyco_files/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ /Users/Research/pyrosetta_dir/test_pdb_dir/ 1 10 5
 '''
 
 
@@ -30,7 +30,8 @@ parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan fil
 parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
-parser.add_argument("num_sugar_small_moves", type=int, help="how many SugarSmallMoves do you want to make within the Fc glycan?")
+parser.add_argument("num_sugar_small_move_trials", type=int, help="how many SugarSmallMoves do you want to make within the Fc glycan?")
+parser.add_argument("num_moves_per_trial", type=int, help="how many SugarSmallMoves do you want to make within one trial?")
 parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--constraint_file", default=None, type=str, help="/path/to/the .cst constraint file you want to use for the protocol")
@@ -49,7 +50,7 @@ import os, sys, random
 
 # collect and create necessary directories for use in metric calculations
 working_dir = os.getcwd() + '/'
-metrics_dump_dir = working_dir + "sugar_small_%s_dir" %str( input_args.num_sugar_small_moves )
+metrics_dump_dir = working_dir + "sugar_small_%s_dir" %str( input_args.num_sugar_small_move_trials )
 try:
     os.mkdir( metrics_dump_dir )
 except:
@@ -161,7 +162,7 @@ if not os.path.isdir( structure_dir ):
         os.mkdir( structure_dir )
     except:
         pass
-working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_%s_sugar_small_moves" %input_args.num_sugar_small_moves
+working_pose_decoy_name = structure_dir + '/' + working_pdb_name + "_glycosylated_then_just_%s_sugar_small_moves" %input_args.num_sugar_small_move_trials
 
 
 # collect the core GlcNAc values from the native pose
@@ -248,19 +249,20 @@ pmm.apply( working_pose )
 
 # relay information to user
 info_file_details = []
-info_file_details.append( "Native PDB filename:\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
-info_file_details.append( "Working PDB filename:\t\t%s\n" %input_args.working_pdb_file.split( '/' )[-1] )
-info_file_details.append( "Sugar filename:\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
-info_file_details.append( "Creating this many decoys:\t%s\n" %str( input_args.nstruct ) )
-info_file_details.append( "Number of sugar small moves:\t%s\n" %str( input_args.num_sugar_small_moves ) )
-info_file_details.append( "Random reset of Fc glycan?:\t%s\n" %str( input_args.random_reset ) )
-info_file_details.append( "Using score ramping?:\t\t%s\n" %str( input_args.ramp_sf ) )
-info_file_details.append( "Constraint file used?:\t\t%s\n" %str( input_args.constraint_file ).split( '/' )[-1] )
-info_file_details.append( "ScoreFunction file used?:\t%s\n" %str( input_args.scorefxn_file ).split( '/' )[-1] )
-info_file_details.append( "Angle multiplier used:\t\t%s\n" %str( input_args.angle_multiplier ) )
-info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
-info_file_details.append( "Base structure directory:\t%s\n" %base_structs_dir )
-info_file_details.append( "Lowest E structure directory:\t%s\n" %lowest_E_structs_dir )
+info_file_details.append( "Native PDB filename:\t\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
+info_file_details.append( "Working PDB filename:\t\t\t%s\n" %input_args.working_pdb_file.split( '/' )[-1] )
+info_file_details.append( "Sugar filename:\t\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
+info_file_details.append( "Creating this many decoys:\t\t%s\n" %str( input_args.nstruct ) )
+info_file_details.append( "Number of SugarSmallMove trials:\t%s\n" %str( input_args.num_sugar_small_move_trials ) )
+info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %str( input_args.num_moves_per_trial ) )
+info_file_details.append( "Random reset of Fc glycan?:\t\t%s\n" %str( input_args.random_reset ) )
+info_file_details.append( "Using score ramping?:\t\t\t%s\n" %str( input_args.ramp_sf ) )
+info_file_details.append( "Constraint file used?:\t\t\t%s\n" %str( input_args.constraint_file ).split( '/' )[-1] )
+info_file_details.append( "ScoreFunction file used?:\t\t%s\n" %str( input_args.scorefxn_file ).split( '/' )[-1] )
+info_file_details.append( "Angle multiplier used:\t\t\t%s\n" %str( input_args.angle_multiplier ) )
+info_file_details.append( "Main structure directory:\t\t%s\n" %main_structure_dir )
+info_file_details.append( "Base structure directory:\t\t%s\n" %base_structs_dir )
+info_file_details.append( "Lowest E structure directory:\t\t%s\n" %lowest_E_structs_dir )
 if input_args.ramp_sf:
     score_types = main_sf.get_nonzero_weighted_scoretypes()
     info_file_details.append( "\nScore weights used in main_sf:\n" )
@@ -515,7 +517,7 @@ while not jd.job_complete:
     # run the SugarSmallMover 10-100 times using a MonteCarlo object to accept or reject the move
     num_ssm_accept = 0
     num_mc_checks = 0
-    for ii in range( input_args.num_sugar_small_moves ):
+    for ii in range( input_args.num_sugar_small_move_trials ):
         # if score ramping is desired
         if input_args.ramp_sf:
             # ramp up or down the appropriate scoring terms and get it back to the MonteCarlo object
@@ -523,25 +525,27 @@ while not jd.job_complete:
                                          "fa_atr", 
                                          FA_ATR_ORIG, 
                                          ii - 1, 
-                                         input_args.num_sugar_small_moves )
+                                         input_args.num_sugar_small_move_trials )
             main_sf = ramp_score_weight( main_sf, 
                                          "fa_rep", 
                                          FA_REP_ORIG, 
                                          ii - 1, 
-                                         input_args.num_sugar_small_moves )
+                                         input_args.num_sugar_small_move_trials )
             mc.score_function( main_sf )
 
         # print current score
         if input_args.verbose:
             print "starting score", main_sf( testing_pose )
 
-        # pick a random Fc glycan residue except core GlcNAc
-        resnum = random.choice( Fc_sugar_nums_except_core_GlcNAc )
+        # for as many moves per trial as desired
+        for jj in range( input_args.num_moves_per_trial ):
+            # pick a random Fc glycan residue except core GlcNAc
+            resnum = random.choice( Fc_sugar_nums_except_core_GlcNAc )
 
-        # apply the SugarSmallMover and change phi, psi, and omega
-        testing_pose.assign( SugarSmallMover( resnum, testing_pose, angle_max ) )
-        if input_args.verbose:
-            print "score after move", main_sf( testing_pose )
+            # apply the SugarSmallMover and change phi, psi, and omega
+            testing_pose.assign( SugarSmallMover( resnum, testing_pose, angle_max ) )
+            if input_args.verbose:
+                print "score after move", main_sf( testing_pose )
 
         # pack the Fc sugars and around them within 20 Angstroms every other trial
         if ii % 2 == 0 or ii == 0:

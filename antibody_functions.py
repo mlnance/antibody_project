@@ -81,6 +81,12 @@ native_Fc_glycan_B = range( 440, 447 + 1 )
 native_FcR_protein = range( 448, 607 + 1 )
 native_FcR_main_glycan = range( 608, 615 + 1 )
 native_FcR_three_mer = range( 616, 618 + 1 )
+native_Fc_protein = []
+native_Fc_protein.extend( native_Fc_chain_A )
+native_Fc_protein.extend( native_Fc_chain_B )
+native_Fc_glycan = []
+native_Fc_glycan.extend( native_Fc_glycan_A )
+native_Fc_glycan.extend( native_Fc_glycan_B )
 native_order = range( 1, 618 + 1 )
 
 # glycosylated decoy
@@ -91,6 +97,12 @@ decoy_Fc_glycan_B = range( 611, 618 + 1)
 decoy_FcR_protein = range( 432, 591 + 1)
 decoy_FcR_main_glycan = range( 592, 598 + 1 )
 decoy_FcR_three_mer = range( 599, 602 + 1 )
+decoy_Fc_protein = []
+decoy_Fc_protein.extend( decoy_Fc_chain_A )
+decoy_Fc_protein.extend( decoy_Fc_chain_B )
+decoy_Fc_glycan = []
+decoy_Fc_glycan.extend( decoy_Fc_glycan_A )
+decoy_Fc_glycan.extend( decoy_Fc_glycan_B )
 decoy_order = []
 decoy_order.extend( decoy_Fc_chain_A )
 decoy_order.extend( decoy_Fc_glycan_A )

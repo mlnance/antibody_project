@@ -72,29 +72,42 @@ kT = 0.7  # used in MonteCarlo and small and shear movers
 
 
 
-# define the residue numbers that comprise the CH2 and CH3 domains, loop regions, and the sugars ( pose numbering )
-# these are only relevant to the PDB 3ay4
-# DOESNT DO ANYTHING  --  more for reference, hence commented out
-'''
-CH2_A_domain = range( 1, 108 + 1 )  # from CYS at linker region to right before loop A
-loop_A = range( 109, 118 + 1 )  # connects CH2 to CH3 domain in chain A
-CH3_A_domain = range( 119, 215 + 1 )  # from end of loop A to the rest of chain A
-sugar_A = range( 216, 223 + 1 )  # the entire glycan on ASN 297 of chain A
+## Pose numbering information ONLY relevant to PDB 3ay4
+# native
+native_Fc_chain_A = range( 1, 215 + 1 )
+native_Fc_glycan_A = range( 216, 223 + 1 )
+native_Fc_chain_B = range( 224, 341 + 1 )
+native_Fc_glycan_B = range( 440, 447 + 1 )
+native_FcR_protein = range( 448, 607 + 1 )
+native_FcR_main_glycan = range( 608, 615 + 1 )
+native_FcR_three_mer = range( 616, 618 + 1 )
+native_order = range( 1, 618 + 1 )
 
-CH2_B_domain = range( 224, 331 + 1 )  # from CYS at linker region to right before loop B
-loop_B = range( 332, 341 + 1 )  # connects CH2 to CH3 domain in chain B
-CH3_B_domain = range( 342, 439 + 1 )  # from end of loop B to the rest of chain B
-sugar_B = range( 440, 447 + 1 )  # the entire glycan on ASN 297 of chain B
+# glycosylated decoy
+decoy_Fc_chain_A = range( 1, 215 + 1 )
+decoy_Fc_glycan_A = range( 603, 610 + 1)
+decoy_Fc_chain_B = range( 216, 431 + 1 )
+decoy_Fc_glycan_B = range( 611, 618 + 1)
+decoy_FcR_protein = range( 432, 591 + 1)
+decoy_FcR_main_glycan = range( 592, 598 + 1 )
+decoy_FcR_three_mer = range( 599, 602 + 1 )
+decoy_order = []
+decoy_order.extend( decoy_Fc_chain_A )
+decoy_order.extend( decoy_Fc_glycan_A )
+decoy_order.extend( decoy_Fc_chain_B )
+decoy_order.extend( decoy_Fc_glycan_B )
+decoy_order.extend( decoy_FcR_protein )
+decoy_order.extend( decoy_FcR_main_glycan )
+decoy_order.extend( decoy_FcR_three_mer )
 
-receptor_protein = range( 448, 607 + 1 )  # all amino acids within the receptor
-receptor_sugars = range( 608, 615 + 1 )  # the glycan that docks with the Fc region
-receptor_sugars.append( ii for ii in range( 616, 618 + 1 ) )  # the small glycan near the top of the receptor
+# make an appropriate dictionary map
+native_to_decoy_res_map = {}
+for ii in range( len( native_order ) ):
+    native_to_decoy_res_map[ native_order[ii] ] = decoy_order[ii]
+decoy_to_native_res_map = {}
+for ii in range( len( decoy_order ) ):
+    decoy_to_native_res_map[ decoy_order[ii] ] = native_order[ii]
 
-# define the sugar chains as well
-chain_A_sug = [ 'D', 'E' ]
-chain_B_sug = [ 'F', 'G' ]
-receptor_main_sug = [ 'H', 'I', 'J', 'K' ]
-'''
 
 
 
@@ -2421,7 +2434,7 @@ def get_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
     :param pose: Pose
     :param cutoff: int( or float( distance cutoff for what defines a contact). Default = CUTOFF_DISTANCE = 5 Angstroms
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    :return: dictionary of 0s and 1s for each residue position to every other residue position
+    :return: dict( key = residue num in pose, value = list of residue nums within <cutoff> distance )
     """
     if verbose:
         print "Getting the residue contact map for the Pose"
@@ -2465,7 +2478,7 @@ def get_contact_map_between_range1_range2( range1, range2, pose, cutoff = CUTOFF
     :param pose: Pose
     :param cutoff: int( or float( distance cutoff for what defines a contact). Default = CUTOFF_DISTANCE = 5 Angstroms
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    :return: dictionary of 0s and 1s for each residue position to every other residue position
+    :return: dict( key = residue num in pose, value = list of residue nums within <cutoff> distance )
     """
     if verbose:
         print "Getting the residue contact map for the Pose"
@@ -2494,6 +2507,62 @@ def get_contact_map_between_range1_range2( range1, range2, pose, cutoff = CUTOFF
             return_dict[ seqpos_1 ] = contacts
 
     return return_dict
+
+
+
+def calc_res_Fnat_recovered_between_range1_range2( decoy, decoy_r1, decoy_r2, native, cutoff = CUTOFF_DISTANCE, verbose = False ):
+    """
+    Uses a residue contact map to determine if residues in the <decoy> between range <decoy_r1> and <decoy_r2> match the native contacts made in the corresponding residue range using the <cutoff> distance
+    :param decoy: decoy Pose
+    :param decoy_r1: list( residue numbers on side 1 )
+    :param decoy_r2: list( residue numbers on side 2 )
+    :param native: native Pose
+    :param cutoff: int( or float( distance cutoff for what defines a contact). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :return: float( residue Fnat recovered )
+    """
+    # get the corresponding native residue numbers in the decoy ranges
+    native_r1 = []
+    for resnum in decoy_r1:
+        native_r1.append( decoy_to_native_res_map[ resnum ] )
+    native_r2 = []
+    for resnum in decoy_r2:
+        native_r2.append( decoy_to_native_res_map[ resnum ] )
+    
+    # get the contact maps for the decoy and native poses
+    decoy_contact_map = get_contact_map_between_range1_range2( decoy_r1, decoy_r2, decoy, cutoff = cutoff, verbose = verbose )
+    native_contact_map = get_contact_map_between_range1_range2( native_r1, native_r2, native, cutoff = cutoff, verbose = verbose )
+
+    # get the number of contacts total found in the native
+    num_native_contacts = sum( [ len( contacts ) for contacts in native_contact_map.values() ] )
+
+    # determine the difference in contacts between the decoy and native
+    num_decoy_recovered_contacts = 0
+    for decoy_resnum in decoy_contact_map.keys():
+        # get the corresponding native residue number
+        corresponding_native_resnum = decoy_to_native_res_map[ decoy_resnum ]
+
+        # for each contact this residue makes within the decoy
+        for decoy_contact_resnum in decoy_contact_map[ decoy_resnum ]:
+            # get the corresponding native residue number for the contact
+            corresponding_native_contact_resnum = decoy_to_native_res_map[ decoy_contact_resnum ]
+
+            # check to see if this is a contact made in the native pose
+            try:
+                native_contacts_at_this_decoy_resnum = native_contact_map[ corresponding_native_resnum ]
+
+                # if the contact made in the decoy is the same as the contact made in the native, count it
+                if corresponding_native_contact_resnum in native_contacts_at_this_decoy_resnum:
+                    num_decoy_recovered_contacts += 1
+
+            # if this residue doesn't make contacts in the native pose, skip it
+            except KeyError:
+                pass
+            
+    # calculate Fnat
+    Fnat = round( ( float( num_decoy_recovered_contacts ) / float( num_native_contacts ) ) * 100, 2 )
+
+    return Fnat
 
 
 

@@ -2510,7 +2510,7 @@ def get_contact_map_between_range1_range2( range1, range2, pose, cutoff = CUTOFF
 
 
 
-def calc_res_Fnat_recovered_between_range1_range2( decoy, decoy_r1, decoy_r2, native, cutoff = CUTOFF_DISTANCE, verbose = False ):
+def calc_res_Fnat_recovered_between_range1_range2( decoy, decoy_r1, decoy_r2, native, cutoff = CUTOFF_DISTANCE, return_more_data = False, verbose = False ):
     """
     Uses a residue contact map to determine if residues in the <decoy> between range <decoy_r1> and <decoy_r2> match the native contacts made in the corresponding residue range using the <cutoff> distance
     :param decoy: decoy Pose
@@ -2518,8 +2518,10 @@ def calc_res_Fnat_recovered_between_range1_range2( decoy, decoy_r1, decoy_r2, na
     :param decoy_r2: list( residue numbers on side 2 )
     :param native: native Pose
     :param cutoff: int( or float( distance cutoff for what defines a contact). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param return_more_data: bool( do you want to have this function return decoy and native number of contacts as well? ) Default is False
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: float( residue Fnat recovered )
+    :return: if return_more_data == True, int( decoy contacts ), int( native contacts ), float( residue Fnat recovered )
     """
     # get the corresponding native residue numbers in the decoy ranges
     native_r1 = []
@@ -2562,7 +2564,11 @@ def calc_res_Fnat_recovered_between_range1_range2( decoy, decoy_r1, decoy_r2, na
     # calculate Fnat
     Fnat = round( ( float( num_decoy_recovered_contacts ) / float( num_native_contacts ) ) * 100, 2 )
 
-    return Fnat
+    if return_more_data:
+        num_decoy_contacts = sum( [ len( contacts ) for contacts in decoy_contact_map.values() ] )
+        return num_decoy_contacts, num_native_contacts, Fnat
+    else:
+        return Fnat
 
 
 

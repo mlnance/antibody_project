@@ -101,7 +101,7 @@ def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_gl
     metric_data.append( str( working_Fc_glycan_to_protein_contacts ) )
     metric_data.append( "delta_glycan_to_protein_contacts:" )
     metric_data.append( str( delta_Fc_glycan_to_protein_contacts ) )
-    metric_data.append( "Fc_glycan_to_protein_Fnat_recovered_contacts" )
+    metric_data.append( "Fc_glycan_to_protein_Fnat_recovered_contacts:" )
     metric_data.append( str( Fc_glycan_to_protein_Fnat_recovered_contacts ) )
 
 
@@ -112,7 +112,7 @@ def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_gl
     metric_data.append( str( working_Fc_glycan_to_FcR_glycan_contacts ) )
     metric_data.append( "delta_Fc_glycan_to_FcR_glycan_contacts:" )
     metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_contacts ) )
-    metric_data.append( "Fc_glycan_to_FcR_glycan_Fnat_recovered_contacts" )
+    metric_data.append( "Fc_glycan_to_FcR_glycan_Fnat_recovered_contacts:" )
     metric_data.append( str( Fc_glycan_to_FcR_glycan_Fnat_recovered_contacts ) )
 
     

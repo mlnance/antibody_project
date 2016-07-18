@@ -3,13 +3,13 @@ __author__ = "morganlnance"
 
 
 
-def pseudo_interface_energy_3ay4( pose, sf, native = False, pmm = None ):
+def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
     """
     Attempts to get pseudo-interface energy of a glycosylated 3ay4 decoy
     Lots of hard coding here - works on a decoy pose as Rosetta renumbers the Pose a bit
     Makes the two ASN connections to the Fc A and B glycans JUMPs instead of chemical EDGEs
     :param pose: Pose
-    :param sf: ScoreFunction
+    :param in_sf: ScoreFunction
     :param native: bool( is this the native 3ay4 or a decoy? Answer determines how FoldTree gets coded )
     :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
     :return: float( pseudo interface energy )
@@ -20,6 +20,7 @@ def pseudo_interface_energy_3ay4( pose, sf, native = False, pmm = None ):
 
 
     # set atom_pair_constraint weight to 0
+    sf = in_sf.clone()
     sf.set_weight( score_type_from_name( "atom_pair_constraint" ), 0.0 )
 
     # get the score of the whole complex

@@ -104,6 +104,11 @@ total_score_small_moves_50_with_ramp_data = total_score_small_moves_50_with_ramp
 
 
 ## SugarSmallMover 50 data
+# pseudo_interface_energy 5 moves per trial and random reset tight constraints on Gal and its GlcNAc with ramp (normal) angle_multiplier of 3 and triple hbond scoring term
+path_to_pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metrics_vs_glycan_rmsd_data/pseudo_interface_energy_vs_glycan_rmsd_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp.csv"
+pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp_data = pd.read_csv( path_to_pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp )
+pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp_data = pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp_data.sort( "glycan_rmsd" )
+
 # pseudo_interface_energy 5 moves per trial and random reset tight constraints on Gal with ramp (normal) angle_multiplier of 3 and triple hbond scoring term
 path_to_pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metrics_vs_glycan_rmsd_data/pseudo_interface_energy_vs_glycan_rmsd_sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp.csv"
 pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp_data = pd.read_csv( path_to_pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp )
@@ -143,6 +148,11 @@ pseudo_interface_energy_sugar_small_moves_50_random_reset_no_omega_no_ramp_data 
 path_to_pseudo_interface_energy_sugar_small_moves_50_random_reset_with_omega_no_ramp = "/Users/Research/pyrosetta_dir/metrics_vs_glycan_rmsd_data/pseudo_interface_energy_vs_glycan_rmsd_sugar_small_moves_50_random_reset_with_omega_no_ramp.csv"
 pseudo_interface_energy_sugar_small_moves_50_random_reset_with_omega_no_ramp_data = pd.read_csv( path_to_pseudo_interface_energy_sugar_small_moves_50_random_reset_with_omega_no_ramp )
 pseudo_interface_energy_sugar_small_moves_50_random_reset_with_omega_no_ramp_data = pseudo_interface_energy_sugar_small_moves_50_random_reset_with_omega_no_ramp_data.sort( "glycan_rmsd", ascending=False )
+
+# total_score 5 moves per trial and random reset tight constraints on Gal and its GlcNAc with ramp (normal) angle_multiplier of 3 and triple hbond scoring term
+path_to_total_score_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metrics_vs_glycan_rmsd_data/total_score_vs_glycan_rmsd_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp.csv"
+total_score_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp_data = pd.read_csv( path_to_total_score_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp )
+total_score_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp_data = total_score_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp_data.sort( "glycan_rmsd" )
 
 # total_score 5 moves per trial and random reset tight constraints on Gal with ramp (normal) angle_multiplier of 3 and triple hbond scoring term
 path_to_total_score_sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metrics_vs_glycan_rmsd_data/total_score_vs_glycan_rmsd_sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp.csv"
@@ -213,6 +223,8 @@ small_moves_50_score_list_pseudo_interface_energy_data_with_ramp = pseudo_interf
 
 
 # SugarSmallMover
+sugar_small_moves_50_rmsd_list_pseudo_interface_energy_data_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp = pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp_data[ "glycan_rmsd" ]
+sugar_small_moves_50_score_list_pseudo_interface_energy_data_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp = pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp_data[ "pseudo_interface_energy" ]
 sugar_small_moves_50_rmsd_list_pseudo_interface_energy_data_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp = pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp_data[ "glycan_rmsd" ]
 sugar_small_moves_50_score_list_pseudo_interface_energy_data_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp = pseudo_interface_energy_sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp_data[ "pseudo_interface_energy" ]
 sugar_small_moves_50_rmsd_list_pseudo_interface_energy_data_random_reset_Gal_constraints_am2_with_ramp = pseudo_interface_energy_sugar_small_moves_50_random_reset_Gal_constraints_am2_with_ramp_data[ "glycan_rmsd" ]
@@ -257,6 +269,8 @@ small_moves_50_score_list_total_score_data_with_ramp = total_score_small_moves_5
 
 
 # SugarSmallMover
+sugar_small_moves_50_rmsd_list_total_score_data_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp = total_score_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp_data[ "glycan_rmsd" ]
+sugar_small_moves_50_score_list_total_score_data_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp = total_score_sugar_small_moves_50_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp_data[ "total_score" ]
 sugar_small_moves_50_rmsd_list_total_score_data_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp = total_score_sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp_data[ "glycan_rmsd" ]
 sugar_small_moves_50_score_list_total_score_data_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp = total_score_sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp_data[ "total_score" ]
 sugar_small_moves_50_rmsd_list_total_score_data_random_reset_Gal_constraints_am2_with_ramp = total_score_sugar_small_moves_50_random_reset_Gal_constraints_am2_with_ramp_data[ "glycan_rmsd" ]
@@ -646,44 +660,44 @@ plt.savefig( plot_title, dpi=120, transparent=True )
 ################
 #### PLOT 9 ####
 ################
-# SugarSmallMoves-50 and 5 moves per trial random reset with (normal) ramp tight constraints on Gal and angle_multiplier of 3 and triple hbond scoring term
+# SugarSmallMoves-50 and 5 moves per trial random reset with (normal) ramp tight constraints on Gal (or Gal and its GlcNAc) and angle_multiplier of 3 and triple hbond scoring term
 
 fig = plt.figure(figsize=(30, 15))
 sub1 = plt.subplot(2, 2, 1)
 sub1.scatter( sugar_small_moves_50_rmsd_list_pseudo_interface_energy_data_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp, sugar_small_moves_50_score_list_pseudo_interface_energy_data_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp )
-sub1.set_title( "Pseudo Interface Energy" )
+sub1.set_title( "Gal only" )
 sub1.set_xlabel( "glycan RMSD" )
-#sub1.set_xlim( [ 0, 10 ] )
+sub1.set_xlim( [ 0, 10 ] )
 sub1.set_ylabel( "pseudo_interface_energy" )
-#sub1.set_ylim( [-8, 0 ] )
+sub1.set_ylim( [-25, 0 ] )
 
 sub2 = plt.subplot(2, 2, 2)
 sub2.scatter( sugar_small_moves_50_rmsd_list_total_score_data_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp, sugar_small_moves_50_score_list_total_score_data_random_reset_tight_Gal_constraints_am3_triple_hbond_5_mpt_with_ramp )
-sub2.set_title( "Total Score" )
+sub2.set_title( "Gal only" )
 sub2.set_xlabel( "glycan RMSD" )
-#sub2.set_xlim( [ 0, 10 ] )
+sub2.set_xlim( [ 0, 10 ] )
 sub2.set_ylabel( "total_score" )
-#sub2.set_ylim( [-15, 0 ] )
-'''
+sub2.set_ylim( [-1200, -1000 ] )
+
 sub3 = plt.subplot(2, 2, 3)
-sub3.scatter( sugar_small_moves_50_rmsd_list_total_score_data_random_reset_Gal_constraints_am2_with_ramp, sugar_small_moves_50_score_list_total_score_data_random_reset_Gal_constraints_am2_with_ramp )
-sub3.set_title( "SugarSmallMoves-50 normal hbond weight" )
+sub3.scatter( sugar_small_moves_50_rmsd_list_pseudo_interface_energy_data_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp, sugar_small_moves_50_score_list_pseudo_interface_energy_data_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp )
+sub3.set_title( "Gal and its GlcNAc" )
 sub3.set_xlabel( "glycan RMSD" )
 sub3.set_xlim( [ 0, 10 ] )
-sub3.set_ylabel( "total_score" )
-sub3.set_ylim( [ -440, -360 ] )
+sub3.set_ylabel( "pseudo_interface_energy" )
+sub3.set_ylim( [-25, 0 ] )
 
 sub4 = plt.subplot(2, 2, 4)
-sub4.scatter( sugar_small_moves_50_rmsd_list_total_score_data_random_reset_Gal_constraints_am2_double_hbond_with_ramp, sugar_small_moves_50_score_list_total_score_data_random_reset_Gal_constraints_am2_double_hbond_with_ramp )
-sub4.set_title( "SugarSmallMoves-50 *2 hbond weight" )
+sub4.scatter( sugar_small_moves_50_rmsd_list_total_score_data_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp, sugar_small_moves_50_score_list_total_score_data_random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_with_ramp )
+sub4.set_title( "Gal and its GlcNAc" )
 sub4.set_xlabel( "glycan RMSD" )
 sub4.set_xlim( [ 0, 10 ] )
 sub4.set_ylabel( "total_score" )
-sub4.set_ylim( [-800, -700 ] )
-'''
+sub4.set_ylim( [-1200, -1000 ] )
+
 # save the plot
 plt.tight_layout()
-plot_title = "3ay4-type glycosylation SugarSmallMoves-50 and 5 moves per trial with random reset, tight constraints on Gal, normal ramp, angle_multiplier of 3, and with hbond*3 protocol with metrics vs glycan rmsd"
+plot_title = "3ay4-type glycosylation SugarSmallMoves-50 and 5 moves per trial with random reset, normal ramp, angle_multiplier of 3, and with hbond*3, and either Gal or Gal and its GlcNac tight constraints protocol with metrics vs glycan rmsd"
 plt.suptitle( plot_title, fontsize = 26 )
 plt.subplots_adjust(top=0.87)
 plt.savefig( plot_title, dpi=120, transparent=True )

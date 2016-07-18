@@ -321,7 +321,7 @@ def fancy_dump_pdb_by_chain( filename, pose, chains ):
 
 
 
-def id_generator( size=4, chars=string.ascii_uppercase + string.digits ):
+def id_generator( size=6, chars=string.ascii_uppercase + string.digits ):
     '''
     Return an id of length <size> using the characters from <chars>
     :param size: int( desired length of id )

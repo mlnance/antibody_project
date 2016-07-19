@@ -44,17 +44,19 @@ plt.savefig( plot_title, dpi=120, transparent=True )
 # pseudo_interface_energy vs Fc_glycan_to_protein_Fnat_recovered_contacts random reset tight Gal cst angle multiplier of 3 and 5 moves per turn
 path_to_random_reset_tight_Gal_constraints_am3_5_mpt = "/Users/Research/pyrosetta_dir/metric_data/sugar_small_moves_50_random_reset_tight_Gal_constraints_am3_5_mpt.csv"
 random_reset_tight_Gal_constraints_am3_5_mpt_data = pd.read_csv( path_to_random_reset_tight_Gal_constraints_am3_5_mpt )
-random_reset_tight_Gal_constraints_am3_5_mpt_data = random_reset_tight_Gal_constraints_am3_5_mpt_data.sort( "Fc_glycan_to_protein_Fnat_recovered_contacts" )
+#random_reset_tight_Gal_constraints_am3_5_mpt_data = random_reset_tight_Gal_constraints_am3_5_mpt_data.sort( "Fc_glycan_to_protein_Fnat_recovered_contacts" )
+random_reset_tight_Gal_constraints_am3_5_mpt_data = random_reset_tight_Gal_constraints_am3_5_mpt_data.sort( "glycan_rmsd" )
 
 fig = plt.figure(figsize=(30, 15))
 sub1 = plt.subplot(2, 2, 1)
-sub1.scatter( random_reset_tight_Gal_constraints_am3_5_mpt_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], random_reset_tight_Gal_constraints_am3_5_mpt_data[ "pseudo_interface_energy" ] )
+sub1.scatter( random_reset_tight_Gal_constraints_am3_5_mpt_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], random_reset_tight_Gal_constraints_am3_5_mpt_data[ "delta_pseudo_interface_energy" ] )
 #sub1.scatter( random_reset_tight_Gal_constraints_am3_5_mpt_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], random_reset_tight_Gal_constraints_am3_5_mpt_data[ "atom_pair_constraint" ] )
 sub1.set_title( "tight Gal only" )
 sub1.set_xlabel( "Fc_glycan_to_protein_Fnat_recovered_contacts" )
 sub1.set_xlim( [ 20, 80 ] )
-sub1.set_ylabel( "pseudo_interface_energy" )
-sub1.set_ylim( [ -7, 0 ] )
+sub1.set_ylabel( "delta_pseudo_interface_energy" )
+sub1.set_ylim( [ 10, 30 ] )
+#sub1.set_ylim( [ -7, 0 ] )
 
 sub2 = plt.subplot(2, 2, 2)
 sub2.scatter( random_reset_tight_Gal_constraints_am3_5_mpt_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], random_reset_tight_Gal_constraints_am3_5_mpt_data[ "total_score" ] )

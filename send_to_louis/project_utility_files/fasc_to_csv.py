@@ -100,12 +100,18 @@ for metric_name in metrics:
     metrics[ metric_name ].append( metric_name )
 
 # loop over each decoy and pull out desired data
+used_metric_names = []
 for decoy in fasc_data_dict.keys():
     filename.append( decoy )
 
     decoy_metrics = fasc_data_dict[ decoy ]
     for metric_name in metrics.keys():
-        metrics[ metric_name ].append( decoy_metrics[ metric_name ] )
+        try:
+            metrics[ metric_name ].append( decoy_metrics[ metric_name ] )
+            if metric_name not in used_metric_names:
+                used_metric_names.append( metric_name )
+        except:
+            pass
 
 # check out the passed result filename for .csv extension
 dump_filename = input_args.resulting_filename
@@ -113,7 +119,7 @@ if not dump_filename.endswith( ".csv" ):
     dump_filename += ".csv"
 
 # write out the .csv data file
-rows = zip( *[ metrics[ metric ] for metric in metrics.keys() ] )
+rows = zip( *[ metrics[ metric ] for metric in used_metric_names ] )
 with open( dump_filename, "wb" ) as f:
     writer = csv.writer( f )
     writer.writerows( rows )

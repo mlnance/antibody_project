@@ -222,7 +222,7 @@ def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
         # if the argument is a ScoreType object
         elif isinstance( scoretype_name, type( fa_dun ) ):
             # adjust the weight in the scorefxn using the corresponding weight given
-            sf.set_weight( scoretype, weight )
+            sf.set_weight( scoretype_name, weights_dict[ scoretype_name ] )
 
         # else, I don't know what they gave me as a scoretype
         else: 

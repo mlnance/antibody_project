@@ -32,7 +32,8 @@ parser.add_argument("structure_dir", type=str, help="where do you want to dump t
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_sugar_small_move_trials", type=int, help="how many SugarSmallMoves do you want to make within the Fc glycan?")
 parser.add_argument("num_moves_per_trial", type=int, help="how many SugarSmallMoves do you want to make within one trial?")
-parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
+parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi, psi, and omega values of the Fc glycan? (Excluding core GlcNAc)")
+parser.add_argument("--native_reset", action="store_true", help="do you want to reset the phi, psi, and omega values of the Fc glycan to the values found in the native?")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--constraint_file", default=None, type=str, help="/path/to/the .cst constraint file you want to use for the protocol")
 parser.add_argument("--native_constraint_file", default=None, type=str, help="/path/to/the corresponding .cst constraint file for the native you want to use for the protocol")
@@ -113,7 +114,8 @@ from rosetta import SmallMover, MinMover
 from antibody_functions import initialize_rosetta, \
     get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
     make_movemap_for_range, load_pose, get_phi_psi_omega_of_res, \
-    ramp_score_weight, make_fa_scorefxn_from_file, SugarSmallMover
+    ramp_score_weight, make_fa_scorefxn_from_file, SugarSmallMover, \
+    decoy_to_native_res_map
 
 # utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
@@ -263,6 +265,7 @@ info_file_details.append( "Creating this many decoys:\t\t%s\n" %str( input_args.
 info_file_details.append( "Number of SugarSmallMove trials:\t%s\n" %str( input_args.num_sugar_small_move_trials ) )
 info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %str( input_args.num_moves_per_trial ) )
 info_file_details.append( "Random reset of Fc glycan?:\t\t%s\n" %str( input_args.random_reset ) )
+info_file_details.append( "Reset of Fc glycan to native?:\t\t%s\n" %str( input_args.native_reset ) )
 info_file_details.append( "Using score ramping?:\t\t\t%s\n" %str( input_args.ramp_sf ) )
 info_file_details.append( "Constraint file used?:\t\t\t%s\n" %str( input_args.constraint_file ).split( '/' )[-1] )
 info_file_details.append( "ScoreFunction file used?:\t\t%s\n" %str( input_args.scorefxn_file ).split( '/' )[-1] )
@@ -422,6 +425,24 @@ while not jd.job_complete:
     pmm.apply( testing_pose )
     if input_args.verbose:
         print "score of core glyco reset", main_sf( testing_pose )
+
+
+
+    ################################
+    #### Fc GLYCAN NATIVE RESET ####
+    ################################
+
+    # reset the phi, psi, and omega of all Fc glycan residues
+    if input_args.native_reset:
+        for decoy_res in Fc_sugar_nums:
+            native_res = decoy_to_native_res_map[ decoy_res ]
+            testing_pose.set_phi( decoy_res, native_pose.phi( native_res ) )
+            testing_pose.set_psi( decoy_res, native_pose.psi( native_res ) )
+            testing_pose.set_omega( decoy_res, native_pose.omega( native_res ) )
+        pmm.apply( testing_pose )
+
+    if input_args.verbose:
+        print "score after Fc glycan native reset", main_sf( testing_pose )
 
 
 

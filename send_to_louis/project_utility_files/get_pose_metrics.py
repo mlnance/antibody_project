@@ -3,12 +3,12 @@ __author__ = "morganlnance"
 
 
 
-def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_glycan_resnums, working_FcR_glycan_resnums, native_Fc_glycan_chains, native_Fc_glycan_resnums, native_FcR_glycan_resnums, decoy_num, dump_dir, MC_acceptance_rate = None ):
+def main( in_working, in_native, in_sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_glycan_resnums, working_FcR_glycan_resnums, native_Fc_glycan_chains, native_Fc_glycan_resnums, native_FcR_glycan_resnums, decoy_num, dump_dir, MC_acceptance_rate = None, constraint_file_used = None ):
     """
     Return a space-delimited string containing various pose metrics.
-    :param working: decoy Pose()
-    :param native: native Pose()
-    :param sf: ScoreFunction()
+    :param in_working: decoy Pose()
+    :param in_native: native Pose()
+    :param in_sf: ScoreFunction()
     :param JUMP_NUM: int( JUMP_NUM that defines the interface )
     :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
     :param working_Fc_glycan_resnums: list( pose residue numbers for the working Fc glycans ).
@@ -19,6 +19,7 @@ def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_gl
     :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
     :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
     :param MC_acceptance_rate: float( the MonteCarlo acceptance rate of your protocol, if relevant ). Default = None
+    :param constraint_file_used: str( /path/to/constraint file used to be used on native to get accurate delta_total_score )
     :return: str( pose metrics )
     """
     #################
@@ -34,6 +35,7 @@ def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_gl
 
     # Rosetta functions
     from rosetta import Vector1, calc_interaction_energy
+    from rosetta.protocols.simple_moves import ConstraintSetMover
     from toolbox import get_hbonds
     
     # Rosetta functions I wrote out
@@ -51,6 +53,20 @@ def main( working, native, sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_gl
     
     # holds all relevant metric data and corresponding label
     metric_data = []
+
+    # copy the scorefunction and Poses passed in
+    sf = in_sf.clone()
+    working = in_working.clone()
+    native = in_native.clone()
+
+    ## delta total score calculation
+    # give the native pose the constraint file passed, if any
+    if constraint_file is not None:
+        constraint_setter = ConstraintSetMover()
+        constraint_setter.constraint_file( input_args.constraint_file )
+        constraint_setter.apply( working )
+    working_total_score = sf( working )
+    native_total_score = sf( native )
     
 
     # glycan RMSD calculation

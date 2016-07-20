@@ -225,8 +225,9 @@ if input_args.scorefxn_file is not None:
 
 # set up constraints from the passed constraint file
 if input_args.constraint_file is not None:
-    # add the appropriate weight to the main_sf
-    main_sf.set_weight( score_type_from_name( "atom_pair_constraint" ), 1.0 )
+    # add the appropriate weight to the main_sf if atom_pair_constraint is 0
+    if main_sf.get_weight( score_type_from_name( "atom_pair_constraint" ) ) == 0:
+        main_sf.set_weight( score_type_from_name( "atom_pair_constraint" ), 1.0 )
 
     if input_args.verbose:
         print "Setting up a ConstraintSetMover"
@@ -590,6 +591,7 @@ while not jd.job_complete:
             print "Moves made so far:", num_mc_checks, 
             print "  Moves accepted:", num_ssm_accept, 
             print "  Acceptance rate:", mc_acceptance
+
 
     # collect additional metric data
     try:

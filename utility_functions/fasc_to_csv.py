@@ -102,12 +102,13 @@ for metric_name in metrics:
 # loop over each decoy and pull out desired data
 used_metric_names = []
 for decoy in fasc_data_dict.keys():
-    filename.append( decoy )
+    metrics[ "filename" ].append( decoy )
 
     decoy_metrics = fasc_data_dict[ decoy ]
     for metric_name in metrics.keys():
         try:
-            metrics[ metric_name ].append( decoy_metrics[ metric_name ] )
+            if metric_name is not "filename":
+                metrics[ metric_name ].append( decoy_metrics[ metric_name ] )
             if metric_name not in used_metric_names:
                 used_metric_names.append( metric_name )
         except:

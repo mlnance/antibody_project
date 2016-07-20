@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling_just_sugar_small_moves.py project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb /Users/Research/antibody_project/send_to_louis/project_glyco_files/3ay4_Fc_Glycan.iupac /Users/Research/antibody_project/send_to_louis/project_utility_files/ /Users/Research/pyrosetta_dir/test_pdb_dir/ 1 10 5
+run glycan_sampling_just_sugar_small_moves.py project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb ~/antibody_project/carbohydrate_files/3ay4_Fc_Glycan.iupac project_utility_files/ test_pdb_dir/ 1 10 5
 '''
 
 
@@ -35,6 +35,7 @@ parser.add_argument("num_moves_per_trial", type=int, help="how many SugarSmallMo
 parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi and psi values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--constraint_file", default=None, type=str, help="/path/to/the .cst constraint file you want to use for the protocol")
+parser.add_argument("--native_constraint_file", default=None, type=str, help="/path/to/the corresponding .cst constraint file for the native you want to use for the protocol")
 parser.add_argument("--scorefxn_file", default=None, type=str, help="/path/to/the .sf scorefxn space-delimited file that tells me which scoring weights beyond the norm you want to use")
 parser.add_argument("--angle_multiplier", type=float, default=1.0, help="by how much do you want to increase the angle_max for the SugarSmallMover? Default is 1.0 (standard value)" )
 parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
@@ -225,6 +226,11 @@ if input_args.scorefxn_file is not None:
 
 # set up constraints from the passed constraint file
 if input_args.constraint_file is not None:
+    # make sure a native constraint file was passed too
+    if input_args.native_constraint_file is None:
+        print "\nI need a constraint file for the native pose too to accurately calculate delta_total_score. Exiting."
+        sys.exit()
+
     # add the appropriate weight to the main_sf if atom_pair_constraint is 0
     if main_sf.get_weight( score_type_from_name( "atom_pair_constraint" ) ) == 0:
         main_sf.set_weight( score_type_from_name( "atom_pair_constraint" ), 1.0 )
@@ -607,7 +613,8 @@ while not jd.job_complete:
                                     native_FcR_interface_glycan_nums, 
                                     jd.current_num, 
                                     metrics_dump_dir, 
-                                    mc_acceptance )
+                                    mc_acceptance,
+                                    input_args.native_constraint_file )
     except:
         metrics = ''
         pass

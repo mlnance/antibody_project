@@ -81,6 +81,7 @@ native_Fc_glycan_B = range( 440, 447 + 1 )
 native_FcR_protein = range( 448, 607 + 1 )
 native_FcR_main_glycan = range( 608, 615 + 1 )
 native_FcR_three_mer = range( 616, 618 + 1 )
+native_FcR_glycan = range( 608, 618 + 1 )
 native_Fc_protein = []
 native_Fc_protein.extend( native_Fc_chain_A )
 native_Fc_protein.extend( native_Fc_chain_B )
@@ -88,6 +89,10 @@ native_Fc_glycan = []
 native_Fc_glycan.extend( native_Fc_glycan_A )
 native_Fc_glycan.extend( native_Fc_glycan_B )
 native_order = range( 1, 618 + 1 )
+native_Fc_protein_chains = [ 'A', 'B' ]
+native_FcR_protein_chains = [ 'C' ]
+native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
+native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 
 # glycosylated decoy
 decoy_Fc_chain_A = range( 1, 215 + 1 )
@@ -97,6 +102,7 @@ decoy_Fc_glycan_B = range( 611, 618 + 1)
 decoy_FcR_protein = range( 432, 591 + 1)
 decoy_FcR_main_glycan = range( 592, 598 + 1 )
 decoy_FcR_three_mer = range( 599, 602 + 1 )
+decoy_FcR_glycan = range( 592, 602 + 1 )
 decoy_Fc_protein = []
 decoy_Fc_protein.extend( decoy_Fc_chain_A )
 decoy_Fc_protein.extend( decoy_Fc_chain_B )
@@ -111,6 +117,10 @@ decoy_order.extend( decoy_Fc_glycan_B )
 decoy_order.extend( decoy_FcR_protein )
 decoy_order.extend( decoy_FcR_main_glycan )
 decoy_order.extend( decoy_FcR_three_mer )
+decoy_Fc_protein_chains = [ 'A', 'B' ]
+decoy_FcR_protein_chains = [ 'C' ]
+decoy_Fc_glycan_chains = [ 'H', 'I', 'J', 'K' ]
+decoy_FcR_glycan_chains = [ 'D', 'E', 'F', 'G' ]
 
 # make an appropriate dictionary map
 native_to_decoy_res_map = {}
@@ -155,10 +165,11 @@ def initialize_rosetta():
 
 
 
-def load_pose( pose_filename ):
+def load_pose( pose_filename, is_3ay4 = False ):
     """
     Load pose from a filename
     :param pose_filename: str( /path/to/pose/filename )
+    :param is_3ay4: bool( if this is 3ay4 native or decoy, attached chain and residue information to Pose object )
     :return: a Rosetta Pose
     """
     # imports
@@ -178,6 +189,43 @@ def load_pose( pose_filename ):
     pose.orig_fold_tree = FoldTree( pose.fold_tree() )
     pose.loops = None
     pose.loops_file = None
+
+    # store residue and chain designation information for both native and decoy for 3ay4
+    if is_3ay4:
+        # native information
+        pose.native_Fc_chain_A = native_Fc_chain_A
+        pose.native_Fc_glycan_A = native_Fc_glycan_A
+        pose.native_Fc_chain_B = native_Fc_chain_B
+        pose.native_Fc_glycan_B = native_Fc_glycan_B
+        pose.native_FcR_protein = native_FcR_protein
+        pose.native_FcR_main_glycan = native_FcR_main_glycan
+        pose.native_FcR_three_mer = native_FcR_three_mer
+        pose.native_FcR_glycan = native_FcR_glycan
+        pose.native_Fc_protein = native_Fc_protein
+        pose.native_Fc_glycan = native_Fc_glycan
+        pose.native_order = native_order
+        pose.native_Fc_protein_chains = native_Fc_protein_chains
+        pose.native_FcR_protein_chains = native_FcR_protein_chains
+        pose.native_Fc_glycan_chains = native_Fc_glycan_chains
+        pose.native_FcR_glycan_chains = native_FcR_glycan_chains
+
+        # decoy information
+        pose.decoy_Fc_chain_A = decoy_Fc_chain_A
+        pose.decoy_Fc_glycan_A = decoy_Fc_glycan_A
+        pose.decoy_Fc_chain_B = decoy_Fc_chain_B
+        pose.decoy_Fc_glycan_B = decoy_Fc_glycan_B
+        pose.decoy_FcR_protein = decoy_FcR_protein
+        pose.decoy_FcR_main_glycan = decoy_FcR_main_glycan
+        pose.decoy_FcR_three_mer = decoy_FcR_three_mer
+        pose.decoy_FcR_glycan = decoy_FcR_glycan
+        pose.decoy_Fc_protein = decoy_Fc_protein
+        pose.decoy_Fc_glycan = decoy_Fc_glycan
+        pose.decoy_order = decoy_order
+        pose.decoy_Fc_protein_chains = decoy_Fc_protein_chains
+        pose.decoy_FcR_protein_chains = decoy_FcR_protein_chains
+        pose.decoy_Fc_glycan_chains = decoy_Fc_glycan_chains
+        pose.decoy_FcR_glycan_chains = decoy_FcR_glycan_chains
+
 
     return pose
 

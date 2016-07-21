@@ -68,7 +68,7 @@ all_letters_list = [ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
 CUTOFF_DISTANCE = 5.0  # used when calculating the number of residue contacts at the interface
 PACK_RADIUS = 20.0  # used when making mutations to structures, repacks in this area
 PROBE_RADIUS = 1.4  # used for calculating total SASA
-kT = 0.7  # used in MonteCarlo and small and shear movers
+kT = 0.8  # used in MonteCarlo and small and shear movers
 
 
 
@@ -2584,14 +2584,16 @@ def calc_res_Fnat_recovered_between_range1_range2( decoy, decoy_r1, decoy_r2, na
 
 
 
-def count_interface_residue_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+def count_interface_residue_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, return_more_data = False, verbose = False ):
     """
     Counts the number of residue "contacts" in a <pose> between interface residues given a <cutoff>
     :param JUMP_NUM: int( Jump number that defines the interface )
     :param pose: Pose
     :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param return_more_data: bool( do you want to have this function return fraction of protein-protein, protein-carbohydrate, and carbohydrate-carbohydrate contacts as well? ) Default is False
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: float( number of residue contacts at interface ), list( str( res1resname_res1chain_res1pdbnum+res2resname_res2chain_res2pdbnum ) )
+    :return: if return_more_data == True, float( interface res contacts ), list( unique contacts made ), float( fraction pro-pro ), float( fraction pro-carb ), float( fraction carb-carb )
     """
     # check to see that the jump number is valid
     if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
@@ -2619,6 +2621,11 @@ def count_interface_residue_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, 
     # instantiate counter and the list to hold the unique contact names
     contacts = 0
     contact_list = []
+
+    # instantiate contact type data lists
+    pro_pro_contacts = 0
+    pro_carb_contacts = 0
+    carb_carb_contacts = 0
     
     # loop through each residue of each residue of side 1 specified and see if its within <cutoff> distance of any residue from side 2
     for res_num_1 in range1:
@@ -2657,7 +2664,26 @@ def count_interface_residue_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, 
                     contact_list.append( unique_name )
                     contacts += 1
 
-    return contacts, contact_list
+                ## record the type of contact made
+                # protein to protein
+                if res1.is_protein() and res2.is_protein():
+                    pro_pro_contacts += 1
+                # carbhydrate to carbohydrate
+                elif res1.is_carbohydrate() and res2.is_carbohydrate():
+                    carb_carb_contacts += 1
+                # protein to carbohydrate
+                else:
+                    pro_carb_contacts += 1
+
+    # calculate fraction of contact types
+    pro_pro_fraction = round( float( pro_pro_contacts ) / float( contacts ), 2 )
+    pro_carb_fraction = round( float( pro_carb_contacts ) / float( contacts ), 2 )
+    carb_carb_fraction = round( float( carb_carb_contacts ) / float( contacts ), 2 )
+
+    if return_more_data:
+        return contacts, contact_list, pro_pro_fraction, pro_carb_fraction, carb_carb_fraction
+    else:
+        return contacts, contact_list
 
 
 

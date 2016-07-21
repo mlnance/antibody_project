@@ -190,42 +190,45 @@ def load_pose( pose_filename, is_3ay4 = False ):
     pose.loops = None
     pose.loops_file = None
 
+    return pose
+
+
+
+def attach_chain_and_res_designations_3ay4( pose ):
     # store residue and chain designation information for both native and decoy for 3ay4
-    if is_3ay4:
-        # native information
-        pose.native_Fc_chain_A = native_Fc_chain_A
-        pose.native_Fc_glycan_A = native_Fc_glycan_A
-        pose.native_Fc_chain_B = native_Fc_chain_B
-        pose.native_Fc_glycan_B = native_Fc_glycan_B
-        pose.native_FcR_protein = native_FcR_protein
-        pose.native_FcR_main_glycan = native_FcR_main_glycan
-        pose.native_FcR_three_mer = native_FcR_three_mer
-        pose.native_FcR_glycan = native_FcR_glycan
-        pose.native_Fc_protein = native_Fc_protein
-        pose.native_Fc_glycan = native_Fc_glycan
-        pose.native_order = native_order
-        pose.native_Fc_protein_chains = native_Fc_protein_chains
-        pose.native_FcR_protein_chains = native_FcR_protein_chains
-        pose.native_Fc_glycan_chains = native_Fc_glycan_chains
-        pose.native_FcR_glycan_chains = native_FcR_glycan_chains
+    # native information
+    pose.native_Fc_chain_A = native_Fc_chain_A
+    pose.native_Fc_glycan_A = native_Fc_glycan_A
+    pose.native_Fc_chain_B = native_Fc_chain_B
+    pose.native_Fc_glycan_B = native_Fc_glycan_B
+    pose.native_FcR_protein = native_FcR_protein
+    pose.native_FcR_main_glycan = native_FcR_main_glycan
+    pose.native_FcR_three_mer = native_FcR_three_mer
+    pose.native_FcR_glycan = native_FcR_glycan
+    pose.native_Fc_protein = native_Fc_protein
+    pose.native_Fc_glycan = native_Fc_glycan
+    pose.native_order = native_order
+    pose.native_Fc_protein_chains = native_Fc_protein_chains
+    pose.native_FcR_protein_chains = native_FcR_protein_chains
+    pose.native_Fc_glycan_chains = native_Fc_glycan_chains
+    pose.native_FcR_glycan_chains = native_FcR_glycan_chains
 
-        # decoy information
-        pose.decoy_Fc_chain_A = decoy_Fc_chain_A
-        pose.decoy_Fc_glycan_A = decoy_Fc_glycan_A
-        pose.decoy_Fc_chain_B = decoy_Fc_chain_B
-        pose.decoy_Fc_glycan_B = decoy_Fc_glycan_B
-        pose.decoy_FcR_protein = decoy_FcR_protein
-        pose.decoy_FcR_main_glycan = decoy_FcR_main_glycan
-        pose.decoy_FcR_three_mer = decoy_FcR_three_mer
-        pose.decoy_FcR_glycan = decoy_FcR_glycan
-        pose.decoy_Fc_protein = decoy_Fc_protein
-        pose.decoy_Fc_glycan = decoy_Fc_glycan
-        pose.decoy_order = decoy_order
-        pose.decoy_Fc_protein_chains = decoy_Fc_protein_chains
-        pose.decoy_FcR_protein_chains = decoy_FcR_protein_chains
-        pose.decoy_Fc_glycan_chains = decoy_Fc_glycan_chains
-        pose.decoy_FcR_glycan_chains = decoy_FcR_glycan_chains
-
+    # decoy information
+    pose.decoy_Fc_chain_A = decoy_Fc_chain_A
+    pose.decoy_Fc_glycan_A = decoy_Fc_glycan_A
+    pose.decoy_Fc_chain_B = decoy_Fc_chain_B
+    pose.decoy_Fc_glycan_B = decoy_Fc_glycan_B
+    pose.decoy_FcR_protein = decoy_FcR_protein
+    pose.decoy_FcR_main_glycan = decoy_FcR_main_glycan
+    pose.decoy_FcR_three_mer = decoy_FcR_three_mer
+    pose.decoy_FcR_glycan = decoy_FcR_glycan
+    pose.decoy_Fc_protein = decoy_Fc_protein
+    pose.decoy_Fc_glycan = decoy_Fc_glycan
+    pose.decoy_order = decoy_order
+    pose.decoy_Fc_protein_chains = decoy_Fc_protein_chains
+    pose.decoy_FcR_protein_chains = decoy_FcR_protein_chains
+    pose.decoy_Fc_glycan_chains = decoy_Fc_glycan_chains
+    pose.decoy_FcR_glycan_chains = decoy_FcR_glycan_chains
 
     return pose
 

@@ -254,7 +254,7 @@ def make_fa_scorefxn_from_file( scorefxn_file, verbose = False ):
         with open( scorefxn_file, "rb" ) as fh:
             score_lines = fh.readlines()
     except:
-        print "Something seems to be wrong with your scorefxn_file ( %s ). Please check your input" %input_args.scorefxn_file
+        print "Something seems to be wrong with your scorefxn_file ( %s ). Please check your input" %scorefxn_file
         sys.exit()
     for score_line in score_lines:
         # ignore new line characters

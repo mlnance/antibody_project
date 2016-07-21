@@ -3,7 +3,7 @@ __author__ = "morganlnance"
 
 
 
-def main( in_working, in_native, in_sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_glycan_resnums, working_FcR_glycan_resnums, native_Fc_glycan_chains, native_Fc_glycan_resnums, native_FcR_glycan_resnums, decoy_num, dump_dir, MC_acceptance_rate = None, constraint_file_used = None ):
+def main( in_working, in_native, in_sf, JUMP_NUM, working_Fc_glycan_chains, working_Fc_glycan_resnums, working_FcR_glycan_resnums, native_Fc_glycan_chains, native_Fc_glycan_resnums, native_FcR_glycan_resnums, decoy_num, dump_dir, MC_acceptance_rate = None, native_constraint_file = None ):
     """
     Return a space-delimited string containing various pose metrics.
     :param in_working: decoy Pose()
@@ -19,7 +19,7 @@ def main( in_working, in_native, in_sf, JUMP_NUM, working_Fc_glycan_chains, work
     :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
     :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
     :param MC_acceptance_rate: float( the MonteCarlo acceptance rate of your protocol, if relevant ). Default = None
-    :param constraint_file_used: str( /path/to/constraint file used to be used on native to get accurate delta_total_score )
+    :param native_constraint_file: str( /path/to/corresponding native constraint file used to be used on native to get accurate delta_total_score )
     :return: str( pose metrics )
     """
     #################
@@ -61,12 +61,15 @@ def main( in_working, in_native, in_sf, JUMP_NUM, working_Fc_glycan_chains, work
 
     ## delta total score calculation
     # give the native pose the constraint file passed, if any
-    if constraint_file is not None:
+    if native_constraint_file is not None:
         constraint_setter = ConstraintSetMover()
-        constraint_setter.constraint_file( input_args.constraint_file )
-        constraint_setter.apply( working )
+        constraint_setter.constraint_file( native_constraint_file )
+        constraint_setter.apply( native )
     working_total_score = sf( working )
     native_total_score = sf( native )
+    delta_total_score = working_total_score - native_total_score
+    metric_data.append( "delta_total_score:" )
+    metric_data.append( str( delta_total_score ) )
     
 
     # glycan RMSD calculation

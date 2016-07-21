@@ -428,7 +428,14 @@ def read_fasc_file( fasc_filename ):
                         
                         # pull out the filename decoy number
                         if key == "filename":
-                            decoy_num = int( value.replace( ".pdb", '' ).split( '_' )[-1] )
+                            decoy_filename = value.split( '/' )[ -1 ]
+                            if "sugar" in decoy_filename:
+                                decoy_num = '_'.join( decoy_filename.split( '_' )[ -5: ] )
+                            elif "LCM" or "GRM" in decoy_filename:
+                                decoy_num = '_'.join( decoy_filename.split( '_' )[ -3: ] )
+                            else: # SmallMoves
+                                decoy_num = '_'.join( decoy_filename.split( '_' )[ -4: ] )
+                            #decoy_num = int( value.replace( ".pdb", '' ).split( '_' )[-1] )
                             fasc_data_dict.decoy_nums.append( decoy_num )
                     except:
                         pass

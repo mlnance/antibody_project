@@ -137,23 +137,36 @@ def main( in_working, in_native, in_sf, JUMP_NUM, working_Fc_glycan_chains, work
     
     # delta interface residue contacts
     cutoff = 8
-    working_intf_contacts, working_contact_list = count_interface_residue_contacts( JUMP_NUM, 
-                                                                                    working, 
-                                                                                    cutoff = cutoff )
-    native_intf_contacts, native_contact_list = count_interface_residue_contacts( JUMP_NUM, 
-                                                                                  native, 
-                                                                                  cutoff = cutoff )
+    working_intf_contacts, working_contact_list, working_pro_pro_fraction, working_pro_carb_fraction, working_carb_carb_fraction = count_interface_residue_contacts( JUMP_NUM, 
+                                                                                                                                                                     working, 
+                                                                                                                                                                     cutoff = cutoff,
+                                                                                                                                                                     return_more_data = True )
+    native_intf_contacts, native_contact_list, native_pro_pro_fraction, native_pro_carb_fraction, native_carb_carb_fraction = count_interface_residue_contacts( JUMP_NUM, 
+                                                                                                                                                                native, 
+                                                                                                                                                                cutoff = cutoff,
+                                                                                                                                                                return_more_data = True )
     delta_interface_res_contacts = working_intf_contacts - native_intf_contacts
+    delta_pro_pro_fraction = working_pro_pro_fraction - native_pro_pro_fraction
+    delta_pro_carb_fraction = working_pro_carb_fraction - native_pro_carb_fraction
+    delta_carb_carb_fraction = working_carb_carb_fraction - native_carb_carb_fraction
     metric_data.append( "interface_res_contacts_%s_A:" %( str( cutoff ) ) )
     metric_data.append( str( working_intf_contacts ) )
     metric_data.append( "delta_interface_res_contacts_%s_A:" %( str( cutoff ) ) )
     metric_data.append( str( delta_interface_res_contacts ) )
+    metric_data.append( "pro_pro_fraction:" )
+    metric_data.append( str( working_pro_pro_fraction ) )
+    metric_data.append( "delta_pro_pro_fraction:" )
+    metric_data.append( str( delta_pro_pro_fraction ) )
+    metric_data.append( "pro_carb_fraction:" )
+    metric_data.append( str( working_pro_carb_fraction ) )
+    metric_data.append( "delta_pro_carb_fraction:" )
+    metric_data.append( str( delta_pro_carb_fraction ) )
+    metric_data.append( "carb_carb_fraction:" )
+    metric_data.append( str( working_carb_carb_fraction ) )
+    metric_data.append( "delta_carb_carb_fraction:" )
+    metric_data.append( str( delta_carb_carb_fraction ) )
 
 
-    # delta Fc-glycan to protein contacts
-    
-
-    
     # delta interface sasa
     working_interface_sasa = calc_interface_sasa( working, JUMP_NUM )
     native_interface_sasa = calc_interface_sasa( native, JUMP_NUM )

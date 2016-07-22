@@ -74,49 +74,49 @@ kT = 0.8  # used in MonteCarlo and small and shear movers
 
 ## Pose numbering information ONLY relevant to PDB 3ay4
 # native
-native_Fc_chain_A = range( 1, 215 + 1 )
-native_Fc_glycan_A = range( 216, 223 + 1 )
-native_Fc_chain_B = range( 224, 341 + 1 )
-native_Fc_glycan_B = range( 440, 447 + 1 )
-native_FcR_protein = range( 448, 607 + 1 )
-native_FcR_main_glycan = range( 608, 615 + 1 )
-native_FcR_three_mer = range( 616, 618 + 1 )
-native_FcR_glycan = range( 608, 618 + 1 )
-native_Fc_protein = []
-native_Fc_protein.extend( native_Fc_chain_A )
-native_Fc_protein.extend( native_Fc_chain_B )
-native_Fc_glycan = []
-native_Fc_glycan.extend( native_Fc_glycan_A )
-native_Fc_glycan.extend( native_Fc_glycan_B )
-native_order = range( 1, 618 + 1 )
+native_Fc_chain_A_nums = range( 1, 215 + 1 )
+native_Fc_glycan_A_nums = range( 216, 223 + 1 )
+native_Fc_chain_B_nums = range( 224, 341 + 1 )
+native_Fc_glycan_B_nums = range( 440, 447 + 1 )
+native_FcR_protein_nums = range( 448, 607 + 1 )
+native_FcR_main_glycan_nums = range( 608, 615 + 1 )
+native_FcR_three_mer_nums = range( 616, 618 + 1 )
+native_FcR_glycan_nums = range( 608, 618 + 1 )
+native_Fc_protein_nums = []
+native_Fc_protein_nums.extend( native_Fc_chain_A_nums )
+native_Fc_protein_nums.extend( native_Fc_chain_B_nums )
+native_Fc_glycan_nums = []
+native_Fc_glycan_nums.extend( native_Fc_glycan_A_nums )
+native_Fc_glycan_nums.extend( native_Fc_glycan_B_nums )
+native_order_nums = range( 1, 618 + 1 )
 native_Fc_protein_chains = [ 'A', 'B' ]
 native_FcR_protein_chains = [ 'C' ]
 native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
 native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 
 # glycosylated decoy
-decoy_Fc_chain_A = range( 1, 215 + 1 )
-decoy_Fc_glycan_A = range( 603, 610 + 1)
-decoy_Fc_chain_B = range( 216, 431 + 1 )
-decoy_Fc_glycan_B = range( 611, 618 + 1)
-decoy_FcR_protein = range( 432, 591 + 1)
-decoy_FcR_main_glycan = range( 592, 598 + 1 )
-decoy_FcR_three_mer = range( 599, 602 + 1 )
-decoy_FcR_glycan = range( 592, 602 + 1 )
-decoy_Fc_protein = []
-decoy_Fc_protein.extend( decoy_Fc_chain_A )
-decoy_Fc_protein.extend( decoy_Fc_chain_B )
-decoy_Fc_glycan = []
-decoy_Fc_glycan.extend( decoy_Fc_glycan_A )
-decoy_Fc_glycan.extend( decoy_Fc_glycan_B )
-decoy_order = []
-decoy_order.extend( decoy_Fc_chain_A )
-decoy_order.extend( decoy_Fc_glycan_A )
-decoy_order.extend( decoy_Fc_chain_B )
-decoy_order.extend( decoy_Fc_glycan_B )
-decoy_order.extend( decoy_FcR_protein )
-decoy_order.extend( decoy_FcR_main_glycan )
-decoy_order.extend( decoy_FcR_three_mer )
+decoy_Fc_chain_A_nums = range( 1, 215 + 1 )
+decoy_Fc_glycan_A_nums = range( 603, 610 + 1)
+decoy_Fc_chain_B_nums = range( 216, 431 + 1 )
+decoy_Fc_glycan_B_nums = range( 611, 618 + 1)
+decoy_FcR_protein_nums = range( 432, 591 + 1)
+decoy_FcR_main_glycan_nums = range( 592, 598 + 1 )
+decoy_FcR_three_mer_nums = range( 599, 602 + 1 )
+decoy_FcR_glycan_nums = range( 592, 602 + 1 )
+decoy_Fc_protein_nums = []
+decoy_Fc_protein_nums.extend( decoy_Fc_chain_A_nums )
+decoy_Fc_protein_nums.extend( decoy_Fc_chain_B_nums )
+decoy_Fc_glycan_nums = []
+decoy_Fc_glycan_nums.extend( decoy_Fc_glycan_A_nums )
+decoy_Fc_glycan_nums.extend( decoy_Fc_glycan_B_nums )
+decoy_order_nums = []
+decoy_order_nums.extend( decoy_Fc_chain_A_nums )
+decoy_order_nums.extend( decoy_Fc_glycan_A_nums )
+decoy_order_nums.extend( decoy_Fc_chain_B_nums )
+decoy_order_nums.extend( decoy_Fc_glycan_B_nums )
+decoy_order_nums.extend( decoy_FcR_protein_nums )
+decoy_order_nums.extend( decoy_FcR_main_glycan_nums )
+decoy_order_nums.extend( decoy_FcR_three_mer_nums )
 decoy_Fc_protein_chains = [ 'A', 'B' ]
 decoy_FcR_protein_chains = [ 'C' ]
 decoy_Fc_glycan_chains = [ 'H', 'I', 'J', 'K' ]
@@ -124,11 +124,11 @@ decoy_FcR_glycan_chains = [ 'D', 'E', 'F', 'G' ]
 
 # make an appropriate dictionary map
 native_to_decoy_res_map = {}
-for ii in range( len( native_order ) ):
-    native_to_decoy_res_map[ native_order[ii] ] = decoy_order[ii]
+for ii in range( len( native_order_nums ) ):
+    native_to_decoy_res_map[ native_order_nums[ii] ] = decoy_order_nums[ii]
 decoy_to_native_res_map = {}
-for ii in range( len( decoy_order ) ):
-    decoy_to_native_res_map[ decoy_order[ii] ] = native_order[ii]
+for ii in range( len( decoy_order_nums ) ):
+    decoy_to_native_res_map[ decoy_order_nums[ii] ] = native_order_nums[ii]
 
 
 
@@ -165,18 +165,16 @@ def initialize_rosetta():
 
 
 
-def load_pose( pose_filename, is_3ay4 = False ):
+def load_pose( pose_filename ):
     """
     Load pose from a filename
     :param pose_filename: str( /path/to/pose/filename )
-    :param is_3ay4: bool( if this is 3ay4 native or decoy, attached chain and residue information to Pose object )
     :return: a Rosetta Pose
     """
     # imports
     from rosetta import Pose, pose_from_file, FoldTree
     
     # create Pose object from filename
-#    print "Loading pose"
     pose = Pose()
     pose_from_file( pose, pose_filename )
     
@@ -194,43 +192,55 @@ def load_pose( pose_filename, is_3ay4 = False ):
 
 
 
-def attach_chain_and_res_designations_3ay4( pose ):
+class DataHolder:
+    pass
+
+
+
+class hold_chain_and_res_designations_3ay4:
     # store residue and chain designation information for both native and decoy for 3ay4
-    # native information
-    pose.native_Fc_chain_A = native_Fc_chain_A
-    pose.native_Fc_glycan_A = native_Fc_glycan_A
-    pose.native_Fc_chain_B = native_Fc_chain_B
-    pose.native_Fc_glycan_B = native_Fc_glycan_B
-    pose.native_FcR_protein = native_FcR_protein
-    pose.native_FcR_main_glycan = native_FcR_main_glycan
-    pose.native_FcR_three_mer = native_FcR_three_mer
-    pose.native_FcR_glycan = native_FcR_glycan
-    pose.native_Fc_protein = native_Fc_protein
-    pose.native_Fc_glycan = native_Fc_glycan
-    pose.native_order = native_order
-    pose.native_Fc_protein_chains = native_Fc_protein_chains
-    pose.native_FcR_protein_chains = native_FcR_protein_chains
-    pose.native_Fc_glycan_chains = native_Fc_glycan_chains
-    pose.native_FcR_glycan_chains = native_FcR_glycan_chains
+    def __init__( self ):
+        self.name = "3ay4"
 
-    # decoy information
-    pose.decoy_Fc_chain_A = decoy_Fc_chain_A
-    pose.decoy_Fc_glycan_A = decoy_Fc_glycan_A
-    pose.decoy_Fc_chain_B = decoy_Fc_chain_B
-    pose.decoy_Fc_glycan_B = decoy_Fc_glycan_B
-    pose.decoy_FcR_protein = decoy_FcR_protein
-    pose.decoy_FcR_main_glycan = decoy_FcR_main_glycan
-    pose.decoy_FcR_three_mer = decoy_FcR_three_mer
-    pose.decoy_FcR_glycan = decoy_FcR_glycan
-    pose.decoy_Fc_protein = decoy_Fc_protein
-    pose.decoy_Fc_glycan = decoy_Fc_glycan
-    pose.decoy_order = decoy_order
-    pose.decoy_Fc_protein_chains = decoy_Fc_protein_chains
-    pose.decoy_FcR_protein_chains = decoy_FcR_protein_chains
-    pose.decoy_Fc_glycan_chains = decoy_Fc_glycan_chains
-    pose.decoy_FcR_glycan_chains = decoy_FcR_glycan_chains
+    def native( self ):
+        # native information
+        self.native_Fc_chain_A_nums = native_Fc_chain_A_nums
+        self.native_Fc_glycan_A_nums = native_Fc_glycan_A_nums
+        self.native_Fc_chain_B_nums = native_Fc_chain_B_nums
+        self.native_Fc_glycan_B_nums = native_Fc_glycan_B_nums
+        self.native_FcR_protein_nums = native_FcR_protein_nums
+        self.native_FcR_main_glycan_nums = native_FcR_main_glycan_nums
+        self.native_FcR_three_mer_nums = native_FcR_three_mer_nums
+        self.native_FcR_glycan_nums = native_FcR_glycan_nums
+        self.native_Fc_protein_nums = native_Fc_protein_nums
+        self.native_Fc_glycan_nums = native_Fc_glycan_nums
+        self.native_order_nums = native_order_nums
+        self.native_Fc_protein_chains = native_Fc_protein_chains
+        self.native_FcR_protein_chains = native_FcR_protein_chains
+        self.native_Fc_glycan_chains = native_Fc_glycan_chains
+        self.native_FcR_glycan_chains = native_FcR_glycan_chains
 
-    return pose
+    def decoy( self ):
+        # decoy information
+        self.Fc_protein_nums = decoy_Fc_protein_nums
+        self.FcR_main_glycan_nums = decoy_FcR_main_glycan_nums
+        """
+        self.decoy_Fc_chain_A_nums = decoy_Fc_chain_A_nums
+        self.decoy_Fc_glycan_A_nums = decoy_Fc_glycan_A_nums
+        self.decoy_Fc_chain_B_nums = decoy_Fc_chain_B_nums
+        self.decoy_Fc_glycan_B_nums = decoy_Fc_glycan_B_nums
+        self.decoy_FcR_protein_nums = decoy_FcR_protein_nums
+        self.decoy_FcR_main_glycan_nums = decoy_FcR_main_glycan_nums
+        self.decoy_FcR_three_mer_nums = decoy_FcR_three_mer_nums
+        self.decoy_FcR_glycan_nums = decoy_FcR_glycan_nums
+        self.decoy_Fc_protein_nums = decoy_Fc_protein_nums
+        self.decoy_Fc_glycan_nums = decoy_Fc_glycan_nums
+        self.decoy_order_nums = decoy_order_nums
+        self.decoy_Fc_protein_chains = decoy_Fc_protein_chains
+        self.decoy_FcR_protein_chains = decoy_FcR_protein_chains
+        self.decoy_Fc_glycan_chains = decoy_Fc_glycan_chains
+        self.decoy_FcR_glycan_chains = decoy_FcR_glycan_chains
+        """
 
 
 
@@ -939,34 +949,34 @@ def make_movemap_for_sugars( pose, allow_bb_movement = True, allow_chi_movement 
 
 
 
-def make_movemap_for_range( seqpos, allow_bb_movement = True, allow_chi_movement = True, verbose = False ):
+def make_movemap_for_range( seqpos_list, allow_bb_movement = True, allow_chi_movement = True, verbose = False ):
     """
-    Given a list of <seqpos>, return a MoveMap allowing for bb and/or chi movement of only the passed residues.
-    :param seqpos: list( int( a list of sequence positions for your pose ) )
+    Given a list of <seqpos_list>, return a MoveMap allowing for bb and/or chi movement of only the passed residues.
+    :param seqpos_list: list( int( a list of sequence positions for your pose ) )
     :param allow_bb_movement: bool( Do you want to allow sugarback bone movement? ). Default = True
     :param allow_chi_movement: bool( Do you want to allow sugarchi angle movement? ). Default = False
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: MoveMap for all sugar residues in <pose>
     """
-    # check to make sure <seqpos> is a list
-    if not isinstance( seqpos, list ):
-        print "You didn't pass me a list for your <seqpos> argument. That's what I need to make your MoveMap. Exiting."
+    # check to make sure <seqpos_list> is a list
+    if not isinstance( seqpos_list, list ):
+        print "You didn't pass me a list for your <seqpos_list> argument. That's what I need to make your MoveMap. Exiting."
         sys.exit()
         
     if verbose:
-        print "Making a MoveMap for the following residues:", seqpos
+        print "Making a MoveMap for the following residues:", seqpos_list
     
     # instantiate a MoveMap
     mm = MoveMap()
 
     # if BB is True
     if allow_bb_movement:
-        for num in seqpos:
+        for num in seqpos_list:
             mm.set_bb( num, True )
 
     # if chi is True
     if allow_chi_movement:
-        for num in seqpos:
+        for num in seqpos_list:
             mm.set_chi( num, True )
     
     # return the MoveMap
@@ -1166,6 +1176,24 @@ def CCD_loop_closure( loop, pose ):
     ccd.apply( pose )
 
     return pose
+
+
+
+def calc_avg_of_list( in_list ):
+    """
+    Returns the average of a <in_list> of values, or None if the list is empty
+    :param in_list: list( a list of integers or floats )
+    :return: float( average of the list )
+    """
+    try:
+        if len( in_list ) != 0:
+            avg = float( sum( in_list ) / len( in_list ) )
+        else:
+            avg = None
+    except:
+        avg = None
+
+    return avg
 
 
 
@@ -2491,7 +2519,7 @@ def make_my_new_asymmetric_antibody( mutation_string, sf, input_pose, apply_sf_s
 #### DATA FUNCTIONS ####
 ########################
 
-def get_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+def get_full_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
     """
     Returns a dictionary of each residue in <pose> that has a contact with another residue in the <pose> less than the given <cutoff> distance
     :param pose: Pose
@@ -2503,7 +2531,7 @@ def get_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
         print "Getting the residue contact map for the Pose"
 
     # holds the resulting contact map
-    return_dict = {}
+    contact_map = {}
 
     for seq_pos in range( 1, pose.n_residue() + 1 ):
         # holder for the residue numbers of residues within the given <cutoff> distance
@@ -2525,21 +2553,22 @@ def get_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
                 if calc_distance( center_1, center_2 ) < cutoff:
                     contacts.append( seq_pos_2 )
 
-        # fill the return_dict with the contacts to that residue, only if there any
+        # fill the contact_map with the contacts to that residue, only if there any
         if len( contacts ) != 0:
-            return_dict[ seq_pos ] = contacts
+            contact_map[ seq_pos ] = contacts
 
-    return return_dict
+    return contact_map
 
 
 
-def get_contact_map_between_range1_range2( range1, range2, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
+def get_contact_map_between_range1_range2( range1, range2, pose, cutoff = CUTOFF_DISTANCE, return_more_info = False, verbose = False ):
     """
     Returns a dictionary of each residue in <pose> that has a contact with another residue in the <pose> less than the given <cutoff> distance
     :param range1: list( residue pose numbers in range 1 )
     :param range2: list( residue pose numbers in range 2 )
     :param pose: Pose
     :param cutoff: int( or float( distance cutoff for what defines a contact). Default = CUTOFF_DISTANCE = 5 Angstroms
+    :param return_more_info: bool( do you want to return the number of contacts made as well? ) Default = False
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: dict( key = residue num in pose, value = list of residue nums within <cutoff> distance )
     """
@@ -2547,7 +2576,7 @@ def get_contact_map_between_range1_range2( range1, range2, pose, cutoff = CUTOFF
         print "Getting the residue contact map for the Pose"
 
     # holds the resulting contact map
-    return_dict = {}
+    contact_map = {}
 
     for seqpos_1 in range1:
         # holder for the residue numbers of residues within the given <cutoff> distance
@@ -2565,54 +2594,143 @@ def get_contact_map_between_range1_range2( range1, range2, pose, cutoff = CUTOFF
             if calc_distance( center_1, center_2 ) < cutoff:
                 contacts.append( seqpos_2 )
 
-        # fill the return_dict with the contacts to that residue, only if there any
+        # fill the contact_map with the contacts to that residue, only if there any
         if len( contacts ) != 0:
-            return_dict[ seqpos_1 ] = contacts
+            contact_map[ seqpos_1 ] = contacts
 
-    return return_dict
+    if return_more_info:
+        num_contacts = sum( [ len( contacts ) for contacts in contact_map.values() ] )
+        return contact_map, num_contacts
+    else:
+        return contact_map
 
 
 
-def calc_res_Fnat_recovered_between_range1_range2( decoy, decoy_r1, decoy_r2, native, cutoff = CUTOFF_DISTANCE, return_more_data = False, verbose = False ):
+def get_contact_map_with_JUMP_NUM( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, return_more_info = False, verbose = False ):
     """
-    Uses a residue contact map to determine if residues in the <decoy> between range <decoy_r1> and <decoy_r2> match the native contacts made in the corresponding residue range using the <cutoff> distance
-    :param decoy: decoy Pose
-    :param decoy_r1: list( residue numbers on side 1 )
-    :param decoy_r2: list( residue numbers on side 2 )
-    :param native: native Pose
+    Returns a dictionary of each residue in <pose> between the interface defined by <JUMP_NUM> that has a contact with another residue in the <pose> less than the given <cutoff> distance
+    :param JUMP_NUM: int( JUMP number that defines the interface of interest )
+    :param pose: Pose
     :param cutoff: int( or float( distance cutoff for what defines a contact). Default = CUTOFF_DISTANCE = 5 Angstroms
-    :param return_more_data: bool( do you want to have this function return decoy and native number of contacts as well? ) Default is False
+    :param return_more_info: bool( do you want to return the number of contacts made as well? ) Default = False
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    :return: float( residue Fnat recovered )
-    :return: if return_more_data == True, int( decoy contacts ), int( native contacts ), float( residue Fnat recovered )
+    :return: dict( key = residue num in pose, value = list of residue nums within <cutoff> distance )
     """
-    # get the corresponding native residue numbers in the decoy ranges
-    native_r1 = []
-    for resnum in decoy_r1:
-        native_r1.append( decoy_to_native_res_map[ resnum ] )
-    native_r2 = []
-    for resnum in decoy_r2:
-        native_r2.append( decoy_to_native_res_map[ resnum ] )
-    
-    # get the contact maps for the decoy and native poses
-    decoy_contact_map = get_contact_map_between_range1_range2( decoy_r1, decoy_r2, decoy, cutoff = cutoff, verbose = verbose )
-    native_contact_map = get_contact_map_between_range1_range2( native_r1, native_r2, native, cutoff = cutoff, verbose = verbose )
+    # get a list of all residue numbers on either side of the decoy's interface
+    pose_r1 = []
+    pose_r2 = []
 
+    # find all of the residue numbers that correspond to side 1 and side 2
+    for ii in range( 1, pose.total_residue() + 1 ):
+        if ii < pose.fold_tree().downstream_jump_residue( JUMP_NUM ):
+            pose_r1.append( ii )
+        else:
+            pose_r2.append( ii )
+
+    # check to see that neither of the lists are empty
+    if len( pose_r1 ) == 0 or len( pose_r2 ) == 0:
+        print
+        print "It appears that the jump number", JUMP_NUM, "does not actually define an interface. Exiting."
+        sys.exit()
+
+    # get the contact maps for the decoy and native poses
+    if return_more_info:
+        contact_map, num_contacts = get_contact_map_between_range1_range2( pose_r1, pose_r2, pose, cutoff = cutoff, return_more_info = return_more_info, verbose = verbose )
+        return contact_map, num_contacts
+    else:
+        contact_map = get_contact_map_between_range1_range2( pose_r1, pose_r2, pose, cutoff = cutoff, return_more_info = return_more_info, verbose = verbose )
+        return contact_map
+
+
+
+def analyze_contact_map( contact_map, pose ):
+    """
+    Return the fraction of protein-protein, protein-carbohydrate, and carbohydrate_carbohydrate contacts found in the <pose>'s <contact_map> 
+    :param contact_map: dict( key = residue num in pose, value = list of residue nums within a cutoff distance )
+    :param pose: Pose( pose responsible for contact map )
+    :return: data object that holds float( fraction pro-pro ), float( fraction pro-carb ), float( fraction carb-carb )
+    """
+    # instantiate contact type data counts
+    pro_pro_contacts = 0
+    pro_carb_contacts = 0
+    carb_carb_contacts = 0
+
+    # instantiate contact distances data list
+    contact_distances = []
+    
+    # for each residue in contact map
+    for resnum in contact_map.keys():
+        # for each residue it makes contact with in the pose
+        for contact_resnum in contact_map[ resnum ]:
+            ## record the type of each contact made
+            # protein to protein
+            if pose.residue( resnum ).is_protein() and pose.residue( contact_resnum ).is_protein():
+                pro_pro_contacts += 1
+            # carbhydrate to carbohydrate
+            elif pose.residue( resnum ).is_carbohydrate() and pose.residue( contact_resnum ).is_carbohydrate():
+                carb_carb_contacts += 1
+            # protein to carbohydrate
+            else:
+                pro_carb_contacts += 1
+
+            ## record the contact distance using nbr atoms
+            # get the atoms used as the center for these residues
+            resnum_nbr_xyz = list( pose.residue( resnum ).nbr_atom_xyz() )
+            contact_resnum_nbr_xyz = list( pose.residue( contact_resnum ).nbr_atom_xyz() )
+            contact_dist = calc_distance( resnum_nbr_xyz, contact_resnum_nbr_xyz )
+            contact_distances.append( contact_dist )
+
+    # calculate fraction of contact types
+    num_contacts = sum( [ len( contacts ) for contacts in contact_map.values() ] )
+    pro_pro_fraction = round( float( pro_pro_contacts ) / float( num_contacts ), 2 )
+    pro_carb_fraction = round( float( pro_carb_contacts ) / float( num_contacts ), 2 )
+    carb_carb_fraction = round( float( carb_carb_contacts ) / float( num_contacts ), 2 )
+
+    # add all data to data holder
+    data_holder = DataHolder()
+    data_holder.pro_pro_fraction = pro_pro_fraction
+    data_holder.pro_carb_fraction = pro_carb_fraction
+    data_holder.carb_carb_fraction = carb_carb_fraction
+    data_holder.contact_distances = contact_distances
+    data_holder.contact_distances_avg = calc_avg_of_list( contact_distances )
+
+    return data_holder
+
+
+
+def calc_Fnat_with_contact_maps( decoy_contact_map, decoy, native_contact_map, native, decoy_to_native_res_map = None ):
+    """
+    Return Fnat as calculated between two contact maps
+    :param decoy_contact_map: dict( key = residue num in decoy, value = list of residue nums within a cutoff distance )
+    :param decoy: Pose( decoy Pose responsible for decoy_contact_map )
+    :param native_contact_map: dict( key = residue num in native, value = list of residue nums within a cutoff distance )
+    :param native: Pose( native Pose responsible for native_contact_map )
+    :param decoy_to_native_res_map: dict( if you're comparing a decoy to a native that has a different numbering scheme, pass in a dictionary that maps each resnum from the decoy to its corresponding resnum in the native )
+    :return: float( Fnat recovered contacts )
+    """
     # get the number of contacts total found in the native
     num_native_contacts = sum( [ len( contacts ) for contacts in native_contact_map.values() ] )
 
-    # determine the difference in contacts between the decoy and native
+    # determine the difference in contacts between decoy and native
     num_decoy_recovered_contacts = 0
     for decoy_resnum in decoy_contact_map.keys():
-        # get the corresponding native residue number
-        corresponding_native_resnum = decoy_to_native_res_map[ decoy_resnum ]
+        # get the corresponding native residue number, if needed
+        if decoy_to_native_res_map is not None:
+            corresponding_native_resnum = decoy_to_native_res_map[ decoy_resnum ]
+        # else the numbers are the same between the decoy and the native
+        else:
+            corresponding_native_resnum = decoy_resnum
 
-        # for each contact this residue makes within the decoy
+        # for each contact this residue makes within decoy
         for decoy_contact_resnum in decoy_contact_map[ decoy_resnum ]:
-            # get the corresponding native residue number for the contact
-            corresponding_native_contact_resnum = decoy_to_native_res_map[ decoy_contact_resnum ]
+            # get the corresponding native residue number for the contact, if needed
+            if decoy_to_native_res_map is not None:
+                corresponding_native_contact_resnum = decoy_to_native_res_map[ decoy_contact_resnum ]
+            # else the numbers are the same between the decoy and the native
+            else:
+                corresponding_native_resnum = decoy_resnum
 
-            # check to see if this is a contact made in the native pose
+            # check to see if this is a contact made in the
             try:
                 native_contacts_at_this_decoy_resnum = native_contact_map[ corresponding_native_resnum ]
 
@@ -2627,169 +2745,7 @@ def calc_res_Fnat_recovered_between_range1_range2( decoy, decoy_r1, decoy_r2, na
     # calculate Fnat
     Fnat = round( ( float( num_decoy_recovered_contacts ) / float( num_native_contacts ) ) * 100, 2 )
 
-    if return_more_data:
-        num_decoy_contacts = sum( [ len( contacts ) for contacts in decoy_contact_map.values() ] )
-        return num_decoy_contacts, num_native_contacts, Fnat
-    else:
-        return Fnat
-
-
-
-def count_interface_residue_contacts( JUMP_NUM, pose, cutoff = CUTOFF_DISTANCE, return_more_data = False, verbose = False ):
-    """
-    Counts the number of residue "contacts" in a <pose> between interface residues given a <cutoff>
-    :param JUMP_NUM: int( Jump number that defines the interface )
-    :param pose: Pose
-    :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
-    :param return_more_data: bool( do you want to have this function return fraction of protein-protein, protein-carbohydrate, and carbohydrate-carbohydrate contacts as well? ) Default is False
-    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    :return: float( number of residue contacts at interface ), list( str( res1resname_res1chain_res1pdbnum+res2resname_res2chain_res2pdbnum ) )
-    :return: if return_more_data == True, float( interface res contacts ), list( unique contacts made ), float( fraction pro-pro ), float( fraction pro-carb ), float( fraction carb-carb )
-    """
-    # check to see that the jump number is valid
-    if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
-        print
-        print "You gave me an invalid jump number, try again"
-        sys.exit()
-
-    # get a list of all residue numbers from side 1 to 2
-    range1 = []
-    range2 = []
-
-    # find all of the residue numbers that correspond to side 1 and side 2
-    for ii in range( 1, pose.total_residue() + 1 ):
-        if ii < pose.fold_tree().downstream_jump_residue( JUMP_NUM ):
-            range1.append( ii )
-        else:
-            range2.append( ii )
-
-    # check to see that neither of the lists are empty
-    if len( range1 ) == 0 or len( range2 ) == 0:
-        print
-        print "It appears that the jump number", JUMP_NUM, "does not actually define an interface"
-        sys.exit()
-
-    # instantiate counter and the list to hold the unique contact names
-    contacts = 0
-    contact_list = []
-
-    # instantiate contact type data lists
-    pro_pro_contacts = 0
-    pro_carb_contacts = 0
-    carb_carb_contacts = 0
-    
-    # loop through each residue of each residue of side 1 specified and see if its within <cutoff> distance of any residue from side 2
-    for res_num_1 in range1:
-        # get the chain and seqpos of this residue
-        res1 = pose.residue( res_num_1 )
-        res1_name = res1.name3()
-        res1_chain = pose.pdb_info().chain( res_num_1 )
-        res1_pdb_num = pose.pdb_info().pose2pdb( res_num_1 ).split( ' ' )[0]
-        
-        # get the center of res_num_1
-        res1_center = res1.nbr_atom_xyz()
-        
-        # loop over each residue on side 2
-        for res_num_2 in range2:
-            # get the chain and seqpos of this residue
-            res2 = pose.residue( res_num_2 )
-            res2_name = res2.name3()
-            res2_chain = pose.pdb_info().chain( res_num_2 )
-            res2_pdb_num = pose.pdb_info().pose2pdb( res_num_2 ).split( ' ' )[0]
-            
-            # get the center of res_num_2
-            res2_center = res2.nbr_atom_xyz()
-
-            # if the two residues are within the appropriate distance given by <cutoff>
-            dist = res1_center.distance( res2_center )
-            if dist <= cutoff:
-                # makes unique names for each contact for ease of analysis
-                uniq_name_res1 = res1_name + '_' + res1_chain + '_' + str( res1_pdb_num )
-                uniq_name_res2 = res2_name + '_' + res2_chain + '_' + str( res2_pdb_num )
-
-                # unique name is the combination of the information from both res1 and res2
-                unique_name = uniq_name_res1 + '+' + uniq_name_res2
-                
-                # if this specific contact has not already been found, add it to the list and up the contacts counter
-                if unique_name not in contact_list:
-                    contact_list.append( unique_name )
-                    contacts += 1
-
-                ## record the type of contact made
-                # protein to protein
-                if res1.is_protein() and res2.is_protein():
-                    pro_pro_contacts += 1
-                # carbhydrate to carbohydrate
-                elif res1.is_carbohydrate() and res2.is_carbohydrate():
-                    carb_carb_contacts += 1
-                # protein to carbohydrate
-                else:
-                    pro_carb_contacts += 1
-
-    # calculate fraction of contact types
-    pro_pro_fraction = round( float( pro_pro_contacts ) / float( contacts ), 2 )
-    pro_carb_fraction = round( float( pro_carb_contacts ) / float( contacts ), 2 )
-    carb_carb_fraction = round( float( carb_carb_contacts ) / float( contacts ), 2 )
-
-    if return_more_data:
-        return contacts, contact_list, pro_pro_fraction, pro_carb_fraction, carb_carb_fraction
-    else:
-        return contacts, contact_list
-
-
-
-def count_residue_contacts_between_range1_range2( range1, range2, pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
-    """
-    Counts the number of residue "contacts" in a <pose> between <range1> and <range2>
-    :param range1: list( residue pose numbers in range 1 )
-    :param range2: list( residue pose numbers in range 2 )
-    :param pose: Pose
-    :param cutoff: int( or float( cutoff distance in Angstroms). Default = CUTOFF_DISTANCE = 5 Angstroms
-    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
-    :return: float( number of residue contacts at interface ), list( str( res1resname_res1chain_res1pdbnum+res2resname_res2chain_res2pdbnum ) )
-    """
-    # instantiate counter and the list to hold the unique contact names
-    contacts = 0
-    contact_list = []
-    
-    # loop through each residue of each residue of side 1 specified and see if its within <cutoff> distance of any residue from side 2
-    for res_num_1 in range1:
-        # get the chain and seqpos of this residue
-        res1 = pose.residue( res_num_1 )
-        res1_name = res1.name3()
-        res1_chain = pose.pdb_info().chain( res_num_1 )
-        res1_pdb_num = pose.pdb_info().pose2pdb( res_num_1 ).split( ' ' )[0]
-        
-        # get the center of res_num_1
-        res1_center = res1.nbr_atom_xyz()
-        
-        # loop over each residue on side 2
-        for res_num_2 in range2:
-            # get the chain and seqpos of this residue
-            res2 = pose.residue( res_num_2 )
-            res2_name = res2.name3()
-            res2_chain = pose.pdb_info().chain( res_num_2 )
-            res2_pdb_num = pose.pdb_info().pose2pdb( res_num_2 ).split( ' ' )[0]
-            
-            # get the center of res_num_2
-            res2_center = res2.nbr_atom_xyz()
-
-            # if the two residues are within the appropriate distance given by <cutoff>
-            dist = res1_center.distance( res2_center )
-            if dist <= cutoff:
-                # makes unique names for each contact for ease of analysis
-                uniq_name_res1 = res1_name + '_' + res1_chain + '_' + str( res1_pdb_num )
-                uniq_name_res2 = res2_name + '_' + res2_chain + '_' + str( res2_pdb_num )
-
-                # unique name is the combination of the information from both res1 and res2
-                unique_name = uniq_name_res1 + '+' + uniq_name_res2
-                
-                # if this specific contact has not already been found, add it to the list and up the contacts counter
-                if unique_name not in contact_list:
-                    contact_list.append( unique_name )
-                    contacts += 1
-
-    return contacts, contact_list
+    return Fnat
 
 
 

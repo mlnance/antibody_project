@@ -2657,6 +2657,11 @@ def analyze_contact_map( contact_map, pose ):
 
     # instantiate contact distances data list
     contact_distances = []
+
+    # instantiate carbohydrate to residue contact polarity data counts
+    carb_to_polar_contacts = 0
+    carb_to_nonpolar_contacts = 0
+    carb_to_aromatic_contacts = 0
     
     # for each residue in contact map
     for resnum in contact_map.keys():
@@ -2673,6 +2678,18 @@ def analyze_contact_map( contact_map, pose ):
             else:
                 pro_carb_contacts += 1
 
+                # since this is a protein to carbohydrate contact, determine the polarity of the amino acid
+                if pose.residue( resnum ).is_protein():
+                    pro_resnum = resnum
+                else:
+                    pro_resnum = contact_resnum
+                if pose.residue( pro_resnum ).is_polar():
+                    carb_to_polar_contacts += 1
+                if pose.residue( pro_resnum ).is_apolar():
+                    carb_to_nonpolar_contacts += 1
+                if pose.residue( pro_resnum ).is_aromatic():
+                    carb_to_aromatic_contacts += 1
+
             ## record the contact distance using nbr atoms
             # get the atoms used as the center for these residues
             resnum_nbr_xyz = list( pose.residue( resnum ).nbr_atom_xyz() )
@@ -2682,23 +2699,57 @@ def analyze_contact_map( contact_map, pose ):
 
     # calculate fraction of contact types
     num_contacts = sum( [ len( contacts ) for contacts in contact_map.values() ] )
-    pro_pro_fraction = round( float( pro_pro_contacts ) / float( num_contacts ), 2 )
-    pro_carb_fraction = round( float( pro_carb_contacts ) / float( num_contacts ), 2 )
-    carb_carb_fraction = round( float( carb_carb_contacts ) / float( num_contacts ), 2 )
+    try:
+        pro_pro_fraction = round( float( pro_pro_contacts ) / float( num_contacts ), 2 )
+    except ZeroDivisionError:
+        pro_pro_fraction = "None"
+    try:
+        pro_carb_fraction = round( float( pro_carb_contacts ) / float( num_contacts ), 2 )
+    except ZeroDivisionError:
+        pro_carb_fraction = "None"
+    try:
+        carb_carb_fraction = round( float( carb_carb_contacts ) / float( num_contacts ), 2 )
+    except ZeroDivisionError:
+        carb_carb_fraction = "None"
+
+    # calculate the fraction of carbohydrate to protein polarity contacts
+    try:
+        carb_to_polar_fraction = round( float( carb_to_polar_contacts ) / float( pro_carb_contacts ), 2 )
+    except ZeroDivisionError:
+        carb_to_polar_fraction = "None"
+    try:
+        carb_to_nonpolar_fraction = round( float( carb_to_nonpolar_contacts ) / float( pro_carb_contacts ), 2 )
+    except ZeroDivisionError:
+        carb_to_nonpolar_fraction = "None"
+    try:
+        carb_to_aromatic_fraction = round( float( carb_to_aromatic_contacts ) / float( pro_carb_contacts ), 2 )
+    except ZeroDivisionError:
+        carb_to_aromatic_fraction = "None"
 
     # add all data to data holder
     data_holder = DataHolder()
+    data_holder.pro_pro_contacts = pro_pro_contacts
+    data_holder.pro_carb_contacts = pro_carb_contacts
+    data_holder.carb_carb_contacts = carb_carb_contacts
     data_holder.pro_pro_fraction = pro_pro_fraction
     data_holder.pro_carb_fraction = pro_carb_fraction
     data_holder.carb_carb_fraction = carb_carb_fraction
+    data_holder.carb_to_polar_contacts = carb_to_polar_contacts
+    data_holder.carb_to_nonpolar_contacts = carb_to_nonpolar_contacts
+    data_holder.carb_to_aromatic_contacts = carb_to_aromatic_contacts
+    data_holder.carb_to_polar_fraction = carb_to_polar_fraction
+    data_holder.carb_to_nonpolar_fraction = carb_to_nonpolar_fraction
+    data_holder.carb_to_aromatic_fraction = carb_to_aromatic_fraction
     data_holder.contact_distances = contact_distances
-    data_holder.contact_distances_avg = calc_avg_of_list( contact_distances )
+    data_holder.contact_distance_avg = calc_avg_of_list( contact_distances )
+    data_holder.contact_distance_max = max( contact_distances )
+    data_holder.contact_distance_min = min( contact_distances )
 
     return data_holder
 
 
 
-def calc_Fnat_with_contact_maps( decoy_contact_map, decoy, native_contact_map, native, decoy_to_native_res_map = None ):
+def calc_Fnats_with_contact_maps( decoy_contact_map, decoy, native_contact_map, native, decoy_to_native_res_map = None ):
     """
     Return Fnat as calculated between two contact maps
     :param decoy_contact_map: dict( key = residue num in decoy, value = list of residue nums within a cutoff distance )
@@ -2706,13 +2757,29 @@ def calc_Fnat_with_contact_maps( decoy_contact_map, decoy, native_contact_map, n
     :param native_contact_map: dict( key = residue num in native, value = list of residue nums within a cutoff distance )
     :param native: Pose( native Pose responsible for native_contact_map )
     :param decoy_to_native_res_map: dict( if you're comparing a decoy to a native that has a different numbering scheme, pass in a dictionary that maps each resnum from the decoy to its corresponding resnum in the native )
-    :return: float( Fnat recovered contacts )
+    :return: DataHolder( object that holds floats of Fnat recovered, Fnat protein-protein recovered, Fnat protein-carbohydrate recovered, Fnat carbohydrate-carbohydrate recovered, Fnat carbohydrate to polar recovered, Fnat carbohydrate to nonpolar recovered, and Fnat carbohydrate to aromatic recovered for both protein-to-protein and protein-to-cabrohydate contacts )
     """
+    # instantiate a DataHolder object
+    data_holder = DataHolder()
+
+    # get a DataHolder object with the data for the native
+    native_data_holder = analyze_contact_map( native_contact_map, native )
+
+    # instantiate contact type data counts
+    pro_pro_contacts_recovered = 0
+    pro_carb_contacts_recovered = 0
+    carb_carb_contacts_recovered = 0
+
+    # instantiate carbohydrate to residue contact polarity data counts
+    carb_to_polar_contacts_recovered = 0
+    carb_to_nonpolar_contacts_recovered = 0
+    carb_to_aromatic_contacts_recovered = 0
+
     # get the number of contacts total found in the native
     num_native_contacts = sum( [ len( contacts ) for contacts in native_contact_map.values() ] )
 
     # determine the difference in contacts between decoy and native
-    num_decoy_recovered_contacts = 0
+    num_decoy_contacts_recovered = 0
     for decoy_resnum in decoy_contact_map.keys():
         # get the corresponding native residue number, if needed
         if decoy_to_native_res_map is not None:
@@ -2730,22 +2797,81 @@ def calc_Fnat_with_contact_maps( decoy_contact_map, decoy, native_contact_map, n
             else:
                 corresponding_native_resnum = decoy_resnum
 
-            # check to see if this is a contact made in the
+            # check to see if this is a contact made in the native
             try:
                 native_contacts_at_this_decoy_resnum = native_contact_map[ corresponding_native_resnum ]
 
                 # if the contact made in the decoy is the same as the contact made in the native, count it
                 if corresponding_native_contact_resnum in native_contacts_at_this_decoy_resnum:
-                    num_decoy_recovered_contacts += 1
+                    num_decoy_contacts_recovered += 1
+
+                    # since this decoy contact is found in the native, analyze the contact for residue and polarity type
+                    # protein to protein
+                    if decoy.residue( decoy_resnum ).is_protein() and decoy.residue( decoy_contact_resnum ).is_protein():
+                        pro_pro_contacts_recovered += 1
+                    # carbhydrate to carbohydrate
+                    elif decoy.residue( decoy_resnum ).is_carbohydrate() and decoy.residue( decoy_contact_resnum ).is_carbohydrate():
+                        carb_carb_contacts_recovered += 1
+                    # protein to carbohydrate
+                    else:
+                        pro_carb_contacts_recovered += 1
+
+                        # since this is a protein to carbohydrate contact, determine the polarity of the amino acid
+                        if decoy.residue( decoy_resnum ).is_protein():
+                            decoy_pro_resnum = decoy_resnum
+                        else:
+                            decoy_pro_resnum = decoy_contact_resnum
+                        if decoy.residue( decoy_pro_resnum ).is_polar():
+                            carb_to_polar_contacts_recovered += 1
+                        if decoy.residue( decoy_pro_resnum ).is_apolar():
+                            carb_to_nonpolar_contacts_recovered += 1
+                        if decoy.residue( decoy_pro_resnum ).is_aromatic():
+                            carb_to_aromatic_contacts_recovered += 1
 
             # if this residue doesn't make contacts in the native pose, skip it
             except KeyError:
                 pass
             
-    # calculate Fnat
-    Fnat = round( ( float( num_decoy_recovered_contacts ) / float( num_native_contacts ) ) * 100, 2 )
+    # calculate Fnats
+    try:
+        Fnat_tot_contacts_recovered = round( ( float( num_decoy_contacts_recovered ) / float( num_native_contacts ) ) * 100, 2 )
+    except ZeroDivisionError:
+        Fnat_tot_contacts_recovered = "None"
+    try:
+        Fnat_pro_pro_contacts_recovered = round( ( float( pro_pro_contacts_recovered ) / float( native_data_holder.pro_pro_contacts ) ) * 100, 2 )
+    except ZeroDivisionError:
+        Fnat_pro_pro_contacts_recovered = "None"
+    try:
+        Fnat_pro_carb_contacts_recovered = round( ( float( pro_carb_contacts_recovered ) / float( native_data_holder.pro_carb_contacts ) ) * 100, 2 )
+    except ZeroDivisionError:
+        Fnat_pro_carb_contacts_recovered = "None"
+    try:
+        Fnat_carb_carb_contacts_recovered = round( ( float( carb_carb_contacts_recovered ) / float( native_data_holder.carb_carb_contacts ) ) * 100, 2 )
+    except ZeroDivisionError:
+        Fnat_carb_carb_contacts_recovered = "None"
+    try:
+        Fnat_carb_to_polar_contacts_recovered = round( ( float( carb_to_polar_contacts_recovered ) / float( native_data_holder.carb_to_polar_contacts ) ) * 100, 2 )
+    except ZeroDivisionError:
+        Fnat_carb_to_polar_contacts_recovered = "None"
+    try:
+        Fnat_carb_to_nonpolar_contacts_recovered = round( ( float( carb_to_nonpolar_contacts_recovered ) / float( native_data_holder.carb_to_nonpolar_contacts ) ) * 100, 2 )
+    except ZeroDivisionError:
+        Fnat_carb_to_nonpolar_contacts_recovered = "None"
+    try:
+        Fnat_carb_to_aromatic_contacts_recovered = round( ( float( carb_to_aromatic_contacts_recovered ) / float( native_data_holder.carb_to_aromatic_contacts ) ) * 100, 2 )
+    except ZeroDivisionError:
+        Fnat_carb_to_aromatic_contacts_recovered = "None"
 
-    return Fnat
+    # attach data to DataHolder object
+    data_holder.Fnat_tot_contacts_recovered = Fnat_tot_contacts_recovered
+    data_holder.Fnat_pro_pro_contacts_recovered = Fnat_pro_pro_contacts_recovered
+    data_holder.Fnat_pro_carb_contacts_recovered = Fnat_pro_carb_contacts_recovered
+    data_holder.Fnat_carb_carb_contacts_recovered = Fnat_carb_carb_contacts_recovered
+    data_holder.Fnat_carb_to_polar_contacts_recovered = Fnat_carb_to_polar_contacts_recovered
+    data_holder.Fnat_carb_to_nonpolar_contacts_recovered = Fnat_carb_to_nonpolar_contacts_recovered
+    data_holder.Fnat_carb_to_aromatic_contacts_recovered = Fnat_carb_to_aromatic_contacts_recovered
+
+    return data_holder
 
 
 

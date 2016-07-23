@@ -47,7 +47,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     # Rosetta functions I wrote out
     from antibody_functions import calc_interface_sasa, decoy_to_native_res_map, \
         get_contact_map_between_range1_range2, get_contact_map_with_JUMP_NUM, \
-        analyze_contact_map, calc_Fnat_with_contact_maps
+        analyze_contact_map, calc_Fnats_with_contact_maps
     from pose_metrics_util import Fc_glycan_rmsd, Fc_glycan_hbonds, \
         pseudo_interface_energy_3ay4
     
@@ -85,7 +85,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
 
 
     ## pseudo-inferface energy 
-    # ( full protein score - Fc-FcR glycan score [ except the short glycan away from interface ] )
+    # ( full protein score - Fc-FcR main glycan score
     working_pseudo_interface_energy = pseudo_interface_energy_3ay4( working, sf, 
                                                                     native = False, 
                                                                     pmm = None )
@@ -144,40 +144,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
                                                                                                                                      native, 
                                                                                                                                      cutoff = Fc_glycan_to_FcR_glycan_CUTOFF, 
                                                                                                                                      return_more_info = True )
-    #################
 
-
-    # delta Fc-glycan to protein contacts
-    Fc_glycan_to_Fc_protein_Fnat_contacts_recovered = calc_Fnat_with_contact_maps( working_Fc_glycan_to_Fc_protein_contact_map, 
-                                                                                   working, 
-                                                                                   native_Fc_glycan_to_Fc_protein_contact_map, 
-                                                                                   native, 
-                                                                                   decoy_to_native_res_map = decoy_to_native_res_map )
-    delta_Fc_glycan_to_Fc_protein_tot_contacts = working_Fc_glycan_to_Fc_protein_tot_contacts - native_Fc_glycan_to_Fc_protein_tot_contacts
-    metric_data.append( "Fc_glycan_to_Fc_protein_tot_contacts_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
-    metric_data.append( str( working_Fc_glycan_to_Fc_protein_tot_contacts ) )
-    metric_data.append( "delta_Fc_glycan_to_Fc_protein_tot_contacts_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
-    metric_data.append( str( delta_Fc_glycan_to_Fc_protein_tot_contacts ) )
-    metric_data.append( "Fc_glycan_to_Fc_protein_Fnat_contacts_recovered_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
-    metric_data.append( str( Fc_glycan_to_Fc_protein_Fnat_contacts_recovered ) )
-
-
-    # delta Fc-glycan to FcR glycan contacts
-    Fc_glycan_to_FcR_glycan_Fnat_contacts_recovered = calc_Fnat_with_contact_maps( working_Fc_glycan_to_FcR_glycan_contact_map, 
-                                                                                   working, 
-                                                                                   native_Fc_glycan_to_FcR_glycan_contact_map, 
-                                                                                   native, 
-                                                                                   decoy_to_native_res_map = decoy_to_native_res_map )
-    delta_Fc_glycan_to_FcR_glycan_tot_contacts = working_Fc_glycan_to_FcR_glycan_tot_contacts - native_Fc_glycan_to_FcR_glycan_tot_contacts
-    metric_data.append( "Fc_glycan_to_FcR_glycan_tot_contacts_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
-    metric_data.append( str( working_Fc_glycan_to_FcR_glycan_tot_contacts ) )
-    metric_data.append( "delta_Fc_glycan_to_FcR_glycan_tot_contacts_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
-    metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_tot_contacts ) )
-    metric_data.append( "Fc_glycan_to_FcR_glycan_Fnat_contacts_recovered_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
-    metric_data.append( str( Fc_glycan_to_FcR_glycan_Fnat_contacts_recovered ) )
-
-    
-    # delta interface residue contacts - interface between Fc and FcR defined by JUMP_NUM 2
     intf_CUTOFF = 8
     working_intf_contact_map, working_intf_tot_contacts = get_contact_map_with_JUMP_NUM( JUMP_NUM, 
                                                                                          working, 
@@ -187,18 +154,96 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
                                                                                        native, 
                                                                                        cutoff = intf_CUTOFF, 
                                                                                        return_more_info = True )
-    intf_Fnat = calc_Fnat_with_contact_maps( working_intf_contact_map, 
-                                             working, 
-                                             native_intf_contact_map, 
-                                             native, 
-                                             decoy_to_native_res_map = decoy_to_native_res_map )
+
+    #################
+
+    ## analyze the contact maps
+    # Fc glycan to Fc protein contact map analysis
+    working_Fc_glycan_to_Fc_protein_data_holder = analyze_contact_map( working_Fc_glycan_to_Fc_protein_contact_map, working )
+    native_Fc_glycan_to_Fc_protein_data_holder = analyze_contact_map( native_Fc_glycan_to_Fc_protein_contact_map, native )
+
+    delta_Fc_glycan_to_Fc_protein_tot_contacts = working_Fc_glycan_to_Fc_protein_tot_contacts - native_Fc_glycan_to_Fc_protein_tot_contacts
+    delta_Fc_glycan_to_Fc_protein_carb_to_polar_contacts = working_Fc_glycan_to_Fc_protein_data_holder.carb_to_polar_contacts - native_Fc_glycan_to_Fc_protein_data_holder.carb_to_polar_contacts
+    delta_Fc_glycan_to_Fc_protein_carb_to_nonpolar_contacts = working_Fc_glycan_to_Fc_protein_data_holder.carb_to_nonpolar_contacts - native_Fc_glycan_to_Fc_protein_data_holder.carb_to_nonpolar_contacts
+    delta_Fc_glycan_to_Fc_protein_carb_to_aromatic_contacts = working_Fc_glycan_to_Fc_protein_data_holder.carb_to_aromatic_contacts - native_Fc_glycan_to_Fc_protein_data_holder.carb_to_aromatic_contacts
+    delta_Fc_glycan_to_Fc_protein_contact_distance_avg = working_Fc_glycan_to_Fc_protein_data_holder.contact_distance_avg - native_Fc_glycan_to_Fc_protein_data_holder.contact_distance_avg
+    delta_Fc_glycan_to_Fc_protein_contact_distance_max = working_Fc_glycan_to_Fc_protein_data_holder.contact_distance_max - native_Fc_glycan_to_Fc_protein_data_holder.contact_distance_max
+    delta_Fc_glycan_to_Fc_protein_contact_distance_min = working_Fc_glycan_to_Fc_protein_data_holder.contact_distance_min - native_Fc_glycan_to_Fc_protein_data_holder.contact_distance_min
+    metric_data.append( "Fc_glycan_to_Fc_protein_tot_contacts_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_Fc_protein_tot_contacts ) )
+    metric_data.append( "delta_Fc_glycan_to_Fc_protein_tot_contacts_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_Fc_protein_tot_contacts ) )
+    metric_data.append( "Fc_glycan_to_Fc_protein_carb_to_polar_tot_contacts_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_Fc_protein_data_holder.carb_to_polar_contacts ) )
+    metric_data.append( "delta_Fc_glycan_to_Fc_protein_carb_to_polar_tot_contacts_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_Fc_protein_carb_to_polar_contacts ) )
+    metric_data.append( "Fc_glycan_to_Fc_protein_carb_to_nonpolar_tot_contacts_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_Fc_protein_data_holder.carb_to_nonpolar_contacts ) )
+    metric_data.append( "delta_Fc_glycan_to_Fc_protein_carb_to_nonpolar_tot_contacts_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_Fc_protein_carb_to_nonpolar_contacts ) )
+    metric_data.append( "Fc_glycan_to_Fc_protein_carb_to_aromatic_tot_contacts_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_Fc_protein_data_holder.carb_to_aromatic_contacts ) )
+    metric_data.append( "delta_Fc_glycan_to_Fc_protein_carb_to_aromatic_tot_contacts_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_Fc_protein_carb_to_aromatic_contacts ) )
+    metric_data.append( "Fc_glycan_to_Fc_protein_contact_distance_avg_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_Fc_protein_data_holder.contact_distance_avg ) )
+    metric_data.append( "delta_Fc_glycan_to_Fc_protein_contact_distance_avg_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_Fc_protein_contact_distance_avg ) )
+    metric_data.append( "Fc_glycan_to_Fc_protein_contact_distance_max_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_Fc_protein_data_holder.contact_distance_max ) )
+    metric_data.append( "delta_Fc_glycan_to_Fc_protein_contact_distance_max_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_Fc_protein_contact_distance_max ) )
+    metric_data.append( "Fc_glycan_to_Fc_protein_contact_distance_min_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_Fc_protein_data_holder.contact_distance_min ) )
+    metric_data.append( "delta_Fc_glycan_to_Fc_protein_contact_distance_min_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_Fc_protein_contact_distance_min ) )
+
+
+    # Fc glycan to protein Fnat calculations
+    Fc_glycan_to_Fc_protein_Fnats_data_holder = calc_Fnats_with_contact_maps( working_Fc_glycan_to_Fc_protein_contact_map, 
+                                                                              working, 
+                                                                              native_Fc_glycan_to_Fc_protein_contact_map, 
+                                                                              native, 
+                                                                              decoy_to_native_res_map = decoy_to_native_res_map )
+
+    metric_data.append( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( Fc_glycan_to_Fc_protein_Fnats_data_holder.Fnat_tot_contacts_recovered ) )
+    metric_data.append( "Fc_glycan_to_Fc_protein_Fnat_carb_to_polar_contacts_recovered_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( Fc_glycan_to_Fc_protein_Fnats_data_holder.Fnat_carb_to_polar_contacts_recovered ) )
+    metric_data.append( "Fc_glycan_to_Fc_protein_Fnat_carb_to_nonpolar_contacts_recovered_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( Fc_glycan_to_Fc_protein_Fnats_data_holder.Fnat_carb_to_nonpolar_contacts_recovered ) )
+    metric_data.append( "Fc_glycan_to_Fc_protein_Fnat_carb_to_aromatic_contacts_recovered_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
+    metric_data.append( str( Fc_glycan_to_Fc_protein_Fnats_data_holder.Fnat_carb_to_aromatic_contacts_recovered ) )
+
+
+    # Fc-glycan to FcR glycan Fnat calculations
+    Fc_glycan_to_FcR_glycan_Fnats_data_holder = calc_Fnats_with_contact_maps( working_Fc_glycan_to_FcR_glycan_contact_map, 
+                                                                              working, 
+                                                                              native_Fc_glycan_to_FcR_glycan_contact_map, 
+                                                                              native, 
+                                                                              decoy_to_native_res_map = decoy_to_native_res_map )
+    delta_Fc_glycan_to_FcR_glycan_tot_contacts = working_Fc_glycan_to_FcR_glycan_tot_contacts - native_Fc_glycan_to_FcR_glycan_tot_contacts
+    metric_data.append( "Fc_glycan_to_FcR_glycan_tot_contacts_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_FcR_glycan_tot_contacts ) )
+    metric_data.append( "delta_Fc_glycan_to_FcR_glycan_tot_contacts_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_tot_contacts ) )
+    metric_data.append( "Fc_glycan_to_FcR_glycan_Fnat_tot_contacts_recovered_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
+    metric_data.append( str( Fc_glycan_to_FcR_glycan_Fnats_data_holder.Fnat_tot_contacts_recovered ) )
+
+    
+    # interface residue Fnat calculations - interface between Fc and FcR defined by JUMP_NUM 2
+    intf_Fnats_data_holder = calc_Fnats_with_contact_maps( working_intf_contact_map, 
+                                                           working, 
+                                                           native_intf_contact_map, 
+                                                           native, 
+                                                           decoy_to_native_res_map = decoy_to_native_res_map )
     delta_intf_tot_contacts = working_intf_tot_contacts - native_intf_tot_contacts
     metric_data.append( "interface_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
     metric_data.append( str( working_intf_tot_contacts ) )
     metric_data.append( "delta_interface_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
     metric_data.append( str( delta_intf_tot_contacts ) )
-    metric_data.append( "interface_Fnat_contacts_recovered_%sA:" %( str( intf_CUTOFF ) ) )
-    metric_data.append( str( intf_Fnat ) )
+    metric_data.append( "interface_Fnat_tot_contacts_recovered_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( intf_Fnats_data_holder.Fnat_tot_contacts_recovered ) )
     '''
     metric_data.append( "interface_pro_pro_fraction:" )
     metric_data.append( str( working_pro_pro_fraction ) )

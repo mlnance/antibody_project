@@ -139,7 +139,7 @@ def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
 
 def Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_chains, decoy_num, dump_dir ):
     '''
-    Return the glycan RMSD of the two Fc glycans in 3ay4 (may work for other PDBs, but I don't know yet)
+    Return the glycan RMSD contribution of the two Fc glycans in 3ay4 (may work for other PDBs, but I don't know yet)
     :param working: decoy Pose()
     :param native: native Pose()
     :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
@@ -197,7 +197,79 @@ def Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_
     except:
         glycan_rmsd = "nan"
         pass
-    
+
+    # delete the files
+    try:
+        os.popen( "rm %s" %working_filename )
+        os.popen( "rm %s" %native_filename )
+    except:
+        pass
+
+    return glycan_rmsd
+
+
+
+def Fc_glycan_hbonds( working, native, working_Fc_glycan_chains, native_Fc_glycan_chains, decoy_num, dump_dir ):
+    '''
+    Return the number of hbonds the Fc glycan contributes to the pose
+    :param working: decoy Pose()
+    :param native: native Pose()
+    :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
+    :param native_Fc_glycan_chains: list( the chain id's for the native Fc glycan ). Ex = [ 'D', 'E' ]
+    :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
+    :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
+    :return: float( Fc glycan rmsd )
+    '''
+    #################
+    #### IMPORTS ####
+    #################
+
+    # Rosetta functions
+    from rosetta import Pose
+    from toolbox import get_hbonds
+
+    # Rosetta functions I wrote out
+    from antibody_functions import load_pose
+
+    # utility functions
+    import os
+    from util import dump_pdb_by_chain, id_generator
+
+
+
+    # get temporary files to work with
+    id = id_generator()
+    if dump_dir.endswith( '/' ):
+        working_filename = "%s%s_temp_working_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+        native_filename = "%s%s_temp_native_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+    else:
+        working_filename = "%s/%s_temp_working_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+        native_filename = "%s/%s_temp_native_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+
+    # dump out the Fc glycans by their chain id's
+    dump_pdb_by_chain( working_filename, working, working_Fc_glycan_chains, decoy_num, dump_dir = dump_dir )
+    dump_pdb_by_chain( native_filename, native, native_Fc_glycan_chains, decoy_num, dump_dir = dump_dir )
+
+    # load in the Fc glycans
+    temp_working = Pose()
+    try:
+        temp_working.assign( load_pose( working_filename ) )
+    except:
+        pass
+
+    temp_native = Pose()
+    try:
+        temp_native.assign( load_pose( native_filename ) )
+    except:
+        pass
+
+    # calculate the glycan rmsd
+    try:
+        glycan_rmsd = non_peptide_heavy_atom_RMSD( temp_working, temp_native )
+    except:
+        glycan_rmsd = "nan"
+        pass
+
     # delete the files
     try:
         os.popen( "rm %s" %working_filename )

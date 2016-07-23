@@ -216,7 +216,27 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( Fc_glycan_to_Fc_protein_Fnats_data_holder.Fnat_carb_to_aromatic_contacts_recovered ) )
 
 
-    # Fc-glycan to FcR glycan Fnat calculations
+    # Fc glycan to FcR glycan contact map analysis
+    working_Fc_glycan_to_FcR_glycan_data_holder = analyze_contact_map( working_Fc_glycan_to_FcR_glycan_contact_map, working )
+    native_Fc_glycan_to_FcR_glycan_data_holder = analyze_contact_map( native_Fc_glycan_to_FcR_glycan_contact_map, native )
+
+    delta_Fc_glycan_to_FcR_glycan_contact_distance_avg = working_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_avg - native_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_avg
+    delta_Fc_glycan_to_FcR_glycan_contact_distance_max = working_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_max - native_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_max
+    delta_Fc_glycan_to_FcR_glycan_contact_distance_min = working_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_min - native_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_min
+    metric_data.append( "Fc_glycan_to_FcR_glycan_contact_distance_avg_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_avg ) )
+    metric_data.append( "delta_Fc_glycan_to_FcR_glycan_contact_distance_avg_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_contact_distance_avg ) )
+    metric_data.append( "Fc_glycan_to_FcR_glycan_contact_distance_max_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_max ) )
+    metric_data.append( "delta_Fc_glycan_to_FcR_glycan_contact_distance_max_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_contact_distance_max ) )
+    metric_data.append( "Fc_glycan_to_FcR_glycan_contact_distance_min_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
+    metric_data.append( str( working_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_min ) )
+    metric_data.append( "delta_Fc_glycan_to_FcR_glycan_contact_distance_min_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
+    metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_contact_distance_min ) )
+
+    # Fc glycan to FcR glycan Fnat calculations
     Fc_glycan_to_FcR_glycan_Fnats_data_holder = calc_Fnats_with_contact_maps( working_Fc_glycan_to_FcR_glycan_contact_map, 
                                                                               working, 
                                                                               native_Fc_glycan_to_FcR_glycan_contact_map, 
@@ -231,33 +251,81 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( Fc_glycan_to_FcR_glycan_Fnats_data_holder.Fnat_tot_contacts_recovered ) )
 
     
+    # interface residue contact map analysis
+    working_intf_data_holder = analyze_contact_map( working_intf_contact_map, working )
+    native_intf_data_holder = analyze_contact_map( native_intf_contact_map, native )
+
+    delta_intf_tot_contacts = working_intf_tot_contacts - native_intf_tot_contacts
+    delta_intf_pro_pro_contacts = working_intf_data_holder.pro_pro_contacts - native_intf_data_holder.pro_pro_contacts
+    delta_intf_pro_carb_contacts = working_intf_data_holder.pro_carb_contacts - native_intf_data_holder.pro_carb_contacts
+    delta_intf_carb_carb_contacts = working_intf_data_holder.carb_carb_contacts - native_intf_data_holder.carb_carb_contacts
+    delta_intf_carb_to_polar_contacts = working_intf_data_holder.carb_to_polar_contacts - native_intf_data_holder.carb_to_polar_contacts
+    delta_intf_carb_to_nonpolar_contacts = working_intf_data_holder.carb_to_nonpolar_contacts - native_intf_data_holder.carb_to_nonpolar_contacts
+    delta_intf_carb_to_aromatic_contacts = working_intf_data_holder.carb_to_aromatic_contacts - native_intf_data_holder.carb_to_aromatic_contacts
+    delta_intf_contact_distance_avg = working_intf_data_holder.contact_distance_avg - native_intf_data_holder.contact_distance_avg
+    delta_intf_contact_distance_max = working_intf_data_holder.contact_distance_max - native_intf_data_holder.contact_distance_max
+    delta_intf_contact_distance_min = working_intf_data_holder.contact_distance_min - native_intf_data_holder.contact_distance_min
+    metric_data.append( "interface_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( working_intf_tot_contacts ) )
+    metric_data.append( "delta_interface_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( delta_intf_tot_contacts ) )
+    metric_data.append( "intf_pro_pro_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( working_intf_data_holder.pro_pro_contacts ) )
+    metric_data.append( "delta_intf_pro_pro_tot_contacts%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( delta_intf_pro_pro_contacts ) )
+    metric_data.append( "intf_pro_carb_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( working_intf_data_holder.pro_carb_contacts ) )
+    metric_data.append( "delta_intf_pro_carb_tot_contacts%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( delta_intf_pro_carb_contacts ) )
+    metric_data.append( "intf_carb_carb_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( working_intf_data_holder.carb_carb_contacts ) )
+    metric_data.append( "delta_intf_carb_carb_tot_contacts%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( delta_intf_carb_carb_contacts ) )
+    metric_data.append( "intf_carb_to_polar_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( working_intf_data_holder.carb_to_polar_contacts ) )
+    metric_data.append( "delta_intf_carb_to_polar_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( delta_intf_carb_to_polar_contacts ) )
+    metric_data.append( "intf_carb_to_nonpolar_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( working_intf_data_holder.carb_to_nonpolar_contacts ) )
+    metric_data.append( "delta_intf_carb_to_nonpolar_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( delta_intf_carb_to_nonpolar_contacts ) )
+    metric_data.append( "intf_carb_to_aromatic_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( working_intf_data_holder.carb_to_aromatic_contacts ) )
+    metric_data.append( "delta_intf_carb_to_aromatic_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( delta_intf_carb_to_aromatic_contacts ) )
+    metric_data.append( "intf_contact_distance_avg_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( working_intf_data_holder.contact_distance_avg ) )
+    metric_data.append( "delta_intf_contact_distance_avg_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( delta_intf_contact_distance_avg ) )
+    metric_data.append( "intf_contact_distance_max_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( working_intf_data_holder.contact_distance_max ) )
+    metric_data.append( "delta_intf_contact_distance_max_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( delta_intf_contact_distance_max ) )
+    metric_data.append( "intf_contact_distance_min_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( working_intf_data_holder.contact_distance_min ) )
+    metric_data.append( "delta_intf_contact_distance_min_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( delta_intf_contact_distance_min ) )
+    
     # interface residue Fnat calculations - interface between Fc and FcR defined by JUMP_NUM 2
     intf_Fnats_data_holder = calc_Fnats_with_contact_maps( working_intf_contact_map, 
                                                            working, 
                                                            native_intf_contact_map, 
                                                            native, 
                                                            decoy_to_native_res_map = decoy_to_native_res_map )
-    delta_intf_tot_contacts = working_intf_tot_contacts - native_intf_tot_contacts
-    metric_data.append( "interface_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
-    metric_data.append( str( working_intf_tot_contacts ) )
-    metric_data.append( "delta_interface_tot_contacts_%sA:" %( str( intf_CUTOFF ) ) )
-    metric_data.append( str( delta_intf_tot_contacts ) )
     metric_data.append( "interface_Fnat_tot_contacts_recovered_%sA:" %( str( intf_CUTOFF ) ) )
     metric_data.append( str( intf_Fnats_data_holder.Fnat_tot_contacts_recovered ) )
-    '''
-    metric_data.append( "interface_pro_pro_fraction:" )
-    metric_data.append( str( working_pro_pro_fraction ) )
-    metric_data.append( "delta_interface_pro_pro_fraction:" )
-    metric_data.append( str( delta_pro_pro_fraction ) )
-    metric_data.append( "interface_pro_carb_fraction:" )
-    metric_data.append( str( working_pro_carb_fraction ) )
-    metric_data.append( "delta_interface_pro_carb_fraction:" )
-    metric_data.append( str( delta_pro_carb_fraction ) )
-    metric_data.append( "interface_carb_carb_fraction:" )
-    metric_data.append( str( working_carb_carb_fraction ) )
-    metric_data.append( "delta_interface_carb_carb_fraction:" )
-    metric_data.append( str( delta_carb_carb_fraction ) )
-    '''
+    metric_data.append( "interface_Fnat_pro_pro_contacts_recovered_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( intf_Fnats_data_holder.Fnat_pro_pro_contacts_recovered ) )
+    metric_data.append( "interface_Fnat_pro_carb_contacts_recovered_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( intf_Fnats_data_holder.Fnat_pro_carb_contacts_recovered ) )
+    metric_data.append( "interface_Fnat_carb_carb_contacts_recovered_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( intf_Fnats_data_holder.Fnat_carb_carb_contacts_recovered ) )
+    metric_data.append( "interface_Fnat_carb_to_polar_contacts_recovered_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( intf_Fnats_data_holder.Fnat_carb_to_polar_contacts_recovered ) )
+    metric_data.append( "interface_Fnat_carb_to_nonpolar_contacts_recovered_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( intf_Fnats_data_holder.Fnat_carb_to_nonpolar_contacts_recovered ) )
+    metric_data.append( "interface_Fnat_carb_to_aromatic_contacts_recovered_%sA:" %( str( intf_CUTOFF ) ) )
+    metric_data.append( str( intf_Fnats_data_holder.Fnat_carb_to_aromatic_contacts_recovered ) )
 
 
     # delta interface sasa

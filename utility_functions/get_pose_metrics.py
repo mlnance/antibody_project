@@ -51,7 +51,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
         get_contact_map_between_range1_range2, get_contact_map_with_JUMP_NUM, \
         analyze_contact_map, calc_Fnats_with_contact_maps
     from pose_metrics_util import Fc_glycan_rmsd, Fc_glycan_hbonds, \
-        pseudo_interface_energy_3ay4
+        pseudo_interface_energy_3ay4, check_GlcNAc_to_Phe_contacts
     
     
     
@@ -128,6 +128,13 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_Fc_glycan_hbonds_contributed ) )
     metric_data.append( "delta_Fc_glycan_hbonds_contributed:" )
     metric_data.append( str( delta_Fc_glycan_hbonds_contributed ) )
+
+
+    # check if the GlcNAc above the Gal residue contacts the Phe residue within 5 Angstroms ( 4.68 contact distance in native )
+    GlcNAc_to_Phe_cutoff = 5
+    working_GlcNAc_to_Phe_contacts = check_GlcNAc_to_Phe_contacts( working, GlcNAc_to_Phe_cutoff )
+    metric_data.append( "GlcNAc_to_its_Phe_contacts_%sA:" %( str( GlcNAc_to_Phe_cutoff ) ) )
+    metric_data.append( str( working_GlcNAc_to_Phe_contacts ) )
 
 
     #################

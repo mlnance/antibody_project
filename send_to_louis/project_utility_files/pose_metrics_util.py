@@ -282,3 +282,33 @@ def Fc_glycan_hbonds( working, working_Fc_glycan_chains, decoy_num, dump_dir ):
         pass
 
     return Fc_glycan_hbonds
+
+
+
+def check_GlcNAc_to_Phe_contacts( working, cutoff ):
+    """
+    Returns 0 if GlcNAc-2 (on Gal) contacts Phe-243, 1 if at least one does, and 2 if they both do within the given <cutoff>
+    :param working: Pose
+    :param cutoff: float( the distance cutoff to count this as a contact )
+    return int( 0, 1, or 2 )
+    """
+    from antibody_functions import calc_distance
+
+    # get the residue objects by using pre-determined Pose numbers
+    GlcNAc_side_A = working.residue( 609 )
+    Phe_side_A = working.residue( 15 )
+    GlcNAc_side_B = working.residue( 617 )
+    Phe_side_B = working.residue( 230 )
+
+    # get the distances in question
+    dist_A = calc_distance( list( GlcNAc_side_A.nbr_atom_xyz() ), list( Phe_side_A.nbr_atom_xyz() ) )
+    dist_B = calc_distance( list( GlcNAc_side_B.nbr_atom_xyz() ), list( Phe_side_B.nbr_atom_xyz() ) )
+
+    # check to see if they are within the cutoff distance
+    num_Phe_GlcNAc_contacts = 0
+    if dist_A <= cutoff:
+        num_Phe_GlcNAc_contacts += 1
+    if dist_B <= cutoff:
+        num_Phe_GlcNAc_contacts += 1
+
+    return num_Phe_GlcNAc_contacts

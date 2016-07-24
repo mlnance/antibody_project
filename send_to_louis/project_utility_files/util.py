@@ -182,7 +182,7 @@ def dump_pdb_by_chain( filename, pose, chains, decoy_num, dump_dir = None ):
         print "You didn't pass me a list or a string for the <chains> argument. Exiting."
         sys.exit()
 
-    # make a random, 4-character suffix for the dump files because Jazz gets sassy?
+    # make a random, 6-character suffix for the dump files because Jazz gets sassy?
     id = id_generator()
 
     # dump the given pose to get access to its PDB lines

@@ -25,6 +25,7 @@ from rosetta import init, pose_from_file, \
 from rosetta.utility import vector1_bool
 from rosetta.numeric import xyzVector_Real
 from rosetta.core.chemical import VariantType
+from rosetta.core.chemical.rings import RingConformer
 from rosetta.core.pose import remove_variant_type_from_pose_residue
 from rosetta.core.scoring.constraints import AtomPairConstraint, AngleConstraint
 from toolbox import mutate_residue, get_hbonds
@@ -241,6 +242,48 @@ class hold_chain_and_res_designations_3ay4:
         self.decoy_Fc_glycan_chains = decoy_Fc_glycan_chains
         self.decoy_FcR_glycan_chains = decoy_FcR_glycan_chains
         """
+
+
+
+def align_sugar_virtual_atoms( in_pose ):
+    """
+    Set the xyz coordinates of each sugar virtual atom to the corresponding atom it is shadowing
+    :param in_pose: Pose
+    :return: Pose
+    """
+    # copy the input pose
+    pose = in_pose.clone()
+
+    # for each residue in the pose
+    for res in pose:
+        # if it is a sugar
+        if res.is_carbohydrate():
+            # if this sugar resiude has shadow atoms (they all should)
+            if res.type().has_shadow_atoms():
+                # for each atom in the sugar
+                for atom_num in range(1, res.natoms()+1 ):
+                    # get the corresponding real atom it is following
+                    atom_being_shadowed = res.type().atom_being_shadowed( atom_num )
+                    # if this atom is being shadowed
+                    if atom_being_shadowed != 0:
+                        # get the AtomID object for the virtual atom
+                        atom_id = AtomID( atom_num, res.seqpos() )
+                        # set the xyz of the virtual atom to that of the real atom being shadowed
+                        pose.set_xyz( atom_id, res.atom( atom_being_shadowed ).xyz() )
+
+                        # update the residue conformation in a hacky way
+                        pose.conformation().residue( res.seqpos() )
+
+    # check that it worked
+    for res in pose:
+        if res.is_carbohydrate():
+            if res.type().has_shadow_atoms():
+                for atom_num in range(1, res.natoms()+1 ):
+                    atom_being_shadowed = res.type().atom_being_shadowed( atom_num )
+                    if atom_being_shadowed != 0:
+                        print list(res.atom(atom_num).xyz()) == list(res.atom(atom_being_shadowed).xyz()), atom_num, atom_being_shadowed, res.seqpos()
+
+    return pose
 
 
 

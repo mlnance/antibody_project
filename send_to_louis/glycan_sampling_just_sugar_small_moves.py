@@ -484,9 +484,9 @@ while not jd.job_complete:
             testing_pose.set_psi( decoy_res_num, native_pose.psi( native_res_num ) )
             testing_pose.set_omega( decoy_res_num, native_pose.omega( native_res_num ) )
 
-    pmm.apply( testing_pose )
-    if input_args.verbose:
-        print "score after Fc glycan native reset:", main_sf( testing_pose )
+        pmm.apply( testing_pose )
+        if input_args.verbose:
+            print "score after Fc glycan native reset:", main_sf( testing_pose )
 
 
 

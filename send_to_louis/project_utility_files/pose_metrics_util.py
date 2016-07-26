@@ -169,11 +169,11 @@ def Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_
     # get temporary files to work with
     id = id_generator()
     if dump_dir.endswith( '/' ):
-        working_filename = "%s%s_temp_working_%s.pdb" %( dump_dir, id, str( decoy_num ) )
-        native_filename = "%s%s_temp_native_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+        working_filename = "%s%s_temp_working_glyc_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+        native_filename = "%s%s_temp_native_glyc_%s.pdb" %( dump_dir, id, str( decoy_num ) )
     else:
-        working_filename = "%s/%s_temp_working_%s.pdb" %( dump_dir, id, str( decoy_num ) )
-        native_filename = "%s/%s_temp_native_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+        working_filename = "%s/%s_temp_working_glyc_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+        native_filename = "%s/%s_temp_native_glyc_%s.pdb" %( dump_dir, id, str( decoy_num ) )
 
     # dump out the Fc glycans by their chain id's
     dump_pdb_by_chain( working_filename, working, working_Fc_glycan_chains, decoy_num, dump_dir = dump_dir )
@@ -208,7 +208,12 @@ def Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_
 
     # get the hbonds of the working Fc glycans, if desired
     if return_hbonds_too:
+        from rosetta import get_fa_scorefxn
         from toolbox import get_hbonds
+
+        # score the Pose so that its hbond energies gets updated
+        sf = get_fa_scorefxn()
+        sf( temp_working )
 
         working_Fc_glycan_hbonds = get_hbonds( temp_working ).nhbonds()
         return glycan_rmsd, working_Fc_glycan_hbonds
@@ -234,7 +239,7 @@ def Fc_glycan_hbonds( working, working_Fc_glycan_chains, decoy_num, dump_dir ):
     #################
 
     # Rosetta functions
-    from rosetta import Pose
+    from rosetta import Pose, get_fa_scorefxn
     from toolbox import get_hbonds
 
     # Rosetta functions I wrote out
@@ -249,9 +254,9 @@ def Fc_glycan_hbonds( working, working_Fc_glycan_chains, decoy_num, dump_dir ):
     # get temporary files to work with
     id = id_generator()
     if dump_dir.endswith( '/' ):
-        working_filename = "%s%s_hbtemp_working_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+        working_filename = "%s%s_hbtemp_working_no_glyc_%s.pdb" %( dump_dir, id, str( decoy_num ) )
     else:
-        working_filename = "%s/%s_hbtemp_working_%s.pdb" %( dump_dir, id, str( decoy_num ) )
+        working_filename = "%s/%s_hbtemp_working_no_glyc_%s.pdb" %( dump_dir, id, str( decoy_num ) )
 
     # get the chain id's of everything discluding the passed Fc glycan chain id's
     working_pose_chains = []
@@ -270,9 +275,15 @@ def Fc_glycan_hbonds( working, working_Fc_glycan_chains, decoy_num, dump_dir ):
     except:
         pass
 
+    # score the Poses so their hbond energies get updated
+    sf = get_fa_scorefxn()
+    sf( working )
+    sf( temp_working )
+
     # get the number of hbonds in the Pose without the Fc glycans
     with_Fc_glycan_hbonds = get_hbonds( working )
     no_Fc_glycan_hbonds = get_hbonds( temp_working )
+    print with_Fc_glycan_hbonds.nhbonds(), no_Fc_glycan_hbonds.nhbonds()
     Fc_glycan_hbonds = with_Fc_glycan_hbonds.nhbonds() - no_Fc_glycan_hbonds.nhbonds()
 
     # delete the files
@@ -285,20 +296,27 @@ def Fc_glycan_hbonds( working, working_Fc_glycan_chains, decoy_num, dump_dir ):
 
 
 
-def check_GlcNAc_to_Phe_contacts( working, cutoff ):
+def check_GlcNAc_to_Phe_contacts( working, cutoff, native = False ):
     """
     Returns 0 if GlcNAc-2 (on Gal) contacts Phe-243, 1 if at least one does, and 2 if they both do within the given <cutoff>
     :param working: Pose
     :param cutoff: float( the distance cutoff to count this as a contact )
+    :param native: bool( is this the native Pose? Or a glycosylated decoy of 3ay4? ) Default = False
     return int( 0, 1, or 2 )
     """
     from antibody_functions import calc_distance
 
     # get the residue objects by using pre-determined Pose numbers
-    GlcNAc_side_A = working.residue( 609 )
-    Phe_side_A = working.residue( 15 )
-    GlcNAc_side_B = working.residue( 617 )
-    Phe_side_B = working.residue( 230 )
+    if not native:
+        GlcNAc_side_A = working.residue( 609 )
+        Phe_side_A = working.residue( 15 )
+        GlcNAc_side_B = working.residue( 617 )
+        Phe_side_B = working.residue( 230 )
+    else:
+        GlcNAc_side_A = working.residue( 222 )
+        Phe_side_A = working.residue( 15 )
+        GlcNAc_side_B = working.residue( 446 )
+        Phe_side_B = working.residue( 238 )
 
     # get the distances in question
     dist_A = calc_distance( list( GlcNAc_side_A.nbr_atom_xyz() ), list( Phe_side_A.nbr_atom_xyz() ) )

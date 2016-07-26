@@ -48,19 +48,29 @@ input_args = parser.parse_args()
 #### CHECK ALL INPUTS ####
 ##########################
 
-# check for conflicting input_args
+import sys
+
+## check for conflicting input_args
+# constraint and native constraint files
 if input_args.constraint_file is not None:
     # make sure a native constraint file was passed too
     if input_args.native_constraint_file is None:
         print "\nI need a constraint file for the native pose too to accurately calculate delta_total_score. Exiting."
         sys.exit()
+
+# native and random reset
 if input_args.native_reset is True and input_args.random_reset is True:
-    print "\nYou told me you want a native reset and a random reset, yet those arguments are conflicting. Check your input. Exiting"
+    print "\nYou told me you want a native reset and a random reset, yet those arguments are conflicting. Check your input. Exiting."
+    sys.exit()
+
+# check that num_sugar_small_move_trials is 10 or more if ramp_sf is set to True
+if input_args.ramp_sf == True and input_args.num_sugar_small_move_trials < 10:
+    print "\nIf you are ramping the ScoreFunction then you need to do 10 or more sugar_small_move_trials for the math to work. Exiting."
     sys.exit()
 
 
 # check for validity of file paths
-import os, sys, random
+import os
 
 # check the utility directory
 if not os.path.isdir( input_args.utility_dir ):
@@ -70,14 +80,6 @@ if not os.path.isdir( input_args.utility_dir ):
 # add the utility directory to the system path for loading of modules
 sys.path.append( input_args.utility_dir )
 
-
-# collect and create necessary directories for use in metric calculations
-working_dir = os.getcwd() + '/'
-metrics_dump_dir = working_dir + "sugar_small_dir_%s" %str( input_args.num_sugar_small_move_trials )
-try:
-    os.mkdir( metrics_dump_dir )
-except:
-    pass
 
 ## check the validity of the passed arguments
 # make sure the structure_dir passed is valid
@@ -108,6 +110,14 @@ if not os.path.isdir( lowest_E_structs_dir ):
     except:
         pass
 
+# collect and create necessary directories for use in metric calculations
+working_dir = os.getcwd() + '/'
+metrics_dump_dir = working_dir + "sugar_small_dir_%s" %str( input_args.num_sugar_small_move_trials )
+try:
+    os.mkdir( metrics_dump_dir )
+except:
+    pass
+
 
 
 #################
@@ -133,6 +143,7 @@ from antibody_functions import initialize_rosetta, \
 # utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
 from get_pose_metrics import main as get_pose_metrics
+import random
 
 
 

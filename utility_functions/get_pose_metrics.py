@@ -7,9 +7,9 @@ __author__ = "morganlnance"
 #### DATA FROM LOW E NATIVE 3AY4 ####
 #####################################
 
-native_with_Fc_glycan_hbonds = 445  # low E native
-native_no_Fc_glycan_hbonds = 423    # low E native without Fc glycan, ie. the starting working pose
-native_just_Fc_glycan_hbonds = 7    # low E native only Fc glycan
+native_with_Fc_glycan_hbonds = 465  # low E native after scoring
+native_no_Fc_glycan_hbonds = 443    # low E native without Fc glycan after scoring, ie. the starting working pose
+native_just_Fc_glycan_hbonds = 7    # low E native only Fc glycan after scoring
 native_Fc_glycan_hbonds_contributed = native_with_Fc_glycan_hbonds - native_no_Fc_glycan_hbonds - native_just_Fc_glycan_hbonds
 
 
@@ -84,7 +84,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     Fc_glycan_rmsd, working_just_Fc_glycan_hbonds = Fc_glycan_rmsd( working, native, working_info.Fc_glycan_chains, native_info.native_Fc_glycan_chains, decoy_num, dump_dir, return_hbonds_too = True )
     metric_data.append( "Fc_glycan_rmsd:" )
     metric_data.append( str( Fc_glycan_rmsd ) )
-
+    
 
     ## pseudo-inferface energy 
     # ( full protein score - Fc-FcR main glycan score
@@ -99,7 +99,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_pseudo_interface_energy ) )
     metric_data.append( "delta_pseudo_interface_energy:" )
     metric_data.append( str( delta_pseudo_interface_energy ) )
-
+    
 
     # delta standard interaction energy ( across an interface defined by a JUMP number )
     working_interaction_energy = calc_interaction_energy( working, sf, Vector1( [ JUMP_NUM ] ) )
@@ -109,7 +109,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_interaction_energy ) )
     metric_data.append( "delta_std_interface_interaction_energy:" )
     metric_data.append( str( delta_interaction_energy ) )
-
+    
 
     # delta hbonds in total complex
     working_hbonds = get_hbonds( working )
@@ -119,7 +119,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_hbonds.nhbonds() ) )
     metric_data.append( "delta_hbonds:" )
     metric_data.append( str( delta_hbonds ) )
-
+    
 
     # delta hbonds contributed by Fc glycan
     working_Fc_glycan_hbonds_contributed = Fc_glycan_hbonds( working, working_info.Fc_glycan_chains, decoy_num, dump_dir ) - working_just_Fc_glycan_hbonds
@@ -128,14 +128,14 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_Fc_glycan_hbonds_contributed ) )
     metric_data.append( "delta_Fc_glycan_hbonds_contributed:" )
     metric_data.append( str( delta_Fc_glycan_hbonds_contributed ) )
-
+    
 
     # check if the GlcNAc above the Gal residue contacts the Phe residue within 5 Angstroms ( 4.68 contact distance in native )
     GlcNAc_to_Phe_cutoff = 5
     working_GlcNAc_to_Phe_contacts = check_GlcNAc_to_Phe_contacts( working, GlcNAc_to_Phe_cutoff )
     metric_data.append( "GlcNAc_to_its_Phe_contacts_%sA:" %( str( GlcNAc_to_Phe_cutoff ) ) )
     metric_data.append( str( working_GlcNAc_to_Phe_contacts ) )
-
+    
 
     #################
     # get the contact maps for the working and the native to use for other metric calculations
@@ -230,7 +230,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_Fc_glycan_to_Fc_protein_data_holder.contact_distance_min ) )
     metric_data.append( "delta_Fc_glycan_to_Fc_protein_contact_distance_min_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
     metric_data.append( str( delta_Fc_glycan_to_Fc_protein_contact_distance_min ) )
-
+    
 
     # Fc glycan to FcR glycan contact map analysis
     working_Fc_glycan_to_FcR_glycan_data_holder = analyze_contact_map( working_Fc_glycan_to_FcR_glycan_contact_map, working )
@@ -253,7 +253,6 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_tot_contacts ) )
     metric_data.append( "Fc_glycan_to_FcR_glycan_Fnat_tot_contacts_recovered_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
     metric_data.append( str( Fc_glycan_to_FcR_glycan_Fnats_data_holder.Fnat_tot_contacts_recovered ) )
-
     #metric_data.append( "Fc_glycan_to_FcR_glycan_contact_distance_avg_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
     #metric_data.append( str( working_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_avg ) )
     #metric_data.append( "delta_Fc_glycan_to_FcR_glycan_contact_distance_avg_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
@@ -266,7 +265,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_min ) )
     metric_data.append( "delta_Fc_glycan_to_FcR_glycan_contact_distance_min_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
     metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_contact_distance_min ) )
-
+    
     
     # interface residue contact map analysis
     working_intf_data_holder = analyze_contact_map( working_intf_contact_map, working )
@@ -343,7 +342,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     #metric_data.append( str( working_intf_data_holder.contact_distance_min ) )
     #metric_data.append( "delta_intf_contact_distance_min_%sA:" %( str( intf_CUTOFF ) ) )
     #metric_data.append( str( delta_intf_contact_distance_min ) )
-    
+        
 
     # delta interface sasa
     working_interface_sasa = calc_interface_sasa( working, JUMP_NUM )
@@ -353,7 +352,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_interface_sasa ) )
     metric_data.append( "delta_interface_sasa:" )
     metric_data.append( str( delta_interface_sasa ) )
-
+    
     
     # MonteCarlo acceptance rate - if relevant
     if MC_acceptance_rate is not None:

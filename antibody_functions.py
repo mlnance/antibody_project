@@ -2847,7 +2847,7 @@ def calc_Fnats_with_contact_maps( decoy_contact_map, decoy, native_contact_map, 
                 corresponding_native_contact_resnum = decoy_to_native_res_map[ decoy_contact_resnum ]
             # else the numbers are the same between the decoy and the native
             else:
-                corresponding_native_contact_resnum = decoy_resnum
+                corresponding_native_contact_resnum = decoy_contact_resnum
 
             # check to see if this is a contact made in the native
             try:

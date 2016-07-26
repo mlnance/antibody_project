@@ -123,7 +123,6 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
 
     # delta hbonds contributed by Fc glycan
     working_Fc_glycan_hbonds_contributed = Fc_glycan_hbonds( working, working_info.native_Fc_glycan_chains, decoy_num, dump_dir ) - working_just_Fc_glycan_hbonds
-    print working_just_Fc_glycan_hbonds
     delta_Fc_glycan_hbonds_contributed = working_Fc_glycan_hbonds_contributed - native_Fc_glycan_hbonds_contributed
     metric_data.append( "Fc_glycan_hbonds_contributed:" )
     metric_data.append( str( working_Fc_glycan_hbonds_contributed ) )

@@ -283,7 +283,6 @@ def Fc_glycan_hbonds( working, working_Fc_glycan_chains, decoy_num, dump_dir ):
     # get the number of hbonds in the Pose without the Fc glycans
     with_Fc_glycan_hbonds = get_hbonds( working )
     no_Fc_glycan_hbonds = get_hbonds( temp_working )
-    print with_Fc_glycan_hbonds.nhbonds(), no_Fc_glycan_hbonds.nhbonds()
     Fc_glycan_hbonds = with_Fc_glycan_hbonds.nhbonds() - no_Fc_glycan_hbonds.nhbonds()
 
     # delete the files

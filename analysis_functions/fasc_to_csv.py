@@ -41,6 +41,7 @@ from util import read_fasc_file, get_score_term_from_fasc_data_dict
 # metrics data gets held in these lists in a dictionary
 filename = []
 total_score = []
+delta_total_score = []
 rmsd = []
 fa_atr = []
 fa_rep = []
@@ -62,6 +63,7 @@ yhh_planarity = []
 ref = []
 sugar_bb = []
 glycan_rmsd = []
+Fc_glycan_rmsd = []
 pseudo_interface_energy = []
 delta_pseudo_interface_energy = []
 std_interface_interaction_energy = []
@@ -71,6 +73,7 @@ delta_hbonds = []
 glycan_to_protein_contacts = []
 delta_glycan_to_protein_contacts = []
 Fc_glycan_to_protein_Fnat_recovered_contacts = []
+Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A = []
 Fc_glycan_to_FcR_glycan_contacts = []
 delta_Fc_glycan_to_FcR_glycan_contacts = []
 Fc_glycan_to_FcR_glycan_Fnat_recovered_contacts = []
@@ -80,7 +83,7 @@ interface_sasa = []
 delta_interface_sasa = []
 MonteCarlo_acceptance_rate = []
 
-metrics = { "filename":filename, "total_score":total_score, "rmsd":rmsd, "fa_atr":fa_atr, "fa_rep":fa_rep, "fa_sol":fa_sol, "fa_intra_rep":fa_intra_rep, "fa_elec":fa_elec, "pro_close":pro_close, "hbond_sr_bb":hbond_sr_bb, "hbond_lr_bb":hbond_lr_bb, "hbond_bb_sc":hbond_bb_sc, "hbond_sc":hbond_sc, "dslf_fa13":dslf_fa13, "atom_pair_constraint":atom_pair_constraint, "rama":rama, "omega":omega, "fa_dun":fa_dun, "p_aa_pp":p_aa_pp, "yhh_planarity":yhh_planarity, "ref":ref, "sugar_bb":sugar_bb, "glycan_rmsd":glycan_rmsd, "pseudo_interface_energy":pseudo_interface_energy, "delta_pseudo_interface_energy":delta_pseudo_interface_energy, "std_interface_interaction_energy":std_interface_interaction_energy, "delta_std_interface_interaction_energy":delta_std_interface_interaction_energy, "hbonds":hbonds, "delta_hbonds":delta_hbonds, "glycan_to_protein_contacts":glycan_to_protein_contacts, "delta_glycan_to_protein_contacts":delta_glycan_to_protein_contacts, "Fc_glycan_to_protein_Fnat_recovered_contacts":Fc_glycan_to_protein_Fnat_recovered_contacts, "Fc_glycan_to_FcR_glycan_contacts":Fc_glycan_to_FcR_glycan_contacts, "delta_Fc_glycan_to_FcR_glycan_contacts":delta_Fc_glycan_to_FcR_glycan_contacts, "Fc_glycan_to_FcR_glycan_Fnat_recovered_contacts":Fc_glycan_to_FcR_glycan_Fnat_recovered_contacts, "interface_res_contacts_8_A":interface_res_contacts_8_A, "delta_interface_res_contacts_8_A":delta_interface_res_contacts_8_A, "interface_sasa":interface_sasa, "delta_interface_sasa":delta_interface_sasa, "MonteCarlo_acceptance_rate":MonteCarlo_acceptance_rate }
+metrics = { "filename":filename, "total_score":total_score, "delta_total_score":delta_total_score, "rmsd":rmsd, "fa_atr":fa_atr, "fa_rep":fa_rep, "fa_sol":fa_sol, "fa_intra_rep":fa_intra_rep, "fa_elec":fa_elec, "pro_close":pro_close, "hbond_sr_bb":hbond_sr_bb, "hbond_lr_bb":hbond_lr_bb, "hbond_bb_sc":hbond_bb_sc, "hbond_sc":hbond_sc, "dslf_fa13":dslf_fa13, "atom_pair_constraint":atom_pair_constraint, "rama":rama, "omega":omega, "fa_dun":fa_dun, "p_aa_pp":p_aa_pp, "yhh_planarity":yhh_planarity, "ref":ref, "sugar_bb":sugar_bb, "glycan_rmsd":glycan_rmsd, "Fc_glycan_rmsd":Fc_glycan_rmsd, "pseudo_interface_energy":pseudo_interface_energy, "delta_pseudo_interface_energy":delta_pseudo_interface_energy, "std_interface_interaction_energy":std_interface_interaction_energy, "delta_std_interface_interaction_energy":delta_std_interface_interaction_energy, "hbonds":hbonds, "delta_hbonds":delta_hbonds, "glycan_to_protein_contacts":glycan_to_protein_contacts, "delta_glycan_to_protein_contacts":delta_glycan_to_protein_contacts, "Fc_glycan_to_protein_Fnat_recovered_contacts":Fc_glycan_to_protein_Fnat_recovered_contacts, "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A":Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A, "Fc_glycan_to_FcR_glycan_contacts":Fc_glycan_to_FcR_glycan_contacts, "delta_Fc_glycan_to_FcR_glycan_contacts":delta_Fc_glycan_to_FcR_glycan_contacts, "Fc_glycan_to_FcR_glycan_Fnat_recovered_contacts":Fc_glycan_to_FcR_glycan_Fnat_recovered_contacts, "interface_res_contacts_8_A":interface_res_contacts_8_A, "delta_interface_res_contacts_8_A":delta_interface_res_contacts_8_A, "interface_sasa":interface_sasa, "delta_interface_sasa":delta_interface_sasa, "MonteCarlo_acceptance_rate":MonteCarlo_acceptance_rate }
 
 
 
@@ -101,18 +104,20 @@ for metric_name in metrics:
 
 # loop over each decoy and pull out desired data
 used_metric_names = []
+unused_metric_names = []
 for decoy in fasc_data_dict.keys():
     metrics[ "filename" ].append( decoy )
 
     decoy_metrics = fasc_data_dict[ decoy ]
     for metric_name in metrics.keys():
-        try:
-            if metric_name is not "filename":
-                metrics[ metric_name ].append( decoy_metrics[ metric_name ] )
-            if metric_name not in used_metric_names:
-                used_metric_names.append( metric_name )
-        except:
-            pass
+        if metric_name not in unused_metric_names:
+            try:
+                if metric_name is not "filename":
+                    metrics[ metric_name ].append( decoy_metrics[ metric_name ] )
+                if metric_name not in used_metric_names:
+                    used_metric_names.append( metric_name )
+            except:
+                unused_metric_names.append( metric_name )
 
 # check out the passed result filename for .csv extension
 dump_filename = input_args.resulting_filename

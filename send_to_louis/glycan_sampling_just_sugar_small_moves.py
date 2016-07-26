@@ -71,13 +71,9 @@ if not os.path.isdir( input_args.utility_dir ):
 sys.path.append( input_args.utility_dir )
 
 
-## collect and create necessary directories for use in metric calculations
-# use a unique id as suffix to metric dir as often many instances are run at the same time
-from util import id_generator
-
+# collect and create necessary directories for use in metric calculations
 working_dir = os.getcwd() + '/'
-metrics_dir_id = str( id_generator() )
-metrics_dump_dir = working_dir + "sugar_small_%s_dir_%s" %( str( input_args.num_sugar_small_move_trials ), metrics_dir_id )
+metrics_dump_dir = working_dir + "sugar_small_dir_%s" %str( input_args.num_sugar_small_move_trials )
 try:
     os.mkdir( metrics_dump_dir )
 except:

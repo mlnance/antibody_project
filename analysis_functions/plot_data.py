@@ -46,12 +46,12 @@ random_reset_tight_Gal_constraints_am3_5_mpt_data = random_reset_tight_Gal_const
 
 fig = plt.figure(figsize=(30, 15))
 sub1 = plt.subplot(2, 2, 1)
-sub1.scatter( random_reset_tight_Gal_constraints_am3_5_mpt_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], random_reset_tight_Gal_constraints_am3_5_mpt_data[ "delta_pseudo_interface_energy" ] )
+sub1.scatter( random_reset_tight_Gal_constraints_am3_5_mpt_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], random_reset_tight_Gal_constraints_am3_5_mpt_data[ "pseudo_interface_energy" ] )
 #sub1.scatter( random_reset_tight_Gal_constraints_am3_5_mpt_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], random_reset_tight_Gal_constraints_am3_5_mpt_data[ "atom_pair_constraint" ] )
 sub1.set_xlabel( "Fc_glycan_to_protein_Fnat_recovered_contacts" )
 sub1.set_xlim( [ 80, 20 ] )
-sub1.set_ylabel( "delta_pseudo_interface_energy" )
-sub1.set_ylim( [ 10, 30 ] )
+sub1.set_ylabel( "pseudo_interface_energy" )
+sub1.set_ylim( [ -10, 0 ] )
 #sub1.set_ylim( [ -7, 0 ] )
 
 sub2 = plt.subplot(2, 2, 2)
@@ -62,11 +62,11 @@ sub2.set_ylabel( "total_score" )
 sub2.set_ylim( [ -430, -380 ] )
 
 sub3 = plt.subplot(2, 2, 3)
-sub3.scatter( random_reset_tight_Gal_constraints_am3_5_mpt_data[ "glycan_rmsd" ], random_reset_tight_Gal_constraints_am3_5_mpt_data[ "delta_pseudo_interface_energy" ] )
+sub3.scatter( random_reset_tight_Gal_constraints_am3_5_mpt_data[ "glycan_rmsd" ], random_reset_tight_Gal_constraints_am3_5_mpt_data[ "pseudo_interface_energy" ] )
 #sub3.scatter( random_reset_tight_Gal_constraints_am3_5_mpt_data[ "glycan_rmsd" ], random_reset_tight_Gal_constraints_am3_5_mpt_data[ "atom_pair_constraint" ] )
 sub3.set_xlabel( "glycan_rmsd" )
 sub3.set_xlim( [ 0, 10 ] )
-sub3.set_ylabel( "delta_pseudo_interface_energy" )
+sub3.set_ylabel( "pseudo_interface_energy" )
 sub3.set_ylim( [ 10, 30 ] )
 
 sub4 = plt.subplot(2, 2, 4)
@@ -97,12 +97,12 @@ random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data = 
 
 fig = plt.figure(figsize=(30, 15))
 sub1 = plt.subplot(2, 2, 1)
-sub1.scatter( random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "delta_pseudo_interface_energy" ] )
+sub1.scatter( random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "pseudo_interface_energy" ] )
 #sub1.scatter( random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "atom_pair_constraint" ] )
 sub1.set_xlabel( "Fc_glycan_to_protein_Fnat_recovered_contacts" )
 sub1.set_xlim( [ 90, 20 ] )
-sub1.set_ylabel( "delta_pseudo_interface_energy" )
-sub1.set_ylim( [ 15, 45 ] )
+sub1.set_ylabel( "pseudo_interface_energy" )
+sub1.set_ylim( [ -30, 0 ] )
 #sub1.set_ylim( [ 0, 20 ] )
 
 sub2 = plt.subplot(2, 2, 2)
@@ -113,12 +113,12 @@ sub2.set_ylabel( "total_score" )
 sub2.set_ylim( [ -1165, -1000 ] )
 
 sub3 = plt.subplot(2, 2, 3)
-sub3.scatter( random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "glycan_rmsd" ], random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "delta_pseudo_interface_energy" ] )
+sub3.scatter( random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "glycan_rmsd" ], random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "pseudo_interface_energy" ] )
 #sub3.scatter( random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "glycan_rmsd" ], random_reset_tight_Gal_and_its_GlcNAc_constraints_am3_triple_hbond_5_mpt_data[ "atom_pair_constraint" ] )
 sub3.set_xlabel( "glycan_rmsd" )
 sub3.set_xlim( [ 0, 10 ] )
-sub3.set_ylabel( "delta_pseudo_interface_energy" )
-sub3.set_ylim( [ 15, 45 ] )
+sub3.set_ylabel( "pseudo_interface_energy" )
+sub3.set_ylim( [ -30, 0 ] )
 #sub3.set_ylim( [ 0, 20 ] )
 
 sub4 = plt.subplot(2, 2, 4)
@@ -131,6 +131,128 @@ sub4.set_ylim( [ -1165, -1000 ] )
 # save the plot
 plt.tight_layout()
 plot_title = "3ay4-type glycosylation comparing SugarSmallMoves-50 with random reset, ramp, tight Gal and its GlcNAc constraints, angle multiplier 3, 5 moves per turn"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+
+
+###########
+#### 3 ####
+###########
+## native reset, tight Gal and its GlcNAc, am1, 5 mpt, with ramp
+path_to_native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metric_data/sugar_small_moves_50_native_reset_tight_Gal_and_its_GlcNAc_am1_5_mpt_with_ramp.csv"
+native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data = pd.read_csv( path_to_native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp )
+native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data = native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data.sort( "glycan_rmsd" )
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+sub1.scatter( native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "pseudo_interface_energy" ] )
+#sub1.scatter( native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "atom_pair_constraint" ] )
+sub1.set_xlabel( "Fc_glycan_to_protein_Fnat_recovered_contacts" )
+sub1.set_xlim( [ 100, 80 ] )
+sub1.set_ylabel( "pseudo_interface_energy" )
+sub1.set_ylim( [ -30, 0 ] )
+#sub1.set_ylim( [ 0, 20 ] )
+
+sub2 = plt.subplot(2, 2, 2)
+sub2.scatter( native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "Fc_glycan_to_protein_Fnat_recovered_contacts" ], native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "total_score" ] )
+sub2.set_xlabel( "Fc_glycan_to_protein_Fnat_recovered_contacts" )
+sub2.set_xlim( [ 100, 80 ] )
+sub2.set_ylabel( "total_score" )
+sub2.set_ylim( [ -465, -440 ] )
+
+sub3 = plt.subplot(2, 2, 3)
+sub3.scatter( native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "glycan_rmsd" ], native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "pseudo_interface_energy" ] )
+#sub3.scatter( native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "glycan_rmsd" ], native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "atom_pair_constraint" ] )
+sub3.set_xlabel( "glycan_rmsd" )
+sub3.set_xlim( [ 1.7, 2.4 ] )
+sub3.set_ylabel( "pseudo_interface_energy" )
+sub3.set_ylim( [ -30, 0 ] )
+#sub3.set_ylim( [ 0, 20 ] )
+
+sub4 = plt.subplot(2, 2, 4)
+sub4.scatter( native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "glycan_rmsd" ], native_reset_tight_Gal_and_its_GlcNAc_constraints_am1_5_mpt_with_ramp_data[ "total_score" ] )
+sub4.set_xlabel( "glycan_rmsd" )
+sub4.set_xlim( [ 1.7, 2.4 ] )
+sub4.set_ylabel( "total_score" )
+sub4.set_ylim( [ -465, -440 ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4-type glycosylation comparing SugarSmallMoves-50 with native reset, ramp, tight Gal and its GlcNAc constraints, angle multiplier 1, 5 moves per turn"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+
+
+##############################################
+#### SugarSmallMoves-50 data using native ####
+##############################################
+
+###########
+#### 1 ####
+###########
+# random reset, Gal and its GlcNAc tight, triple hbond sf, am 3, 5 moves per trial, with ramp data
+path_to_using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am3_5_mpt = "/Users/Research/pyrosetta_dir/metric_data/using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am3_5_mpt.csv"
+using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am3_5_mpt_data = pd.read_csv( path_to_using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am3_5_mpt )
+using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am3_5_mpt_data = using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am3_5_mpt_data.sort( "Fc_glycan_rmsd" )
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+sub1.scatter( using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am3_5_mpt_data[ "Fc_glycan_rmsd" ], using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am3_5_mpt_data[ "delta_pseudo_interface_energy" ] )
+sub1.set_xlabel( "Fc_glycan_rmsd" )
+sub1.set_xlim( [ 0, 10 ] )
+sub1.set_ylabel( "delta_pseudo_interface_energy" )
+sub1.set_ylim( [ 0, 50 ] )
+
+sub2 = plt.subplot(2, 2, 2)
+sub2.scatter( using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am3_5_mpt_data[ "Fc_glycan_rmsd" ], using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am3_5_mpt_data[ "delta_total_score" ] )
+sub2.set_xlabel( "Fc_glycan_rmsd" )
+sub2.set_xlim( [ 0, 10 ] )
+sub2.set_ylabel( "delta_total_score" )
+sub2.set_ylim( [ 0, 200 ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4-type glycosylation comparing SugarSmallMoves-50 on the native Pose with ramp, tight Gal and its GlcNAc constraints, triple hbond sf weights, angle multiplier 3, and 5 moves per turn"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+###########
+#### 2 ####
+###########
+# random reset, Gal and its GlcNAc tight, triple hbond sf, am 1, 5 moves per trial, with ramp data
+path_to_using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am1_5_mpt = "/Users/Research/pyrosetta_dir/metric_data/using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am1_5_mpt.csv"
+using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am1_5_mpt_data = pd.read_csv( path_to_using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am1_5_mpt )
+using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am1_5_mpt_data = using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am1_5_mpt_data.sort( "Fc_glycan_rmsd" )
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+sub1.scatter( using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am1_5_mpt_data[ "Fc_glycan_rmsd" ], using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am1_5_mpt_data[ "delta_pseudo_interface_energy" ] )
+sub1.set_xlabel( "Fc_glycan_rmsd" )
+sub1.set_xlim( [ 0, 10 ] )
+sub1.set_ylabel( "delta_pseudo_interface_energy" )
+sub1.set_ylim( [ 0, 50 ] )
+
+sub2 = plt.subplot(2, 2, 2)
+sub2.scatter( using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am1_5_mpt_data[ "Fc_glycan_rmsd" ], using_native_random_reset_Gal_and_its_GlcNAc_tight_triple_hbond_am1_5_mpt_data[ "delta_total_score" ] )
+sub2.set_xlabel( "Fc_glycan_rmsd" )
+sub2.set_xlim( [ 0, 10 ] )
+sub2.set_ylabel( "delta_total_score" )
+sub2.set_ylim( [ 0, 200 ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4-type glycosylation comparing SugarSmallMoves-50 on the native Pose with ramp, tight Gal and its GlcNAc constraints, triple hbond sf weights, angle multiplier 1, and 5 moves per turn"
 plt.suptitle( plot_title, fontsize = 30 )
 plt.subplots_adjust(top=0.87)
 plt.savefig( plot_title, dpi=120, transparent=True )

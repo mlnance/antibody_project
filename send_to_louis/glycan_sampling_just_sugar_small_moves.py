@@ -639,26 +639,15 @@ while not jd.job_complete:
             pmm.apply( testing_pose )
         num_mc_checks += 1
 
-        # calculate and print out the MC acceptance rate every 3 trials
+        # print out the MC acceptance rate every 3 trials
+        mc_acceptance = round( ( float( num_ssm_accept ) / float( num_mc_checks ) * 100 ), 2 )
         if ii % 3 == 0:
-            mc_acceptance = round( ( float( num_ssm_accept ) / float( num_mc_checks ) * 100 ), 2 )
             if input_args.verbose:
                 print "Moves made so far:", num_mc_checks, 
                 print "  Moves accepted:", num_ssm_accept, 
                 print "  Acceptance rate:", mc_acceptance
 
     # collect additional metric data
-    metrics = get_pose_metrics( testing_pose, 
-                                testing_pose_info, 
-                                native_pose, 
-                                native_pose_info, 
-                                main_sf, 
-                                2, # Fc-FcR interface JUMP_NUM
-                                jd.current_num, 
-                                metrics_dump_dir, 
-                                input_args.utility_dir, 
-                                MC_acceptance_rate = mc_acceptance,
-                                native_constraint_file = input_args.native_constraint_file )
     try:
         metrics = get_pose_metrics( testing_pose, 
                                     testing_pose_info, 

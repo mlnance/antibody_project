@@ -60,8 +60,6 @@ except ImportError:
 # TODO-add visualization options to each relevant function using this global PyMOL_Mover
 pmm = PyMOL_Mover()
 
-# global data path  --  SPECIFIC TO MORGAN'S COMPUTER  --  CHANGE ON YOURS
-data_dir = "/Users/Research/pyrosetta_git_repo/mutational_data/"
 
 # global variables
 AA_list = [ 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y' ]
@@ -77,18 +75,26 @@ kT = 0.8  # used in MonteCarlo and small and shear movers
 # native
 native_Fc_chain_A_nums = range( 1, 215 + 1 )
 native_Fc_glycan_A_nums = range( 216, 223 + 1 )
+native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
 native_Fc_chain_B_nums = range( 224, 341 + 1 )
 native_Fc_glycan_B_nums = range( 440, 447 + 1 )
+native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
 native_FcR_protein_nums = range( 448, 607 + 1 )
 native_FcR_main_glycan_nums = range( 608, 615 + 1 )
 native_FcR_three_mer_nums = range( 616, 618 + 1 )
 native_FcR_glycan_nums = range( 608, 618 + 1 )
+native_branch_points = [ 69, 218, 292, 442, 478, 595, 608, 610 ]
+native_Fc_glycan_branch_point_nums = [ 218, 442 ]
+native_Fc_glycan_branch_point_nums_with_ASN = [ 69, 218, 292, 442 ]
 native_Fc_protein_nums = []
 native_Fc_protein_nums.extend( native_Fc_chain_A_nums )
 native_Fc_protein_nums.extend( native_Fc_chain_B_nums )
 native_Fc_glycan_nums = []
 native_Fc_glycan_nums.extend( native_Fc_glycan_A_nums )
 native_Fc_glycan_nums.extend( native_Fc_glycan_B_nums )
+native_Fc_glycan_nums_except_core_GlcNAc = []
+native_Fc_glycan_nums_except_core_GlcNAc.extend( native_Fc_glycan_A_nums_except_core_GlcNAc )
+native_Fc_glycan_nums_except_core_GlcNAc.extend( native_Fc_glycan_B_nums_except_core_GlcNAc )
 native_order_nums = range( 1, 618 + 1 )
 native_Fc_protein_chains = [ 'A', 'B' ]
 native_FcR_protein_chains = [ 'C' ]
@@ -215,6 +221,9 @@ class hold_chain_and_res_designations_3ay4:
         self.native_FcR_glycan_nums = native_FcR_glycan_nums
         self.native_Fc_protein_nums = native_Fc_protein_nums
         self.native_Fc_glycan_nums = native_Fc_glycan_nums
+        self.native_Fc_glycan_nums_except_core_GlcNAc = native_Fc_glycan_nums_except_core_GlcNAc
+        self.native_Fc_glycan_branch_point_nums = native_Fc_glycan_branch_point_nums
+        self.native_Fc_glycan_branch_point_nums_with_ASN = native_Fc_glycan_branch_point_nums_with_ASN
         self.native_order_nums = native_order_nums
         self.native_Fc_protein_chains = native_Fc_protein_chains
         self.native_FcR_protein_chains = native_FcR_protein_chains
@@ -2838,7 +2847,7 @@ def calc_Fnats_with_contact_maps( decoy_contact_map, decoy, native_contact_map, 
                 corresponding_native_contact_resnum = decoy_to_native_res_map[ decoy_contact_resnum ]
             # else the numbers are the same between the decoy and the native
             else:
-                corresponding_native_resnum = decoy_resnum
+                corresponding_native_contact_resnum = decoy_resnum
 
             # check to see if this is a contact made in the native
             try:

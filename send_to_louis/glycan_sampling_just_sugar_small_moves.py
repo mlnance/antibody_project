@@ -55,7 +55,12 @@ import sys
 if input_args.constraint_file is not None:
     # make sure a native constraint file was passed too
     if input_args.native_constraint_file is None:
-        print "\nI need a constraint file for the native pose too to accurately calculate delta_total_score. Exiting."
+        print "\nI need a constraint file for the native Pose too to accurately calculate delta_total_score. Exiting."
+        sys.exit()
+if input_args.native_constraint_file is not None:
+    # make sure a constraint file was passed too for the decoy
+    if input_args.constraint_file is None:
+        print "\nI need a constraint file for the decoy Pose too if you are passing one for the native. Exiting."
         sys.exit()
 
 # native and random reset
@@ -69,13 +74,29 @@ if input_args.ramp_sf == True and input_args.num_sugar_small_move_trials < 10:
     sys.exit()
 
 
-# check for validity of file paths
+## check for validity of file paths
 import os
 
 # check the utility directory
 if not os.path.isdir( input_args.utility_dir ):
-    print "Your argument", input_args.utility_dir, "for utility_directory is not a directory, exiting"
+    print "\nYour argument '%s' for utility_directory is not a directory. Exiting." %input_args.utility_dir
     sys.exit()
+
+# check the scorefxn_file and (native_)constraint_files
+if input_args.scorefxn_file is not None:
+   if not os.path.isfile( input_args.scorefxn_file ):
+       print "\nYour argument '%s' for scorefxn_file is not a file. Exiting." %input_args.scorefxn_file
+       sys.exit()
+if input_args.constraint_file is not None:
+    if not os.path.isfile( input_args.constraint_file ):
+       print "\nYour argument '%s' for constraint_file is not a file. Exiting." %input_args.constraint_file
+       sys.exit()
+if input_args.native_constraint_file is not None:
+    if not os.path.isfile( input_args.native_constraint_file ):
+       print "\nYour argument '%s' for native_constraint_file is not a file. Exiting." %input_args.native_constraint_file
+       sys.exit()
+        
+
 
 # add the utility directory to the system path for loading of modules
 sys.path.append( input_args.utility_dir )
@@ -89,8 +110,7 @@ if os.path.isdir( input_args.structure_dir ):
     else:
         main_structure_dir = input_args.structure_dir
 else:
-    print
-    print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
+    print "\nIt seems that the directory you gave me '%s' does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
     sys.exit()
 
 # make the needed directories if needed
@@ -346,8 +366,7 @@ while not jd.job_complete:
     testing_pose.pdb_info().name( "decoy_num_" + str( cur_decoy_num ) )
     pmm.apply( testing_pose )
     if input_args.verbose:
-        print
-        print "score of glycosylated pose:", main_sf( testing_pose )
+        print "\nscore of glycosylated pose:", main_sf( testing_pose )
 
 
 
@@ -441,7 +460,7 @@ while not jd.job_complete:
         try:
             constraint_setter.apply( testing_pose )
         except:
-            print "It appears there is something wrong with your constraint file. Please check your input."
+            print "\nIt appears there is something wrong with your constraint file. Please check your input."
             sys.exit()
 
 

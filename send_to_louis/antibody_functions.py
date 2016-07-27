@@ -95,6 +95,7 @@ native_Fc_glycan_nums.extend( native_Fc_glycan_B_nums )
 native_Fc_glycan_nums_except_core_GlcNAc = []
 native_Fc_glycan_nums_except_core_GlcNAc.extend( native_Fc_glycan_A_nums_except_core_GlcNAc )
 native_Fc_glycan_nums_except_core_GlcNAc.extend( native_Fc_glycan_B_nums_except_core_GlcNAc )
+native_Fc_glycan_branch_nums = [ 221, 222, 223, 445, 446, 447 ]
 native_order_nums = range( 1, 618 + 1 )
 native_Fc_protein_chains = [ 'A', 'B' ]
 native_FcR_protein_chains = [ 'C' ]
@@ -222,6 +223,7 @@ class hold_chain_and_res_designations_3ay4:
         self.native_Fc_protein_nums = native_Fc_protein_nums
         self.native_Fc_glycan_nums = native_Fc_glycan_nums
         self.native_Fc_glycan_nums_except_core_GlcNAc = native_Fc_glycan_nums_except_core_GlcNAc
+        self.native_Fc_glycan_branch_nums = native_Fc_glycan_branch_nums
         self.native_Fc_glycan_branch_point_nums = native_Fc_glycan_branch_point_nums
         self.native_Fc_glycan_branch_point_nums_with_ASN = native_Fc_glycan_branch_point_nums_with_ASN
         self.native_order_nums = native_order_nums

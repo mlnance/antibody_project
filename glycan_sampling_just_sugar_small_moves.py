@@ -546,8 +546,9 @@ while not jd.job_complete:
 
     # make backbone and chi MoveMap for the Fc sugars
     min_mm = MoveMap()
-    for res_num in Fc_glycan_nums: min_mm.set_bb( res_num, True )
-    for res_num in Fc_glycan_nums: min_mm.set_chi( res_num, True )
+    for res_num in Fc_glycan_nums: 
+        min_mm.set_bb( res_num, True )
+        min_mm.set_chi( res_num, True )
 
     # add in the Fc glycan branch points discluding the ASN connection
     for branch_point in Fc_glycan_branch_point_nums: min_mm.set_branches( branch_point, True )

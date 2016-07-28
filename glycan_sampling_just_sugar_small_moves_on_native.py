@@ -281,7 +281,8 @@ while not jd.job_complete:
     if input_args.random_reset:
         # this is for each residue of the Fc glycan except the core GlcNAc
         # changing omega on residues that don't have an omega torsion doesn't affect them
-        for res_num in testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc:
+        #for res_num in testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc:
+        for res_num in testing_pose_info.native_Fc_glycan_branch_nums:
             # pick three random integers between 0 and 360 - ie. -180 to 180
             reset_phi_num = float( random_range( 0, 360 ) )
             reset_psi_num = float( random_range( 0, 360 ) )
@@ -304,9 +305,9 @@ while not jd.job_complete:
 
     # make backbone and chi MoveMap for the Fc sugars
     min_mm = MoveMap()
-    for res_num in testing_pose_info.native_Fc_glycan_nums: 
+    #for res_num in testing_pose_info.native_Fc_glycan_nums: 
+    for res_num in testing_pose_info.native_Fc_glycan_branch_nums: 
         min_mm.set_bb( res_num, True )
-    for res_num in testing_pose_info.native_Fc_glycan_nums: 
         min_mm.set_chi( res_num, True )
 
     # add in the Fc glycan branch points discluding the ASN connection
@@ -324,7 +325,8 @@ while not jd.job_complete:
     pack_rotamers_mover = make_pack_rotamers_mover( main_sf, testing_pose, 
                                                     apply_sf_sugar_constraints = False,
                                                     pack_branch_points = True, 
-                                                    residue_range = testing_pose_info.native_Fc_glycan_nums, 
+                                                    #residue_range = testing_pose_info.native_Fc_glycan_nums, 
+                                                    residue_range = testing_pose_info.native_Fc_glycan_branch_nums, 
                                                     use_pack_radius = True, 
                                                     pack_radius = 20 )
 
@@ -397,7 +399,8 @@ while not jd.job_complete:
         # for as many moves per trial as desired
         for jj in range( input_args.num_moves_per_trial ):
             # pick a random Fc glycan residue except the core GlcNAc
-            res_num = random.choice( testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc )
+            #res_num = random.choice( testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc )
+            res_num = random.choice( testing_pose_info.native_Fc_glycan_branch_nums )
 
             # apply the SugarSmallMover and change phi, psi, and omega
             testing_pose.assign( SugarSmallMover( res_num, testing_pose, angle_max, 
@@ -426,9 +429,9 @@ while not jd.job_complete:
             pmm.apply( testing_pose )
         num_mc_checks += 1
 
-        # print out the MC acceptance rate every 3 trials
+        # print out the MC acceptance rate every 3 trials and on the last trial
         mc_acceptance = round( ( float( num_ssm_accept ) / float( num_mc_checks ) * 100 ), 2 )
-        if ii % 3 == 0:
+        if ii % 3 == 0 or ii == input_args.num_sugar_small_move_trials:
             if input_args.verbose:
                 print "Moves made so far:", num_mc_checks, 
                 print "  Moves accepted:", num_ssm_accept, 

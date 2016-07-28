@@ -565,29 +565,78 @@ def get_residue_score_by_scoretype( sf, input_scoretype, seq_pos, pose, weight =
 
 
 
-def get_res_with_biggest_score_diff( decoy, native, in_sf, decoy_to_native_res_map = None ):
+def get_scoretype_with_biggest_score_diff( in_decoy, in_native, in_sf ):
     """
-    Iterate through <decoy> residues and compare each total energy to the corresponding residue in <native>. If the residues don't match up exactly in order from 1 - n, give me a <decoy_to_native_res_map> dictionary.
-    If multiple residues have the same highest delta score, then only the last residue seen with this value will be stored
-    :param decoy: Pose 1
-    :param native: Pose 2
+    Determine which ScoreType in <in_sf> corresponds to the largest total score difference between <in_decoy> and <in_native>.
+    :param in_decoy: Pose 1
+    :param in_native: Pose 2
     :param in_sf: ScoreFunction
-    :param decoy_to_native_res_map: dict( if you're comparing a decoy to a native that has a different numbering scheme, pass in a dictionary that maps each resnum from the decoy to its corresponding resnum in the native )
-    :return: obj( holds residue <decoy> number and score, <native> number and score, delta total score, corresponding ScoreType, delta ScoreType score )
+    :return: obj( holds ScoreType name and the delta total score of that ScoreType )
     """
     # make clones of decoy, native, and sf
-    decoy = decoy.clone()
-    native = native.clone()
+    decoy = in_decoy.clone()
+    native = in_native.clone()
     sf = in_sf.clone()
 
     # score the poses to gain access to the energies object
     sf( decoy )
     sf( native )
 
-    # holders for the highest delta score and corresponding residue numbers
-    highest_delta_score = None
-    highest_delta_score_decoy_num = None
-    highest_delta_score_native_num = None
+    # holders for the biggest delta score and ScoreType
+    biggest_delta_score_by_scoretype = None
+    biggest_delta_score_type = None
+
+    # use the energies object to determine which ScoreType gives the biggest difference
+    for score_type in sf.get_nonzero_weighted_scoretypes():
+        # get the total scores by ScoreType
+        decoy_score_by_scoretype = decoy.energies().total_energies().get( score_type )
+        native_score_by_scoretype = native.energies().total_energies().get( score_type )
+        delta_score_by_scoretype = decoy_score_by_scoretype - native_score_by_scoretype
+
+        # update the prelimary data holders
+        if biggest_delta_score_by_scoretype is None:
+            # if this holder is None, then the other one is well, so update them all with the first residue
+            biggest_delta_score_by_scoretype = delta_score_by_scoretype
+            biggest_delta_score_scoretype = score_type
+        # otherwise, if data has been found, check to see if the new score is higher and update the holders
+        else:
+            if delta_score_by_scoretype > biggest_delta_score_by_scoretype:
+                biggest_delta_score_by_scoretype = delta_score_by_scoretype
+                biggest_delta_score_scoretype = score_type
+
+    # make an object to hold relevant data
+    data = DataHolder()
+    data.biggest_delta_score_by_scoretype = biggest_delta_score_by_scoretype
+    data.score_type = biggest_delta_score_scoretype
+    data.str_score_type = str( biggest_delta_score_scoretype )
+
+    return data
+
+
+
+def get_res_with_biggest_score_diff( in_decoy, in_native, in_sf, decoy_to_native_res_map = None ):
+    """
+    Iterate through <in_decoy> residues and compare each total energy to the corresponding residue in <in_native>. If the residues don't match up exactly in order from 1 - n, give me a <decoy_to_native_res_map> dictionary.
+    If multiple residues have the same biggest delta score, then only the last residue seen with this value will be stored
+    :param in_decoy: Pose 1
+    :param in_native: Pose 2
+    :param in_sf: ScoreFunction
+    :param decoy_to_native_res_map: dict( if you're comparing a decoy to a native that has a different numbering scheme, pass in a dictionary that maps each resnum from the decoy to its corresponding resnum in the native )
+    :return: obj( holds residue <in_decoy> number and score, <in_native> number and score, delta total score, corresponding ScoreType, delta ScoreType score )
+    """
+    # make clones of decoy, native, and sf
+    decoy = in_decoy.clone()
+    native = in_native.clone()
+    sf = in_sf.clone()
+
+    # score the poses to gain access to the energies object
+    sf( decoy )
+    sf( native )
+
+    # holders for the biggest delta score and corresponding residue numbers
+    biggest_delta_score = None
+    biggest_delta_score_decoy_num = None
+    biggest_delta_score_native_num = None
 
     # iterate through each residue in decoy and compare its total score to the corresponding residue found in native
     for decoy_num in range( 1, decoy.n_residue() + 1 ):
@@ -603,48 +652,49 @@ def get_res_with_biggest_score_diff( decoy, native, in_sf, decoy_to_native_res_m
         delta_score = decoy_score - native_score
 
         # update the prelimary data holders
-        if highest_delta_score is None:
+        if biggest_delta_score is None:
             # if this holder is None, then the other two are as well, so update them all with the first residue
-            highest_delta_score = delta_score
-            highest_delta_score_decoy_num = decoy_num
-            highest_delta_score_native_num = native_num
+            biggest_delta_score = delta_score
+            biggest_delta_score_decoy_num = decoy_num
+            biggest_delta_score_native_num = native_num
         # otherwise, if data has been found, check to see if the new score is higher and update the holders
         else:
-            if delta_score > highest_delta_score:
-                highest_delta_score = delta_score
-                highest_delta_score_decoy_num = decoy_num
-                highest_delta_score_native_num = native_num
+            if delta_score > biggest_delta_score:
+                biggest_delta_score = delta_score
+                biggest_delta_score_decoy_num = decoy_num
+                biggest_delta_score_native_num = native_num
 
     # make holders for the info related to the specific ScoreType
-    highest_delta_score_by_scoretype = None
-    highest_delta_score_scoretype = None
+    biggest_delta_score_by_scoretype = None
+    biggest_delta_score_scoretype = None
 
-    # using the decoy and native residue numbers with the highest delta total score, find the corresponding highest ScoreType
+    # using the decoy and native residue numbers with the biggest delta total score, find the corresponding biggest ScoreType
     for score_type in sf.get_nonzero_weighted_scoretypes():
         # get the residue scores by ScoreType
-        decoy_score_by_scoretype = decoy.energies().residue_total_energies( highest_delta_score_decoy_num ).get( score_type )
-        native_score_by_scoretype = native.energies().residue_total_energies( highest_delta_score_native_num ).get( score_type )
+        decoy_score_by_scoretype = decoy.energies().residue_total_energies( biggest_delta_score_decoy_num ).get( score_type )
+        native_score_by_scoretype = native.energies().residue_total_energies( biggest_delta_score_native_num ).get( score_type )
         delta_score_by_scoretype = decoy_score_by_scoretype - native_score_by_scoretype
 
         # update the prelimary data holders
-        if highest_delta_score_by_scoretype is None:
+        if biggest_delta_score_by_scoretype is None:
             # if this holder is None, then the other one is well, so update them all with the first residue
-            highest_delta_score_by_scoretype = delta_score_by_scoretype
-            highest_delta_score_scoretype = score_type
+            biggest_delta_score_by_scoretype = delta_score_by_scoretype
+            biggest_delta_score_scoretype = score_type
         # otherwise, if data has been found, check to see if the new score is higher and update the holders
         else:
-            if delta_score_by_scoretype > highest_delta_score_by_scoretype:
-                highest_delta_score_by_scoretype = delta_score_by_scoretype
-                highest_delta_score_scoretype = score_type
+            if delta_score_by_scoretype > biggest_delta_score_by_scoretype:
+                biggest_delta_score_by_scoretype = delta_score_by_scoretype
+                biggest_delta_score_scoretype = score_type
                 
     # make an object to hold relevant data
     data = DataHolder()
-    data.highest_delta_score = highest_delta_score
-    data.decoy_num = highest_delta_score_decoy_num
-    data.native_num = highest_delta_score_native_num
-    data.highest_delta_score_by_scoretype = highest_delta_score_by_scoretype
-    data.score_type = highest_delta_score_scoretype
-    data.str_score_type = str( highest_delta_score_scoretype )
+    data.biggest_delta_score = biggest_delta_score
+    data.decoy_num = biggest_delta_score_decoy_num
+    data.native_num = biggest_delta_score_native_num
+    data.native_res_info = native.pdb_info().pose2pdb( biggest_delta_score_native_num ).strip()
+    data.biggest_delta_score_by_scoretype = biggest_delta_score_by_scoretype
+    data.score_type = biggest_delta_score_scoretype
+    data.str_score_type = str( biggest_delta_score_scoretype )
 
     return data
 

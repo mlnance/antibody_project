@@ -2764,6 +2764,13 @@ def get_contact_map_between_range1_range2( range1, range2, pose, cutoff = CUTOFF
     if verbose:
         print "Getting the residue contact map for the Pose"
 
+    # if possible, sort the two passed ranges
+    try:
+        range1.sort()
+        range2.sort()
+    except:
+        pass
+
     # holds the resulting contact map
     contact_map = {}
 
@@ -3020,7 +3027,7 @@ def calc_Fnats_with_contact_maps( decoy_contact_map, decoy, native_contact_map, 
             # if this residue doesn't make contacts in the native pose, skip it
             except KeyError:
                 pass
-            
+
     # calculate Fnats
     try:
         Fnat_tot_contacts_recovered = round( ( float( num_decoy_contacts_recovered ) / float( num_native_contacts ) ) * 100, 2 )
@@ -3061,6 +3068,56 @@ def calc_Fnats_with_contact_maps( decoy_contact_map, decoy, native_contact_map, 
     data_holder.Fnat_carb_to_aromatic_contacts_recovered = Fnat_carb_to_aromatic_contacts_recovered
 
     return data_holder
+
+
+
+def find_missing_native_contacts( decoy_contact_map, native_contact_map, native_to_decoy_res_map = None ):
+    """
+    Determine which contacts in the native are not found in the decoy
+    :param decoy_contact_map: dict( key = residue num in decoy, value = list of residue nums within a cutoff distance )
+    :param native_contact_map: dict( key = residue num in native, value = list of residue nums within a cutoff distance )
+    :param decoy_to_native_res_map: dict( decoy numbering of contacts that are not made in decoy but found in native )
+    """
+    # determine the difference in contacts between decoy and native
+    num_native_contacts_lost = 0
+    native_contacts_lost_res_map = {}
+
+    for native_resnum in native_contact_map.keys():
+        # get the corresponding decoy residue number, if needed
+        if native_to_decoy_res_map is not None:
+            corresponding_decoy_resnum = native_to_decoy_res_map[ native_resnum ]
+        # else the numbers are the same between the decoy and the native
+        else:
+            corresponding_decoy_resnum = native_resnum
+
+        # for each contact this residue makes within native
+        for native_contact_resnum in native_contact_map[ native_resnum ]:
+            # get the corresponding decoy residue number for the contact, if needed
+            if native_to_decoy_res_map is not None:
+                corresponding_decoy_contact_resnum = native_to_decoy_res_map[ native_contact_resnum ]
+            # else the numbers are the same between the decoy and the native
+            else:
+                corresponding_decoy_contact_resnum = native_contact_resnum
+
+            # check to see if this is a contact made in the decoy
+            try:
+                decoy_contacts_at_this_native_resnum = decoy_contact_map[ corresponding_decoy_resnum ]
+
+                # if the contact made in the native is lost in the decoy, count it
+                if corresponding_decoy_contact_resnum not in decoy_contacts_at_this_native_resnum:
+                    num_native_contacts_lost += 1
+
+                    # add the lost contacts to the residue map
+                    if corresponding_decoy_resnum in native_contacts_lost_res_map.keys():
+                        if corresponding_decoy_contact_resnum not in native_contacts_lost_res_map[ corresponding_decoy_resnum ]:
+                            native_contacts_lost_res_map[ corresponding_decoy_resnum ].append( corresponding_decoy_contact_resnum )
+                    else:
+                        native_contacts_lost_res_map[ corresponding_decoy_resnum ] = []
+                        native_contacts_lost_res_map[ corresponding_decoy_resnum ].append( corresponding_decoy_contact_resnum )
+            except:
+                pass
+
+    return native_contacts_lost_res_map, num_native_contacts_lost
 
 
 

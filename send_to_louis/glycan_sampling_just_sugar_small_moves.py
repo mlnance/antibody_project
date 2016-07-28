@@ -666,9 +666,9 @@ while not jd.job_complete:
             pmm.apply( testing_pose )
         num_mc_checks += 1
 
-        # print out the MC acceptance rate every 3 trials
+        # print out the MC acceptance rate every 3 trials and on the last trial
         mc_acceptance = round( ( float( num_ssm_accept ) / float( num_mc_checks ) * 100 ), 2 )
-        if ii % 3 == 0:
+        if ii % 3 == 0 or ii == input_args.num_sugar_small_move_trials:
             if input_args.verbose:
                 print "Moves made so far:", num_mc_checks, 
                 print "  Moves accepted:", num_ssm_accept, 

@@ -18,6 +18,7 @@ parser.add_argument("native_pdb_file", type=str, help="the filename of the nativ
 parser.add_argument("structure_directory", type=str, help="where do you want your decoys to be dumped? Each PDB will have its own directory there")
 parser.add_argument("utility_directory", type=str, help="where do the utility files live? Give me the directory.")
 parser.add_argument("base_nstruct", type=int, help="how many decoy structures do you want to create to get a base native structure?")
+parser.add_argument("--scorefxn_file", default=None, type=str, help="/path/to/the .sf scorefxn space-delimited file that tells me which scoring weights beyond the norm you want to use")
 input_args = parser.parse_args()
 
 
@@ -72,28 +73,24 @@ except:
     pass
 
 
-# relay information to user
-print
-print "Native PDB filename:\t\t", input_args.native_pdb_file.split( '/' )[-1]
-print "Main structure directory:\t", main_structure_dir
-print "Base structures directory:\t", base_structs_dir
-print "Lowest E structures directory:\t", lowest_E_structs_dir
-print
-
-
 
 ################################
 #### INITIAL PROTOCOL SETUP ####
 ################################
 
 # good to go, import needed functions
-from antibody_functions import load_pose, \
-    initialize_rosetta, apply_sugar_constraints_to_sf, \
-    make_pack_rotamers_mover 
-from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
-from get_pose_metrics import main as get_pose_metrics
 from rosetta import Pose, get_fa_scorefxn, PyJobDistributor, \
     PyMOL_Mover, MoveMap, MinMover
+from rosetta.core.scoring import score_type_from_name
+
+from antibody_functions import load_pose, \
+    initialize_rosetta, apply_sugar_constraints_to_sf, \
+    make_pack_rotamers_mover, make_fa_scorefxn_from_file, \
+    hold_chain_and_res_designations_3ay4
+
+from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
+from get_pose_metrics_on_native import main as get_pose_metrics_on_native
+
 
 # initialize Rosetta ( comes from antibody_functions )
 initialize_rosetta()
@@ -115,14 +112,46 @@ native_pose = Pose()
 native_pose.assign( load_pose( orig_pdb_filename_full_path ) )
 native_pose.pdb_info().name( "native" )
 
-# make the necessary score function
-sf = get_fa_scorefxn()
-sf = apply_sugar_constraints_to_sf( sf, native_pose )
+# automatically populates chain and residue information into holder for native 3ay4
+native_pose_info = hold_chain_and_res_designations_3ay4()
+native_pose_info.native()
+
+
+# use the scorefxn_file to set up additional weights
+if input_args.scorefxn_file is not None:
+    sf = make_fa_scorefxn_from_file( input_args.scorefxn_file )
+# else create a fa_scorefxn
+else:
+    sf = get_fa_scorefxn()
+
+# fa_intra_rep should always be 0.440 since that's what I've been using
+sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
+
 
 # pymol stuff
 pmm = PyMOL_Mover()
 pmm.keep_history( True )
 pmm.apply( native_pose )
+
+
+# relay information to user
+info_file_details = []
+info_file_details.append( "Native PDB filename:\t\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
+info_file_details.append( "Creating this many decoys:\t\t%s\n" %str( input_args.base_nstruct ) )
+info_file_details.append( "ScoreFunction file used?:\t\t%s\n" %str( input_args.scorefxn_file ).split( '/' )[-1] )
+info_file_details.append( "Main structure directory:\t\t%s\n" %main_structure_dir )
+info_file_details.append( "Base structure directory:\t\t%s\n" %base_structs_dir )
+info_file_details.append( "Lowest E structure directory:\t\t%s\n" %lowest_E_structs_dir )
+info_file_details.append( "\nScore weights used in sf:\n%s\n" %( "\n".join( [ "%s: %s" %( str( name ), sf.get_weight( name ) ) for name in sf.get_nonzero_weighted_scoretypes() ] ) ) )
+info_file = ''.join( info_file_details )
+print "\n", info_file, "\n"
+
+# write out the info file with the collected info from above
+info_filename = main_structure_dir + "protocol_run.info"
+with open( info_filename, "wb" ) as fh:
+    fh.write( "Info for this run of %s\n\n" %__file__ )
+    fh.write( info_file )
+
 
 
 
@@ -143,6 +172,13 @@ while not jd.job_complete:
     working_pose.assign( native_pose )
     working_pose.pdb_info().name( "base_%s" %str( decoy_num ) )
     pmm.apply( working_pose )
+
+    # instantiate the 3ay4 information holder class object
+    working_pose_info = hold_chain_and_res_designations_3ay4()
+
+    # see antibody_functions for more information on this hard-coded function
+    working_pose_info.native()
+
 
     for ii in range( 2 ):
         # pack
@@ -170,25 +206,23 @@ while not jd.job_complete:
     print "\tFinished with decoy %s" %str( decoy_num )
     decoy_num += 1
 
-    # TODO: needs to be checked and fixed. pseudo-interface energy comes out really negative
-    '''
     # collect additional metric data
     try:
-        metrics = get_pose_metrics( working_pose,
-                                    native_pose,
-                                    sf,
-                                    2, # interface JUMP_NUM
-                                    [ 'D', 'E', 'F', 'G' ],
-                                    [ 'D', 'E', 'F', 'G' ],
-                                    decoy_num,
-                                    metrics_dump_dir )
+        metrics = get_pose_metrics_on_native( working_pose,
+                                              working_pose_info,
+                                              native_pose,
+                                              native_pose_info,
+                                              sf,
+                                              2, # Fc-FcR interface JUMP_NUM
+                                              jd.current_num,
+                                              metrics_dump_dir,
+                                              input_args.utility_directory )
     except:
         metrics = ''
         pass
 
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics
-    '''
     
     # dump the decoy
     jd.output_decoy( working_pose )

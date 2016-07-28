@@ -3,6 +3,118 @@ __author__ = "morganlnance"
 
 
 
+# TODO: need to figure out the ordering of the FoldTree or something because the jumps get added successfully, but then crashes when you try to access them. kinematics::Atom bad method call to Atom tree
+def pseudo_glycan_interface_energy( sugar_nums, in_sf, in_pose, pmm = None ):
+    """
+    Gets chemical edges from <in_pose> and turns each one into a jump if it contains a protein residue on one side and a sugar residue found in <sugar_nums> on the other.
+    <sugar_nums> contains the glycan(s) that are connected to <in_pose> by chemical edge(s).
+    If all the sugar numbers of interest in <sugar_nums> are not connected to each other and then the protein by a chemical edge, they will not be moved from the complex and the score will be inaccurate
+    :param sugar_nums: list( Pose numbers for sugar residues of interest )
+    :param in_sf: ScoreFunction
+    :param in_pose: Pose
+    :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
+    :return: float( pseudo interface energy )
+    """
+    import sys
+    from rosetta.core.scoring import score_type_from_name
+
+
+    # check that all residues in <sugar_nums> are actually sugars
+    for resnum in sugar_nums:
+        if not in_pose.residue( resnum ).is_carbohydrate():
+            print "\nYou gave me a non-sugar residue number in your <sugar_nums> argument. I don't like the looks of this. Exiting."
+            sys.exit()
+
+    # clone the input pose
+    pose = in_pose.clone()
+
+    # set atom_pair_constraint weight to 0 in the sf clone
+    sf = in_sf.clone()
+    sf.set_weight( score_type_from_name( "atom_pair_constraint" ), 0.0 )
+
+    # get the score of the whole complex
+    start_score = sf( pose )
+
+    # get the chemical edges found in the Pose
+    chem_edges = pose.fold_tree().get_chemical_edges()
+
+    # collect the JUMP nums that are added
+    jump_nums_added = []
+
+    # for each edge, see which one has a protein residue and a sugar residue found in <sugar_nums>
+    for chem_edge in chem_edges:
+        # turn the chemical edge into a string
+        chem_edge_str = str( chem_edge ).strip()
+
+        # split the string on whitespace as to access residue numbers
+        chem_edge_split_with_empty_string = chem_edge_str.split( ' ' )
+
+        # remove the empty string occurances ( '' ) as they may be of variable occurance
+        chem_edge_split = []
+        for char in chem_edge_split_with_empty_string:
+            if char != '':
+                chem_edge_split.append( char )
+
+        # collect the relevant information from the split string
+        upstream_connect = int( chem_edge_split[1] )
+        downstream_connect = int( chem_edge_split[2] )
+
+        ## check for the two possible cases of interest
+        # if the upstream is a protein residue and the downstream is a sugar in <sugar_nums>
+        if pose.residue( upstream_connect ).is_protein() and downstream_connect in sugar_nums:
+            # remove the chemical edge using the chem_edge object
+            pose.fold_tree().delete_edge( chem_edge )
+
+            # add a new jump edge using the information from the chemical edge
+            add_jump_num = pose.fold_tree().num_jump() + 1
+            jump_nums_added.append( add_jump_num )
+            pose.fold_tree().add_edge( upstream_connect, downstream_connect, add_jump_num )
+
+            # reorder the new FoldTree on the first residue
+            pose.fold_tree().reorder( 1 )
+        
+        # elif the upstream is a sugar in <sugar_nums> and the downstream is a protein residue
+        elif pose.residue( downstream_connect ).is_protein() and upstream_connect in sugar_nums:
+            # remove the chemical edge using the chem_edge object
+            pose.fold_tree().delete_edge( chem_edge )
+
+            # add a new jump edge using the information from the chemical edge
+            add_jump_num = pose.fold_tree().num_jump() + 1
+            jump_nums_added.append( add_jump_num )
+            pose.fold_tree().add_edge( upstream_connect, downstream_connect, add_jump_num )
+
+            # reorder the new FoldTree on the first residue
+            pose.fold_tree().reorder( 1 )
+
+        # else, skip this chemical edge
+        else:
+            pass
+
+    # send the Pose to PyMOL
+    try:
+        pmm.keep_history( True )
+        pmm.apply( pose )
+    except:
+        pass
+
+    # split apart the <sugar_nums>
+    for jump_num in jump_nums_added:
+        try:
+            jump = pose.jump( jump_num )
+        except:
+            return pose
+        vec = jump.get_translation() * 1000
+        jump.set_translation( vec )
+        pose.set_jump( jump_num, jump )
+        try:
+            pmm.apply( pose )
+        except:
+            pass
+
+    return pose
+
+
+
 def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
     """
     Attempts to get pseudo-interface energy of a glycosylated 3ay4 decoy

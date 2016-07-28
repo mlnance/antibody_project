@@ -49,7 +49,8 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     # Rosetta functions I wrote out
     from antibody_functions import calc_interface_sasa, decoy_to_native_res_map, \
         get_contact_map_between_range1_range2, get_contact_map_with_JUMP_NUM, \
-        analyze_contact_map, calc_Fnats_with_contact_maps
+        analyze_contact_map, calc_Fnats_with_contact_maps, \
+        get_scoretype_with_biggest_score_diff, get_res_with_biggest_score_diff
     from pose_metrics_util import Fc_glycan_rmsd, Fc_glycan_hbonds, \
         pseudo_interface_energy_3ay4, check_GlcNAc_to_Phe_contacts
     
@@ -99,6 +100,22 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_pseudo_interface_energy ) )
     metric_data.append( "delta_pseudo_interface_energy:" )
     metric_data.append( str( delta_pseudo_interface_energy ) )
+
+
+    # determine which ScoreType contributes the biggest difference in total score compared to native
+    working_total_score_data = get_scoretype_with_biggest_score_diff( working, native, sf )
+    metric_data.append( "delta_biggest_score_diff_by_scoretype:" )
+    metric_data.append( str( working_total_score_data.biggest_delta_score_by_scoretype ) )
+    metric_data.append( "biggest_score_diff_scoretype:" )
+    metric_data.append( str( working_total_score_data.str_score_type ) )
+
+
+    # determine the residue with the biggest score difference compared to native
+    working_residue_score_data = get_res_with_biggest_score_diff( working, native, sf, decoy_to_native_res_map = decoy_to_native_res_map )
+    metric_data.append( "delta_res_biggest_score_diff_tot_score:" )
+    metric_data.append( str( working_residue_score_data.biggest_delta_score ) )
+    metric_data.append( "decoy_res_num:" )
+    metric_data.append( str( working_residue_score_data.decoy_num ) )
     
 
     # delta standard interaction energy ( across an interface defined by a JUMP number )
@@ -173,8 +190,8 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
                                                                                        cutoff = intf_CUTOFF, 
                                                                                        return_more_info = True )
 
-    #################
 
+    ##############################################
     ## analyze the contact maps
     # Fc glycan to Fc protein contact map analysis
     working_Fc_glycan_to_Fc_protein_data_holder = analyze_contact_map( working_Fc_glycan_to_Fc_protein_contact_map, working )

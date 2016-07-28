@@ -648,7 +648,7 @@ def get_res_with_biggest_score_diff( in_decoy, in_native, in_sf, decoy_to_native
 
         # get the total score of each residue and the delta
         decoy_score = decoy.energies().residue_total_energy( decoy_num )
-        native_score = decoy.energies().residue_total_energy( native_num )
+        native_score = native.energies().residue_total_energy( native_num )
         delta_score = decoy_score - native_score
 
         # update the prelimary data holders

@@ -191,9 +191,9 @@ plt.savefig( plot_title, dpi=120, transparent=True )
 
 
 
-##############################################
-#### SugarSmallMoves-50 data using native ####
-##############################################
+########################################################
+#### SugarSmallMoves-50 data using native and reset ####
+########################################################
 
 ###########
 #### 1 ####
@@ -253,6 +253,150 @@ sub2.set_ylim( [ 0, 200 ] )
 # save the plot
 plt.tight_layout()
 plot_title = "3ay4-type glycosylation comparing SugarSmallMoves-50 on the native Pose with ramp, tight Gal and its GlcNAc constraints, triple hbond sf weights, angle multiplier 1, and 5 moves per turn"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+
+
+##############################################################
+#### SugarSmallMoves-100 data using native Fc branch only ####
+##############################################################
+###########
+#### 1 ####
+###########
+
+# using native, random reset of Fc glycan branch only, Gal and its GlcNAc high and tight constraints, am3, 3 mpt, with ramp
+path_to_using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials = "/Users/Research/pyrosetta_dir/metric_data/using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials.csv"
+using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data = pd.read_csv( path_to_using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials )
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+data = using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data[ using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data.delta_pseudo_interface_energy <= np.percentile( using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data.delta_pseudo_interface_energy, 80 ) ]
+sub1.scatter( data["Fc_glycan_rmsd"], data["delta_pseudo_interface_energy"] )
+sub1.set_xlabel( "Fc_glycan_rmsd" )
+sub1.set_xlim( [ 0, 10 ] )
+sub1.set_ylabel( "delta_pseudo_interface_energy" )
+#sub1.set_ylim( [ 0, 50 ] )
+
+sub2 = plt.subplot(2, 2, 2)
+data = using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data[ using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data.delta_total_score <= np.percentile( using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data.delta_total_score, 80 ) ]
+sub2.scatter( data["Fc_glycan_rmsd"], data["delta_total_score"] )
+sub2.set_xlabel( "Fc_glycan_rmsd" )
+sub2.set_xlim( [ 0, 10 ] )
+sub2.set_ylabel( "delta_total_score" )
+#sub2.set_ylim( [ 0, 200 ] )
+
+sub3 = plt.subplot(2, 2, 3)
+data = using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data[ using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data.delta_pseudo_interface_energy <= np.percentile( using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data.delta_pseudo_interface_energy, 80 ) ]
+sub3.scatter( data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"], data["delta_pseudo_interface_energy"] )
+sub3.set_xlabel( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A" )
+sub3.set_xlim( [ 100, 0 ] )
+sub3.set_ylabel( "delta_pseudo_interface_energy" )
+#sub3.set_ylim( [ 0, 200 ] )
+
+sub4 = plt.subplot(2, 2, 4)
+data = using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data[ using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data.delta_total_score <= np.percentile( using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_am2_3mpt_100trials_data.delta_total_score, 80 ) ]
+sub4.scatter( data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"], data["delta_total_score"] )
+sub4.set_xlabel( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A" )
+sub4.set_xlim( [ 100, 0 ] )
+sub4.set_ylabel( "delta_total_score" )
+#sub4.set_ylim( [ 0, 200 ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4-type glycosylation comparing SugarSmallMoves-100 on the native with random reset of Fc glycan branch only, Gal and its GlcNAc high and tight cst, am2, 5mpt, 100 trials, with ramp"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+###########
+#### 2 ####
+###########
+# using native, random reset of Fc glycan branch only, Gal and its GlcNAc high and tight constraints, triple hbond sf, am3, 3 mpt, with ramp
+path_to_using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials = "/Users/Research/pyrosetta_dir/metric_data/using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials.csv"
+using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data = pd.read_csv( path_to_using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials )
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+data = using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data[ using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data.delta_pseudo_interface_energy <= np.percentile( using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data.delta_pseudo_interface_energy, 80 ) ]
+sub1.scatter( data["Fc_glycan_rmsd"], data["delta_pseudo_interface_energy"] )
+sub1.set_xlabel( "Fc_glycan_rmsd" )
+sub1.set_xlim( [ 0, 10 ] )
+sub1.set_ylabel( "delta_pseudo_interface_energy" )
+#sub1.set_ylim( [ 0, 50 ] )
+
+sub2 = plt.subplot(2, 2, 2)
+data = using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data[ using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data.delta_total_score <= np.percentile( using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data.delta_total_score, 80 ) ]
+sub2.scatter( data["Fc_glycan_rmsd"], data["delta_total_score"] )
+sub2.set_xlabel( "Fc_glycan_rmsd" )
+sub2.set_xlim( [ 0, 10 ] )
+sub2.set_ylabel( "delta_total_score" )
+#sub2.set_ylim( [ 0, 200 ] )
+
+sub3 = plt.subplot(2, 2, 3)
+data = using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data[ using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data.delta_pseudo_interface_energy <= np.percentile( using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data.delta_pseudo_interface_energy, 80 ) ]
+sub3.scatter( data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"], data["delta_pseudo_interface_energy"] )
+sub3.set_xlabel( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A" )
+sub3.set_xlim( [ 100, 0 ] )
+sub3.set_ylabel( "delta_pseudo_interface_energy" )
+#sub3.set_ylim( [ 0, 200 ] )
+
+sub4 = plt.subplot(2, 2, 4)
+data = using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data[ using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data.delta_total_score <= np.percentile( using_native_random_reset_only_branch_glycan_Gal_and_its_GlcNAc_high_and_tight_triple_hbond_am2_3mpt_100trials_data.delta_total_score, 80 ) ]
+sub4.scatter( data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"], data["delta_total_score"] )
+sub4.set_xlabel( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A" )
+sub4.set_xlim( [ 100, 0 ] )
+sub4.set_ylabel( "delta_total_score" )
+#sub4.set_ylim( [ 0, 200 ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4-type glycosylation comparing SugarSmallMoves-100 on the native with random reset of Fc glycan branch only, Gal and its GlcNAc high and tight cst, triple hbond sf, am2, 5mpt, 100 trials, with ramp"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+
+
+#######################################################
+#### SugarSmallMoves-50 data using native no reset ####
+#######################################################
+
+###########
+#### 1 ####
+###########
+# Gal and its GlcNAc high and tight, am 1, 3 moves per trial, with ramp data
+path_to_using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt = "/Users/Research/pyrosetta_dir/metric_data/using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt.csv"
+using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data = pd.read_csv( path_to_using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt )
+using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data = using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data.sort( "delta_total_score")
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+data = using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data.delta_pseudo_interface_energy <= np.percentile( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data.delta_pseudo_interface_energy, 80 ) ]
+sub1.scatter( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ "delta_pseudo_interface_energy" ] )
+sub1.set_xlabel( "Fc_glycan_rmsd" )
+sub1.set_xlim( [ 0, 1 ] )
+sub1.set_ylabel( "delta_pseudo_interface_energy" )
+#sub1.set_ylim( [ 0, 50 ] )
+
+sub2 = plt.subplot(2, 2, 2)
+data = using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data.delta_total_score <= np.percentile( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data.delta_total_score, 80 ) ]
+sub2.scatter( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ "delta_total_score" ] )
+sub2.set_xlabel( "Fc_glycan_rmsd" )
+sub2.set_xlim( [ 0, 1 ] )
+sub2.set_ylabel( "delta_total_score" )
+#sub2.set_ylim( [ 0, 200 ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4-type glycosylation comparing SugarSmallMoves-50 on the native Pose with ramp, high and tight Gal and its GlcNAc constraints, angle multiplier 1, and 3 moves per turn"
 plt.suptitle( plot_title, fontsize = 30 )
 plt.subplots_adjust(top=0.87)
 plt.savefig( plot_title, dpi=120, transparent=True )

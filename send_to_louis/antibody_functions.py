@@ -565,6 +565,91 @@ def get_residue_score_by_scoretype( sf, input_scoretype, seq_pos, pose, weight =
 
 
 
+def get_res_with_biggest_score_diff( decoy, native, in_sf, decoy_to_native_res_map = None ):
+    """
+    Iterate through <decoy> residues and compare each total energy to the corresponding residue in <native>. If the residues don't match up exactly in order from 1 - n, give me a <decoy_to_native_res_map> dictionary.
+    If multiple residues have the same highest delta score, then only the last residue seen with this value will be stored
+    :param decoy: Pose 1
+    :param native: Pose 2
+    :param in_sf: ScoreFunction
+    :param decoy_to_native_res_map: dict( if you're comparing a decoy to a native that has a different numbering scheme, pass in a dictionary that maps each resnum from the decoy to its corresponding resnum in the native )
+    :return: obj( holds residue <decoy> number and score, <native> number and score, delta total score, corresponding ScoreType, delta ScoreType score )
+    """
+    # make clones of decoy, native, and sf
+    decoy = decoy.clone()
+    native = native.clone()
+    sf = in_sf.clone()
+
+    # score the poses to gain access to the energies object
+    sf( decoy )
+    sf( native )
+
+    # holders for the highest delta score and corresponding residue numbers
+    highest_delta_score = None
+    highest_delta_score_decoy_num = None
+    highest_delta_score_native_num = None
+
+    # iterate through each residue in decoy and compare its total score to the corresponding residue found in native
+    for decoy_num in range( 1, decoy.n_residue() + 1 ):
+        # get the corresponding residue number in native, if needed
+        if decoy_to_native_res_map is not None:
+            native_num = decoy_to_native_res_map[ decoy_num ]
+        else:
+            native_num = decoy_num
+
+        # get the total score of each residue and the delta
+        decoy_score = decoy.energies().residue_total_energy( decoy_num )
+        native_score = decoy.energies().residue_total_energy( native_num )
+        delta_score = decoy_score - native_score
+
+        # update the prelimary data holders
+        if highest_delta_score is None:
+            # if this holder is None, then the other two are as well, so update them all with the first residue
+            highest_delta_score = delta_score
+            highest_delta_score_decoy_num = decoy_num
+            highest_delta_score_native_num = native_num
+        # otherwise, if data has been found, check to see if the new score is higher and update the holders
+        else:
+            if delta_score > highest_delta_score:
+                highest_delta_score = delta_score
+                highest_delta_score_decoy_num = decoy_num
+                highest_delta_score_native_num = native_num
+
+    # make holders for the info related to the specific ScoreType
+    highest_delta_score_by_scoretype = None
+    highest_delta_score_scoretype = None
+
+    # using the decoy and native residue numbers with the highest delta total score, find the corresponding highest ScoreType
+    for score_type in sf.get_nonzero_weighted_scoretypes():
+        # get the residue scores by ScoreType
+        decoy_score_by_scoretype = decoy.energies().residue_total_energies( highest_delta_score_decoy_num ).get( score_type )
+        native_score_by_scoretype = native.energies().residue_total_energies( highest_delta_score_native_num ).get( score_type )
+        delta_score_by_scoretype = decoy_score_by_scoretype - native_score_by_scoretype
+
+        # update the prelimary data holders
+        if highest_delta_score_by_scoretype is None:
+            # if this holder is None, then the other one is well, so update them all with the first residue
+            highest_delta_score_by_scoretype = delta_score_by_scoretype
+            highest_delta_score_scoretype = score_type
+        # otherwise, if data has been found, check to see if the new score is higher and update the holders
+        else:
+            if delta_score_by_scoretype > highest_delta_score_by_scoretype:
+                highest_delta_score_by_scoretype = delta_score_by_scoretype
+                highest_delta_score_scoretype = score_type
+                
+    # make an object to hold relevant data
+    data = DataHolder()
+    data.highest_delta_score = highest_delta_score
+    data.decoy_num = highest_delta_score_decoy_num
+    data.native_num = highest_delta_score_native_num
+    data.highest_delta_score_by_scoretype = highest_delta_score_by_scoretype
+    data.score_type = highest_delta_score_scoretype
+    data.str_score_type = str( highest_delta_score_scoretype )
+
+    return data
+
+
+
 def get_sugar_bb_only_sf( weight = 1 ):
     """
     Creates and returns a ScoreFunction with only the sugar_bb term as a non-zero. Can specify weight with <weight> param

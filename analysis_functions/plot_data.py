@@ -542,31 +542,31 @@ plt.savefig( plot_title, dpi=120, transparent=True )
 
 
 
-###########################################
-#### SSM-50 data using native no reset ####
-###########################################
+############################################################
+#### SSM-50 data using Fc glycan branch native no reset ####
+############################################################
 ###########
 #### 1 ####
 ###########
 # Fc branch only, Gal and its GlcNAc high and tight, am 1, 3 moves per trial, with ramp data
-path_to_using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt = "/Users/Research/pyrosetta_dir/metric_data/using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt.csv"
-using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data = pd.read_csv( path_to_using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt )
-using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data = using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data.sort( "total_score")
+path_to_using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metric_data/using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp.csv"
+using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data = pd.read_csv( path_to_using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp )
+using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data = using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data.sort( "total_score")
 
 fig = plt.figure(figsize=(30, 15))
 sub1 = plt.subplot(2, 2, 1)
-ymin = floor( min( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ "pseudo_interface_energy" ] ) )
-ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data.pseudo_interface_energy, 80 ) )
-sub1.scatter( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ "pseudo_interface_energy" ] )
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "pseudo_interface_energy" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data.pseudo_interface_energy, 80 ) )
+sub1.scatter( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "pseudo_interface_energy" ] )
 sub1.set_xlabel( "Fc_glycan_rmsd" )
 sub1.set_xlim( [ 0, 10 ] )
 sub1.set_ylabel( "pseudo_interface_energy" )
 sub1.set_ylim( [ ymin, ymax ] )
 
 sub2 = plt.subplot(2, 2, 2)
-ymin = floor( min( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ "total_score" ] ) )
-ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data.total_score, 80 ) )
-sub2.scatter( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_data[ "total_score" ] )
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "total_score" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data.total_score, 80 ) )
+sub2.scatter( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "total_score" ] )
 sub2.set_xlabel( "Fc_glycan_rmsd" )
 sub2.set_xlim( [ 0, 10 ] )
 sub2.set_ylabel( "total_score" )
@@ -581,8 +581,193 @@ plt.savefig( plot_title, dpi=120, transparent=True )
 
 
 
+
+
+##########################################################
+#### SSM-50 data using full Fc glycan native no reset ####
+##########################################################
+###########
+#### 1 ####
+###########
+# full glycan (except core GlcNAc), am1, 3mpt, high and tight Gal and GlcNAc cst, no reset, with ramp
+path_to_using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metric_data/using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp.csv"
+using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data = pd.read_csv( path_to_using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp )
+using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data = using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data.sort( "total_score")
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "pseudo_interface_energy" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data.pseudo_interface_energy, 80 ) )
+sub1.scatter( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "pseudo_interface_energy" ] )
+sub1.set_xlabel( "Fc_glycan_rmsd" )
+sub1.set_xlim( [ 0, 10 ] )
+sub1.set_ylabel( "pseudo_interface_energy" )
+sub1.set_ylim( [ ymin, ymax ] )
+
+sub2 = plt.subplot(2, 2, 2)
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "total_score" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data.total_score, 80 ) )
+sub2.scatter( using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_high_and_tight_am1_3_mpt_with_ramp_data[ "total_score" ] )
+sub2.set_xlabel( "Fc_glycan_rmsd" )
+sub2.set_xlim( [ 0, 10 ] )
+sub2.set_ylabel( "total_score" )
+sub2.set_ylim( [ ymin, ymax ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4 glycan comparing SSM-50 on native Pose no reset, with ramp, high and tight Gal and GlcNAc cst, am1, 3mpt"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
 ###########
 #### 2 ####
+###########
+# full glycan (except core GlcNAc), am1, 3mpt, tight Gal and GlcNAc cst, no reset, with ramp
+path_to_using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metric_data/using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp.csv"
+using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data = pd.read_csv( path_to_using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp )
+using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data = using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data.sort( "total_score")
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "pseudo_interface_energy" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data.pseudo_interface_energy, 80 ) )
+sub1.scatter( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "pseudo_interface_energy" ] )
+sub1.set_xlabel( "Fc_glycan_rmsd" )
+sub1.set_xlim( [ 0, 10 ] )
+sub1.set_ylabel( "pseudo_interface_energy" )
+sub1.set_ylim( [ ymin, ymax ] )
+
+sub2 = plt.subplot(2, 2, 2)
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "total_score" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data.total_score, 80 ) )
+sub2.scatter( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "total_score" ] )
+sub2.set_xlabel( "Fc_glycan_rmsd" )
+sub2.set_xlim( [ 0, 10 ] )
+sub2.set_ylabel( "total_score" )
+sub2.set_ylim( [ ymin, ymax ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4 glycan comparing SSM-50 on native Pose no reset, with ramp, tight Gal and GlcNAc cst, am1, 3mpt"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+###########
+#### 3 ####
+###########
+# full glycan (except core GlcNAc), am1, 3mpt, Gal and GlcNAc cst, no reset, with ramp
+path_to_using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metric_data/using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp.csv"
+using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data = pd.read_csv( path_to_using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp )
+using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data = using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data.sort( "total_score")
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "pseudo_interface_energy" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data.pseudo_interface_energy, 80 ) )
+sub1.scatter( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "pseudo_interface_energy" ] )
+sub1.set_xlabel( "Fc_glycan_rmsd" )
+sub1.set_xlim( [ 0, 10 ] )
+sub1.set_ylabel( "pseudo_interface_energy" )
+sub1.set_ylim( [ ymin, ymax ] )
+
+sub2 = plt.subplot(2, 2, 2)
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "total_score" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data.total_score, 80 ) )
+sub2.scatter( using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_tight_am1_3_mpt_with_ramp_data[ "total_score" ] )
+sub2.set_xlabel( "Fc_glycan_rmsd" )
+sub2.set_xlim( [ 0, 10 ] )
+sub2.set_ylabel( "total_score" )
+sub2.set_ylim( [ ymin, ymax ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4 glycan comparing SSM-50 on native Pose no reset, with ramp, Gal and GlcNAc cst, am1, 3mpt"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+###########
+#### 4 ####
+###########
+# full glycan (except core GlcNAc), am2, 5mpt, tight Gal and GlcNAc cst, no reset, with ramp
+path_to_using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metric_data/using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp.csv"
+using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data = pd.read_csv( path_to_using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp )
+using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data = using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data.sort( "total_score")
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "pseudo_interface_energy" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data.pseudo_interface_energy, 80 ) )
+sub1.scatter( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "pseudo_interface_energy" ] )
+sub1.set_xlabel( "Fc_glycan_rmsd" )
+sub1.set_xlim( [ 0, 10 ] )
+sub1.set_ylabel( "pseudo_interface_energy" )
+sub1.set_ylim( [ ymin, ymax ] )
+
+sub2 = plt.subplot(2, 2, 2)
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "total_score" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data.total_score, 80 ) )
+sub2.scatter( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "total_score" ] )
+sub2.set_xlabel( "Fc_glycan_rmsd" )
+sub2.set_xlim( [ 0, 10 ] )
+sub2.set_ylabel( "total_score" )
+sub2.set_ylim( [ ymin, ymax ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4 glycan comparing SSM-50 on native Pose no reset, with ramp, tight Gal and GlcNAc cst, am2, 5mpt"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+###########
+#### 5 ####
+###########
+# full glycan (except core GlcNAc), am2, 5mpt, Gal and GlcNAc cst, no reset, with ramp
+path_to_using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp = "/Users/Research/pyrosetta_dir/metric_data/using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp.csv"
+using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data = pd.read_csv( path_to_using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp )
+using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data = using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data.sort( "total_score")
+
+fig = plt.figure(figsize=(30, 15))
+sub1 = plt.subplot(2, 2, 1)
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "pseudo_interface_energy" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data.pseudo_interface_energy, 80 ) )
+sub1.scatter( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "pseudo_interface_energy" ] )
+sub1.set_xlabel( "Fc_glycan_rmsd" )
+sub1.set_xlim( [ 0, 10 ] )
+sub1.set_ylabel( "pseudo_interface_energy" )
+sub1.set_ylim( [ ymin, ymax ] )
+
+sub2 = plt.subplot(2, 2, 2)
+ymin = floor( min( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "total_score" ] ) )
+ymax = ceil( np.percentile( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data.total_score, 80 ) )
+sub2.scatter( using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "Fc_glycan_rmsd" ], using_native_Gal_and_its_GlcNAc_am2_5_mpt_with_ramp_data[ "total_score" ] )
+sub2.set_xlabel( "Fc_glycan_rmsd" )
+sub2.set_xlim( [ 0, 10 ] )
+sub2.set_ylabel( "total_score" )
+sub2.set_ylim( [ ymin, ymax ] )
+
+# save the plot
+plt.tight_layout()
+plot_title = "3ay4 glycan comparing SSM-50 on native Pose no reset, with ramp, Gal and GlcNAc cst, am2, 5mpt"
+plt.suptitle( plot_title, fontsize = 30 )
+plt.subplots_adjust(top=0.87)
+plt.savefig( plot_title, dpi=120, transparent=True )
+
+
+
+###########
+#### 6 ####
 ###########
 # full glycan (except core GlcNAc), am1, 3mpt, NO ramp or reset
 path_to_using_native_am1_3_mpt = "/Users/Research/pyrosetta_dir/metric_data/using_native_am1_3_mpt.csv"

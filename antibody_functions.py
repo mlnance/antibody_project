@@ -567,7 +567,7 @@ def get_residue_score_by_scoretype( sf, input_scoretype, seq_pos, pose, weight =
 
 def get_scoretype_with_biggest_score_diff( in_decoy, in_native, in_sf ):
     """
-    Determine which ScoreType in <in_sf> corresponds to the largest total score difference between <in_decoy> and <in_native>.
+    Determine which ScoreType in <in_sf> corresponds to the largest total score difference between <in_decoy> and <in_native>. Returns an object that holds information for the biggest positive difference and the biggest negative difference.
     :param in_decoy: Pose 1
     :param in_native: Pose 2
     :param in_sf: ScoreFunction
@@ -583,8 +583,10 @@ def get_scoretype_with_biggest_score_diff( in_decoy, in_native, in_sf ):
     sf( native )
 
     # holders for the biggest delta score and ScoreType
-    biggest_delta_score_by_scoretype = None
-    biggest_delta_score_type = None
+    biggest_pos_delta_score_by_scoretype = None
+    biggest_pos_delta_score_type = None
+    biggest_neg_delta_score_by_scoretype = None
+    biggest_neg_delta_score_type = None
 
     # use the energies object to determine which ScoreType gives the biggest difference
     for score_type in sf.get_nonzero_weighted_scoretypes():
@@ -594,21 +596,29 @@ def get_scoretype_with_biggest_score_diff( in_decoy, in_native, in_sf ):
         delta_score_by_scoretype = decoy_score_by_scoretype - native_score_by_scoretype
 
         # update the prelimary data holders
-        if biggest_delta_score_by_scoretype is None:
-            # if this holder is None, then the other one is well, so update them all with the first residue
-            biggest_delta_score_by_scoretype = delta_score_by_scoretype
-            biggest_delta_score_scoretype = score_type
+        if biggest_pos_delta_score_by_scoretype is None:
+            # if this holder is None, then the other ones are as well, so update them all with the first residue
+            biggest_pos_delta_score_by_scoretype = delta_score_by_scoretype
+            biggest_pos_delta_score_scoretype = score_type
+            biggest_neg_delta_score_by_scoretype = delta_score_by_scoretype
+            biggest_neg_delta_score_scoretype = score_type
         # otherwise, if data has been found, check to see if the new score is higher and update the holders
         else:
-            if delta_score_by_scoretype > biggest_delta_score_by_scoretype:
-                biggest_delta_score_by_scoretype = delta_score_by_scoretype
-                biggest_delta_score_scoretype = score_type
+            if delta_score_by_scoretype > biggest_pos_delta_score_by_scoretype:
+                biggest_pos_delta_score_by_scoretype = delta_score_by_scoretype
+                biggest_pos_delta_score_scoretype = score_type
+            if delta_score_by_scoretype < biggest_neg_delta_score_by_scoretype:
+                biggest_neg_delta_score_by_scoretype = delta_score_by_scoretype
+                biggest_neg_delta_score_scoretype = score_type
 
     # make an object to hold relevant data
     data = DataHolder()
-    data.biggest_delta_score_by_scoretype = biggest_delta_score_by_scoretype
-    data.score_type = biggest_delta_score_scoretype
-    data.str_score_type = str( biggest_delta_score_scoretype )
+    data.biggest_pos_delta_score_by_scoretype = biggest_pos_delta_score_by_scoretype
+    data.score_type_pos = biggest_pos_delta_score_scoretype
+    data.str_score_type_pos = str( biggest_pos_delta_score_scoretype )
+    data.biggest_neg_delta_score_by_scoretype = biggest_neg_delta_score_by_scoretype
+    data.score_type_neg = biggest_neg_delta_score_scoretype
+    data.str_score_type_neg = str( biggest_neg_delta_score_scoretype )
 
     return data
 
@@ -840,6 +850,7 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
         pose.set_omega( seqpos, new_omega )
 
     return pose
+
 
 
 def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):

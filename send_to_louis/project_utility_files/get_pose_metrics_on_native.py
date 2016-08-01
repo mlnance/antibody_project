@@ -104,10 +104,14 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
 
     # determine which ScoreType contributes the biggest difference in total score compared to native
     working_total_score_data = get_scoretype_with_biggest_score_diff( working, native, sf )
-    metric_data.append( "delta_biggest_score_diff_by_scoretype:" )
-    metric_data.append( str( working_total_score_data.biggest_delta_score_by_scoretype ) )
-    metric_data.append( "biggest_score_diff_scoretype:" )
-    metric_data.append( str( working_total_score_data.str_score_type ) )
+    metric_data.append( "delta_biggest_pos_score_diff_by_scoretype:" )
+    metric_data.append( str( working_total_score_data.biggest_pos_delta_score_by_scoretype ) )
+    metric_data.append( "biggest_pos_score_diff_scoretype:" )
+    metric_data.append( str( working_total_score_data.str_score_type_pos ) )
+    metric_data.append( "delta_biggest_neg_score_diff_by_scoretype:" )
+    metric_data.append( str( working_total_score_data.biggest_neg_delta_score_by_scoretype ) )
+    metric_data.append( "biggest_neg_score_diff_scoretype:" )
+    metric_data.append( str( working_total_score_data.str_score_type_neg ) )
 
 
     # determine the residue with the biggest score difference compared to native

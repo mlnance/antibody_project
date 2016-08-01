@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling_just_sugar_small_moves_on_native.py project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII_removed_Fc_sugar.pdb ~/antibody_project/carbohydrate_files/3ay4_Fc_Glycan.iupac project_utility_files/ ~/pyrosetta_dir/test_pdb_dir/ 1 10 5
+run glycan_sampling_just_sugar_small_moves_on_native.py project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb project_glyco_files/3ay4_Fc_Glycan.iupac project_utility_files/ ~/pyrosetta_dir/test_pdb_dir/ 1 3 3
 '''
 
 
@@ -31,7 +31,9 @@ parser.add_argument("structure_dir", type=str, help="where do you want to dump t
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_sugar_small_move_trials", type=int, help="how many SugarSmallMoves do you want to make within the Fc glycan?")
 parser.add_argument("num_moves_per_trial", type=int, help="how many SugarSmallMoves do you want to make within one trial?")
-parser.add_argument("--random_reset", action="store_true", help="do you want to randomly reset the phi, psi, and omega values of the Fc glycan? (Excluding core GlcNAc)")
+parser.add_argument("--full_random_reset", action="store_true", help="do you want to randomly reset the phi, psi, and omega values of the Fc glycan? (Excluding core GlcNAc)")
+parser.add_argument("--branch_random_reset", action="store_true", help="do you want to randomly reset the phi, psi, and omega values of the Fc glycan 3-mer branch? (Excluding core GlcNAc)")
+parser.add_argument("--do_light_reset", action="store_true", help="do you want the random reset to be light? +/- 10-20 degrees discluding 0")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--native_constraint_file", default=None, type=str, help="/path/to/the .cst constraint file you want to use for the protocol")
 parser.add_argument("--scorefxn_file", default=None, type=str, help="/path/to/the .sf scorefxn space-delimited file that tells me which scoring weights beyond the norm you want to use")
@@ -76,6 +78,21 @@ else:
     print
     print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
     sys.exit()
+
+# check type of random reset selected - can have only picked one
+if input_args.full_random_reset is True and input_args.branch_random_reset:
+    print "\nYou gave me conflicting arguments for the Fc glycan reset. You can only choose one type of random reset. Exiting."
+    sys.exit()
+
+# store whether any kind of reset is happening
+if input_args.full_random_reset is True or input_args.branch_random_reset is True:
+    do_random_reset = True
+
+# check that num_sugar_small_move_trials is 10 or more if ramp_sf is set to True
+if input_args.ramp_sf == True and input_args.num_sugar_small_move_trials < 10:
+    print "\nIf you are ramping the ScoreFunction then you need to do 10 or more sugar_small_move_trials for the math to work. Exiting."
+    sys.exit()
+
 
 # make the needed directories if needed
 # base_structs and lowest_E_structs
@@ -198,7 +215,9 @@ info_file_details.append( "Sugar filename:\t\t\t\t%s\n" %input_args.glyco_file.s
 info_file_details.append( "Creating this many decoys:\t\t%s\n" %str( input_args.nstruct ) )
 info_file_details.append( "Number of SugarSmallMove trials:\t%s\n" %str( input_args.num_sugar_small_move_trials ) )
 info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %str( input_args.num_moves_per_trial ) )
-info_file_details.append( "Random reset of Fc glycan?:\t\t%s\n" %str( input_args.random_reset ) )
+info_file_details.append( "Full random reset of Fc glycan?:\t%s\n" %str( input_args.full_random_reset ) )
+info_file_details.append( "Branch random reset of Fc glycan?:\t%s\n" %str( input_args.branch_random_reset ) )
+info_file_details.append( "Doing a light random reset?:\t\t%s\n" %str( input_args.do_light_reset ) )
 info_file_details.append( "Using score ramping?:\t\t\t%s\n" %str( input_args.ramp_sf ) )
 info_file_details.append( "Native constraint file used?:\t\t%s\n" %str( input_args.native_constraint_file ).split( '/' )[-1] )
 info_file_details.append( "ScoreFunction file used?:\t\t%s\n" %str( input_args.scorefxn_file ).split( '/' )[-1] )
@@ -278,15 +297,43 @@ while not jd.job_complete:
     #### Fc GLYCAN RANDOM RESET ####
     ################################
 
-    if input_args.random_reset:
-        # this is for each residue of the Fc glycan except the core GlcNAc
+    # if doing any kind of random reset
+    if do_random_reset:
+        # grab the right residue numbers that should be reset
+        if input_args.full_random_reset:
+            reset_these_res_nums = testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc
+        if input_args.branch_random_reset:
+            reset_these_res_nums = testing_pose_info.native_Fc_glycan_branch_nums
+            
         # changing omega on residues that don't have an omega torsion doesn't affect them
-        #for res_num in testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc:
-        for res_num in testing_pose_info.native_Fc_glycan_branch_nums:
-            # pick three random integers between 0 and 360 - ie. -180 to 180
-            reset_phi_num = float( random_range( 0, 360 ) )
-            reset_psi_num = float( random_range( 0, 360 ) )
-            reset_omega_num = float( random_range( 0, 360 ) )
+        for res_num in reset_these_res_nums:
+            # if doing a light reset, new phi, psi, and omega are +/- 10-20 from what they currently are
+            if input_args.do_light_reset:
+                # determine if the phi, psi, and omega change will be positive or negative
+                if random_range( 0, 1 ) == 1:
+                    phi_mult = 1
+                else:
+                    phi_mult = -1
+                if random_range( 0, 1 ) == 1:
+                    psi_mult = 1
+                else:
+                    psi_mult = -1
+                if random_range( 0, 1 ) == 1:
+                    omega_mult = 1
+                else:
+                    omega_mult = -1
+
+                # create the new phi, psi, and omega
+                reset_phi_num = testing_pose.phi( res_num ) + ( random_range( 10, 20 )  * phi_mult )
+                reset_psi_num = testing_pose.psi( res_num ) + ( random_range( 10, 20 )  * psi_mult )
+                reset_omega_num = testing_pose.omega( res_num ) + ( random_range( 10, 20 )  * omega_mult )
+
+            # otherwise, a full random reset is desired
+            else:
+                # pick three random integers between 0 and 360 - ie. -180 to 180
+                reset_phi_num = float( random_range( 0, 360 ) )
+                reset_psi_num = float( random_range( 0, 360 ) )
+                reset_omega_num = float( random_range( 0, 360 ) )
 
             # reset the phi, psi, and omega values for the residue
             testing_pose.set_phi( res_num, reset_phi_num )

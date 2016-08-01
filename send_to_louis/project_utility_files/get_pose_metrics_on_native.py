@@ -51,7 +51,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
         get_contact_map_between_range1_range2, get_contact_map_with_JUMP_NUM, \
         analyze_contact_map, calc_Fnats_with_contact_maps, \
         get_scoretype_with_biggest_score_diff, get_res_with_biggest_score_diff
-    from pose_metrics_util import Fc_glycan_rmsd, Fc_glycan_hbonds, \
+    from pose_metrics_util import Fc_glycan_metrics, Fc_glycan_hbonds, \
         pseudo_interface_energy_3ay4, check_GlcNAc_to_Phe_contacts
     
     
@@ -81,10 +81,12 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( delta_total_score ) )
     
 
-    # glycan RMSD calculation
-    Fc_glycan_rmsd, working_just_Fc_glycan_hbonds = Fc_glycan_rmsd( working, native, working_info.native_Fc_glycan_chains, native_info.native_Fc_glycan_chains, decoy_num, dump_dir, return_hbonds_too = True )
+    # glycan RMSD, tot score, and hbond calculation
+    working_Fc_glycan_data = Fc_glycan_metrics( working, native, working_info.native_Fc_glycan_chains, native_info.native_Fc_glycan_chains, sf, decoy_num, dump_dir )
     metric_data.append( "Fc_glycan_rmsd:" )
-    metric_data.append( str( Fc_glycan_rmsd ) )
+    metric_data.append( str( working_Fc_glycan_data.Fc_glycan_rmsd ) )
+    metric_data.append( "Fc_glycan_tot_score:" )
+    metric_data.append( str( working_Fc_glycan_data.Fc_glycan_tot_score ) )
     
 
     ## pseudo-inferface energy 
@@ -143,7 +145,9 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     
 
     # delta hbonds contributed by Fc glycan
-    working_Fc_glycan_hbonds_contributed = Fc_glycan_hbonds( working, working_info.native_Fc_glycan_chains, decoy_num, dump_dir ) - working_just_Fc_glycan_hbonds
+    working_Fc_glycan_internal_hbonds = working_Fc_glycan_data.Fc_glycan_internal_hbonds
+
+    working_Fc_glycan_hbonds_contributed = Fc_glycan_hbonds( working, working_info.native_Fc_glycan_chains, decoy_num, dump_dir ) - working_Fc_glycan_internal_hbonds
     delta_Fc_glycan_hbonds_contributed = working_Fc_glycan_hbonds_contributed - native_Fc_glycan_hbonds_contributed
     metric_data.append( "Fc_glycan_hbonds_contributed:" )
     metric_data.append( str( working_Fc_glycan_hbonds_contributed ) )

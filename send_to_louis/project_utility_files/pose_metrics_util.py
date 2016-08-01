@@ -249,17 +249,17 @@ def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
 
 
 
-def Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_chains, decoy_num, dump_dir, return_hbonds_too = False ):
+def Fc_glycan_metrics( working, native, working_Fc_glycan_chains, native_Fc_glycan_chains, sf, decoy_num, dump_dir ):
     '''
     Return the glycan RMSD contribution of the two Fc glycans in 3ay4 (may work for other PDBs, but I don't know yet)
     :param working: decoy Pose()
     :param native: native Pose()
     :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
     :param native_Fc_glycan_chains: list( the chain id's for the native Fc glycan ). Ex = [ 'D', 'E' ]
+    :param sf: ScoreFunction
     :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
     :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
-    :param return_hbonds_too: bool( do you also want to return the number of hbonds in the working Fc glycan? ) Default = False
-    :return: float( Fc glycan rmsd )
+    :return: obj( DataHolder that contains Fc_glycan_rmsd, Fc_glycan_tot_score, and Fc_glycan_internal_hbonds )
     '''
     #################
     #### IMPORTS ####
@@ -270,12 +270,12 @@ def Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_
     from rosetta.core.scoring import non_peptide_heavy_atom_RMSD
 
     # Rosetta functions I wrote out
-    from antibody_functions import load_pose
+    from antibody_functions import load_pose, DataHolder
 
     # utility functions
     import os
     from util import dump_pdb_by_chain, id_generator
-
+    from toolbox import get_hbonds
 
 
     # get temporary files to work with
@@ -318,21 +318,20 @@ def Fc_glycan_rmsd( working, native, working_Fc_glycan_chains, native_Fc_glycan_
     except:
         pass
 
-    # get the hbonds of the working Fc glycans, if desired
-    if return_hbonds_too:
-        from rosetta import get_fa_scorefxn
-        from toolbox import get_hbonds
+    ## get the total score and hbonds of the working Fc glycans
+    # score first as to gain access to the hbonds data
+    Fc_glycan_tot_score = sf( temp_working )
 
-        # score the Pose so that its hbond energies gets updated
-        sf = get_fa_scorefxn()
-        sf( temp_working )
+    # num hbonds in Fc glycan
+    Fc_glycan_internal_hbonds = get_hbonds( temp_working ).nhbonds()
 
-        working_Fc_glycan_hbonds = get_hbonds( temp_working ).nhbonds()
-        return glycan_rmsd, working_Fc_glycan_hbonds
+    # store data in the DataHolder and return it
+    data = DataHolder()
+    data.Fc_glycan_rmsd = glycan_rmsd
+    data.Fc_glycan_tot_score = Fc_glycan_tot_score
+    data.Fc_glycan_internal_hbonds = Fc_glycan_internal_hbonds
 
-    # or just return the glycan rmsd
-    else:
-        return glycan_rmsd
+    return data
 
 
 

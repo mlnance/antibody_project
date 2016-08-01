@@ -87,6 +87,8 @@ if input_args.full_random_reset is True and input_args.branch_random_reset:
 # store whether any kind of reset is happening
 if input_args.full_random_reset is True or input_args.branch_random_reset is True:
     do_random_reset = True
+else:
+    do_random_reset = False
 
 # check that num_sugar_small_move_trials is 10 or more if ramp_sf is set to True
 if input_args.ramp_sf == True and input_args.num_sugar_small_move_trials < 10:

@@ -90,6 +90,11 @@ if input_args.full_random_reset is True or input_args.branch_random_reset is Tru
 else:
     do_random_reset = False
 
+# make sure that do_random_reset was set to True if the user set do_light_reset to True
+if input_args.do_light_reset == True and do_random_reset == False:
+    print "\nYou asked for a light reset, but didn't specify which kind of reset (full glycan or just the branch). Exiting."
+    sys.exit()    
+
 # check that num_sugar_small_move_trials is 10 or more if ramp_sf is set to True
 if input_args.ramp_sf == True and input_args.num_sugar_small_move_trials < 10:
     print "\nIf you are ramping the ScoreFunction then you need to do 10 or more sugar_small_move_trials for the math to work. Exiting."

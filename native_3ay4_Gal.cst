@@ -1,2 +1,2 @@
-SiteConstraint C1 3E A FLAT_HARMONIC 5.83 1.0 1.5
-SiteConstraint C1 3G B FLAT_HARMONIC 5.16 1.0 1.5
+SiteConstraint C1 3E A FLAT_HARMONIC 5.83 1.0 2.0
+SiteConstraint C1 3G B FLAT_HARMONIC 5.16 1.0 2.0

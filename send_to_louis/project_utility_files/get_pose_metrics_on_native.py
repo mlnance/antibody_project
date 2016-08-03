@@ -12,6 +12,8 @@ native_no_Fc_glycan_hbonds = 443    # low E native without Fc glycan after scori
 native_just_Fc_glycan_hbonds = 7    # low E native only Fc glycan after scoring
 native_Fc_glycan_hbonds_contributed = native_with_Fc_glycan_hbonds - native_no_Fc_glycan_hbonds - native_just_Fc_glycan_hbonds
 
+# low E native sasa - ( low E native without sugar sasa + low E native just sugar sasa ) probe radius of 1.4
+native_Fc_glycan_sasa_contributed = -2516.4019778449438
 
 
 
@@ -51,7 +53,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
         get_contact_map_between_range1_range2, get_contact_map_with_JUMP_NUM, \
         analyze_contact_map, calc_Fnats_with_contact_maps, \
         get_scoretype_with_biggest_score_diff, get_res_with_biggest_score_diff
-    from pose_metrics_util import Fc_glycan_metrics, Fc_glycan_hbonds, \
+    from pose_metrics_util import Fc_glycan_metrics, \
         pseudo_interface_energy_3ay4, check_GlcNAc_to_Phe_contacts
     
     
@@ -81,12 +83,32 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( delta_total_score ) )
     
 
-    # glycan RMSD, tot score, and hbond calculation
+    # delta hbonds in total complex
+    working_hbonds = get_hbonds( working )
+    native_hbonds = get_hbonds( native )
+    delta_hbonds = working_hbonds.nhbonds() - native_hbonds.nhbonds()
+    metric_data.append( "hbonds:" )
+    metric_data.append( str( working_hbonds.nhbonds() ) )
+    metric_data.append( "delta_hbonds:" )
+    metric_data.append( str( delta_hbonds ) )
+    
+
+    # glycan RMSD, tot score, hbond, and sasa calculation
     working_Fc_glycan_data = Fc_glycan_metrics( working, native, working_info.native_Fc_glycan_chains, native_info.native_Fc_glycan_chains, sf, decoy_num, dump_dir )
+    delta_Fc_glycan_hbonds_contributed = working_Fc_glycan_data.Fc_glycan_hbonds_contributed - native_Fc_glycan_hbonds_contributed
+    delta_Fc_glycan_sasa_contributed = working_Fc_glycan_data.Fc_glycan_sasa_contributed - native_Fc_glycan_sasa_contributed
     metric_data.append( "Fc_glycan_rmsd:" )
     metric_data.append( str( working_Fc_glycan_data.Fc_glycan_rmsd ) )
     metric_data.append( "Fc_glycan_tot_score:" )
-    metric_data.append( str( working_Fc_glycan_data.Fc_glycan_tot_score ) )
+    metric_data.append( str( working_Fc_glycan_data.Fc_glycan_tot_score ) )    
+    metric_data.append( "Fc_glycan_hbonds_contributed:" )
+    metric_data.append( str( working_Fc_glycan_data.Fc_glycan_hbonds_contributed ) )
+    metric_data.append( "delta_Fc_glycan_hbonds_contributed:" )
+    metric_data.append( str( delta_Fc_glycan_hbonds_contributed ) )
+    metric_data.append( "Fc_glycan_sasa_contributed:" )
+    metric_data.append( str( working_Fc_glycan_data.Fc_glycan_sasa_contributed ) )
+    metric_data.append( "delta_Fc_glycan_sasa_contributed:" )
+    metric_data.append( str( delta_Fc_glycan_sasa_contributed ) )
     
 
     ## pseudo-inferface energy 
@@ -132,27 +154,6 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_interaction_energy ) )
     metric_data.append( "delta_std_interface_interaction_energy:" )
     metric_data.append( str( delta_interaction_energy ) )
-    
-
-    # delta hbonds in total complex
-    working_hbonds = get_hbonds( working )
-    native_hbonds = get_hbonds( native )
-    delta_hbonds = working_hbonds.nhbonds() - native_hbonds.nhbonds()
-    metric_data.append( "hbonds:" )
-    metric_data.append( str( working_hbonds.nhbonds() ) )
-    metric_data.append( "delta_hbonds:" )
-    metric_data.append( str( delta_hbonds ) )
-    
-
-    # delta hbonds contributed by Fc glycan
-    working_Fc_glycan_internal_hbonds = working_Fc_glycan_data.Fc_glycan_internal_hbonds
-
-    working_Fc_glycan_hbonds_contributed = Fc_glycan_hbonds( working, working_info.native_Fc_glycan_chains, decoy_num, dump_dir ) - working_Fc_glycan_internal_hbonds
-    delta_Fc_glycan_hbonds_contributed = working_Fc_glycan_hbonds_contributed - native_Fc_glycan_hbonds_contributed
-    metric_data.append( "Fc_glycan_hbonds_contributed:" )
-    metric_data.append( str( working_Fc_glycan_hbonds_contributed ) )
-    metric_data.append( "delta_Fc_glycan_hbonds_contributed:" )
-    metric_data.append( str( delta_Fc_glycan_hbonds_contributed ) )
     
 
     # check if the GlcNAc above the Gal residue contacts the Phe residue within 5 Angstroms ( 4.68 contact distance in native )

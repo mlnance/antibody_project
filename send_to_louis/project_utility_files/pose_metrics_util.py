@@ -252,6 +252,8 @@ def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
 def Fc_glycan_metrics( working, native, working_Fc_glycan_chains, native_Fc_glycan_chains, sf, decoy_num, dump_dir ):
     '''
     Return the glycan RMSD contribution of the two Fc glycans in 3ay4 (may work for other PDBs, but I don't know yet)
+    Fc_glycan_buried_sasa = complex with Fc glycan - ( complex without Fc glycan + just Fc glycan )
+    hbonds contributed by Fc glycans = total hbonds in Pose - total hbonds in Pose without Fc glycans - just Fc glycan hbonds
     :param working: decoy Pose()
     :param native: native Pose()
     :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
@@ -259,14 +261,14 @@ def Fc_glycan_metrics( working, native, working_Fc_glycan_chains, native_Fc_glyc
     :param sf: ScoreFunction
     :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
     :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
-    :return: obj( DataHolder that contains Fc_glycan_rmsd, Fc_glycan_tot_score, and Fc_glycan_internal_hbonds )
+    :return: obj( DataHolder that contains Fc_glycan_rmsd, Fc_glycan_tot_score, Fc_glycan_buried_sasa, and Fc_glycan_internal_hbonds, Fc_glycan_hbonds_contributed )
     '''
     #################
     #### IMPORTS ####
     #################
 
     # Rosetta functions
-    from rosetta import Pose
+    from rosetta import Pose, calc_total_sasa
     from rosetta.core.scoring import non_peptide_heavy_atom_RMSD
 
     # Rosetta functions I wrote out
@@ -292,9 +294,9 @@ def Fc_glycan_metrics( working, native, working_Fc_glycan_chains, native_Fc_glyc
     dump_pdb_by_chain( native_filename, native, native_Fc_glycan_chains, decoy_num, dump_dir = dump_dir )
 
     # load in the Fc glycans
-    temp_working = Pose()
+    just_Fc_glycan = Pose()
     try:
-        temp_working.assign( load_pose( working_filename ) )
+        just_Fc_glycan.assign( load_pose( working_filename ) )
     except:
         pass
 
@@ -306,10 +308,20 @@ def Fc_glycan_metrics( working, native, working_Fc_glycan_chains, native_Fc_glyc
 
     # calculate the glycan rmsd
     try:
-        glycan_rmsd = non_peptide_heavy_atom_RMSD( temp_working, temp_native )
+        glycan_rmsd = non_peptide_heavy_atom_RMSD( just_Fc_glycan, temp_native )
     except:
         glycan_rmsd = "nan"
         pass
+
+    ## get the metrics associated with just the Fc glycan
+    # score first as to gain access to the hbonds data
+    Fc_glycan_tot_score = sf( just_Fc_glycan )
+
+    # SASA of just the glycan
+    Fc_glycan_sasa = calc_total_sasa( just_Fc_glycan, 1.4 )
+
+    # num hbonds in Fc glycan
+    Fc_glycan_internal_hbonds = get_hbonds( just_Fc_glycan ).nhbonds()
 
     # delete the files
     try:
@@ -318,50 +330,8 @@ def Fc_glycan_metrics( working, native, working_Fc_glycan_chains, native_Fc_glyc
     except:
         pass
 
-    ## get the total score and hbonds of the working Fc glycans
-    # score first as to gain access to the hbonds data
-    Fc_glycan_tot_score = sf( temp_working )
 
-    # num hbonds in Fc glycan
-    Fc_glycan_internal_hbonds = get_hbonds( temp_working ).nhbonds()
-
-    # store data in the DataHolder and return it
-    data = DataHolder()
-    data.Fc_glycan_rmsd = glycan_rmsd
-    data.Fc_glycan_tot_score = Fc_glycan_tot_score
-    data.Fc_glycan_internal_hbonds = Fc_glycan_internal_hbonds
-
-    return data
-
-
-
-def Fc_glycan_hbonds( working, working_Fc_glycan_chains, decoy_num, dump_dir ):
-    '''
-    Return the number of hbonds the Fc glycan contributes to the Pose. Total hbonds in Pose - Total hbonds in Pose without Fc glycans = hbonds contributed by Fc glycans
-    :param working: decoy Pose()
-    :param native: native Pose()
-    :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
-    :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
-    :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
-    :return: float( Fc glycan rmsd )
-    '''
-    #################
-    #### IMPORTS ####
-    #################
-
-    # Rosetta functions
-    from rosetta import Pose, get_fa_scorefxn
-    from toolbox import get_hbonds
-
-    # Rosetta functions I wrote out
-    from antibody_functions import load_pose
-
-    # utility functions
-    import os
-    from util import dump_pdb_by_chain, id_generator
-
-
-
+    ## now move to metrics requiring the removal of the glycan from the complex
     # get temporary files to work with
     id = id_generator()
     if dump_dir.endswith( '/' ):
@@ -380,21 +350,25 @@ def Fc_glycan_hbonds( working, working_Fc_glycan_chains, decoy_num, dump_dir ):
     dump_pdb_by_chain( working_filename, working, working_pose_chains, decoy_num, dump_dir = dump_dir )
 
     # load in the working Pose without the Fc glycans
-    temp_working = Pose()
+    complex_no_Fc_glycan = Pose()
     try:
-        temp_working.assign( load_pose( working_filename ) )
+        complex_no_Fc_glycan.assign( load_pose( working_filename ) )
     except:
         pass
 
     # score the Poses so their hbond energies get updated
-    sf = get_fa_scorefxn()
     sf( working )
-    sf( temp_working )
+    sf( complex_no_Fc_glycan )
 
     # get the number of hbonds in the Pose without the Fc glycans
     with_Fc_glycan_hbonds = get_hbonds( working )
-    no_Fc_glycan_hbonds = get_hbonds( temp_working )
-    Fc_glycan_hbonds = with_Fc_glycan_hbonds.nhbonds() - no_Fc_glycan_hbonds.nhbonds()
+    no_Fc_glycan_hbonds = get_hbonds( complex_no_Fc_glycan )
+    Fc_glycan_hbonds_contributed = with_Fc_glycan_hbonds.nhbonds() - no_Fc_glycan_hbonds.nhbonds() - Fc_glycan_internal_hbonds
+
+    # get the SASA contributed by the presence of the Fc glycan
+    with_Fc_glycan_sasa = calc_total_sasa( working, 1.4 )
+    no_Fc_glycan_sasa = calc_total_sasa( complex_no_Fc_glycan, 1.4 )
+    Fc_glycan_sasa_contributed = with_Fc_glycan_sasa - ( no_Fc_glycan_sasa + Fc_glycan_sasa )
 
     # delete the files
     try:
@@ -402,7 +376,15 @@ def Fc_glycan_hbonds( working, working_Fc_glycan_chains, decoy_num, dump_dir ):
     except:
         pass
 
-    return Fc_glycan_hbonds
+    # store data in the DataHolder and return it
+    data = DataHolder()
+    data.Fc_glycan_rmsd = glycan_rmsd
+    data.Fc_glycan_tot_score = Fc_glycan_tot_score
+    data.Fc_glycan_internal_hbonds = Fc_glycan_internal_hbonds
+    data.Fc_glycan_hbonds_contributed = Fc_glycan_hbonds_contributed
+    data.Fc_glycan_sasa_contributed = Fc_glycan_sasa_contributed
+
+    return data
 
 
 

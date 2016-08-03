@@ -614,6 +614,7 @@ while not jd.job_complete:
     # run the SugarSmallMover a range of times using a MonteCarlo object to accept or reject the move
     num_ssm_accept = 0
     num_mc_checks = 0
+    mc_acceptance = None
     for ii in range( 1, input_args.num_sugar_small_move_trials + 1 ):
         # if score ramping is desired
         if input_args.ramp_sf:

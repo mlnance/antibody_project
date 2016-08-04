@@ -32,6 +32,7 @@ parser.add_argument("nstruct", type=int, help="how many decoys do you want to ma
 parser.add_argument("num_sugar_small_move_trials", type=int, help="how many SugarSmallMoves do you want to make within the Fc glycan?")
 parser.add_argument("num_moves_per_trial", type=int, help="how many SugarSmallMoves do you want to make within one trial?")
 parser.add_argument("--LCM_reset", action="store_true", help="do you want to the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan? (Excluding core GlcNAc)")
+parser.add_argument("--light_reset", action="store_true", help="do you want the random reset to be light? +/- 5-10 degrees discluding 0")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--native_constraint_file", default=None, type=str, help="/path/to/the .cst constraint file you want to use for the protocol")
 parser.add_argument("--scorefxn_file", default=None, type=str, help="/path/to/the .sf scorefxn space-delimited file that tells me which scoring weights beyond the norm you want to use")
@@ -75,6 +76,11 @@ if os.path.isdir( input_args.structure_dir ):
 else:
     print
     print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
+    sys.exit()
+
+# make sure that only one kind of reset argument was set to True
+if input_args.light_reset is True and input_args.LCM_reset is True:
+    print "\nYou asked for both a light reset and an LCM reset. Please only specify one type of reset. Exiting."
     sys.exit()
 
 # check that num_sugar_small_move_trials is 10 or more if ramp_sf is set to True
@@ -206,6 +212,7 @@ info_file_details.append( "Creating this many decoys:\t\t%s\n" %str( input_args.
 info_file_details.append( "Number of SugarSmallMove trials:\t%s\n" %str( input_args.num_sugar_small_move_trials ) )
 info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %str( input_args.num_moves_per_trial ) )
 info_file_details.append( "LCM reset of Fc glycan?:\t\t%s\n" %str( input_args.LCM_reset ) )
+info_file_details.append( "Light reset of Fc glycan?:\t\t%s\n" %str( input_args.light_reset ) )
 info_file_details.append( "Using score ramping?:\t\t\t%s\n" %str( input_args.ramp_sf ) )
 info_file_details.append( "Native constraint file used?:\t\t%s\n" %str( input_args.native_constraint_file ).split( '/' )[-1] )
 info_file_details.append( "ScoreFunction file used?:\t\t%s\n" %str( input_args.scorefxn_file ).split( '/' )[-1] )
@@ -281,10 +288,11 @@ while not jd.job_complete:
 
 
 
-    #############################
-    #### Fc GLYCAN LCM RESET ####
-    #############################
+    #########################
+    #### Fc GLYCAN RESET ####
+    #########################
 
+    # if user wants an LCM reset
     if input_args.LCM_reset:
         # for each residue except core GlcNAc
         for res_num in testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc:
@@ -306,6 +314,39 @@ while not jd.job_complete:
         pmm.apply( testing_pose )
         if input_args.verbose:
             print "score of LCM reset:", main_sf( testing_pose )
+
+    # if user wants a light reset by perturbing starting glycan phi/psi/omega
+    if input_args.light_reset:
+        # for each residue except core GlcNAc
+        for res_num in testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc:
+
+            # determine if the phi, psi, and omega change will be positive or negative
+            if random_range( 0, 1 ) == 1:
+                phi_mult = 1
+            else:
+                phi_mult = -1
+            if random_range( 0, 1 ) == 1:
+                psi_mult = 1
+            else:
+                psi_mult = -1
+            if random_range( 0, 1 ) == 1:
+                omega_mult = 1
+            else:
+                omega_mult = -1
+
+            # create the new phi, psi, and omega
+            reset_phi_num = testing_pose.phi( res_num ) + ( random_range( 5, 10 ) * phi_mult )
+            reset_psi_num = testing_pose.psi( res_num ) + ( random_range( 5, 10 ) * psi_mult )
+            reset_omega_num = testing_pose.omega( res_num ) + ( random_range( 5, 10 ) * omega_mult )
+
+            # reset the phi, psi, and omega values for the residue
+            testing_pose.set_phi( res_num, reset_phi_num )
+            testing_pose.set_psi( res_num, reset_psi_num )
+            testing_pose.set_omega( res_num, reset_omega_num )
+
+        pmm.apply( testing_pose )                                                      
+        if input_args.verbose:
+            print "score of light reset:", main_sf( testing_pose )
 
 
 

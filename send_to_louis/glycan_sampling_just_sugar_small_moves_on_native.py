@@ -31,6 +31,7 @@ parser.add_argument("structure_dir", type=str, help="where do you want to dump t
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_sugar_small_move_trials", type=int, help="how many SugarSmallMoves do you want to make within the Fc glycan?")
 parser.add_argument("num_moves_per_trial", type=int, help="how many SugarSmallMoves do you want to make within one trial?")
+#parser.add_argument("--just_chain_A", action="store_true", help="do you want the SugarSmallMover (and any reset) to act on the chain A glycan only?")
 parser.add_argument("--LCM_reset", action="store_true", help="do you want to the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--light_reset", action="store_true", help="do you want the random reset to be light? +/- 5-10 degrees discluding 0")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
@@ -131,6 +132,7 @@ from antibody_functions import initialize_rosetta, \
 # utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
 from get_pose_metrics_on_native import main as get_pose_metrics_on_native
+from pose_metrics_util import Fc_glycan_rmsd
 
 
 
@@ -211,6 +213,7 @@ info_file_details.append( "Sugar filename:\t\t\t\t%s\n" %input_args.glyco_file.s
 info_file_details.append( "Creating this many decoys:\t\t%s\n" %str( input_args.nstruct ) )
 info_file_details.append( "Number of SugarSmallMove trials:\t%s\n" %str( input_args.num_sugar_small_move_trials ) )
 info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %str( input_args.num_moves_per_trial ) )
+#info_file_details.append( "Just move (and reset) chain A?:\t%s\n" %str( input_args.just_chain_A ) )
 info_file_details.append( "LCM reset of Fc glycan?:\t\t%s\n" %str( input_args.LCM_reset ) )
 info_file_details.append( "Light reset of Fc glycan?:\t\t%s\n" %str( input_args.light_reset ) )
 info_file_details.append( "Using score ramping?:\t\t\t%s\n" %str( input_args.ramp_sf ) )
@@ -350,6 +353,25 @@ while not jd.job_complete:
 
 
 
+    #############################
+    #### Fc GLYCAN RMSD CALC ####
+    #############################
+
+    # find out how much the reset (if any) moved the glycan
+    pre_SSM_metrics = []
+    if input_args.LCM_reset or input_args.light_reset:
+        Fc_glycan_rmsd_after_reset = Fc_glycan_rmsd( testing_pose, testing_pose_info.native_Fc_glycan_chains, 
+                                                     native_pose, native_pose_info.native_Fc_glycan_chains, 
+                                                     cur_decoy_num, metrics_dump_dir )
+
+        pre_SSM_metrics.append( "Fc_glycan_rmsd_after_reset:" )
+        pre_SSM_metrics.append( str( Fc_glycan_rmsd_after_reset ) )
+
+        if input_args.verbose:
+            print "Fc glycan RMSD after reset:", Fc_glycan_rmsd_after_reset
+
+
+
     #################################
     #### Fc GLYCAN AREA PACK/MIN ####
     #################################
@@ -393,6 +415,23 @@ while not jd.job_complete:
             print "score of pre-min:", ii, main_sf( testing_pose )
         
         pmm.apply( testing_pose )
+
+
+
+    #############################
+    #### Fc GLYCAN RMSD CALC ####
+    #############################
+
+    # find out how much the pack/min moved the glycan
+    Fc_glycan_rmsd_after_packmin = Fc_glycan_rmsd( testing_pose, testing_pose_info.native_Fc_glycan_chains, 
+                                                 native_pose, native_pose_info.native_Fc_glycan_chains, 
+                                                 cur_decoy_num, metrics_dump_dir )
+
+    pre_SSM_metrics.append( "Fc_glycan_rmsd_after_packmin:" )
+    pre_SSM_metrics.append( str( Fc_glycan_rmsd_after_packmin ) )
+
+    if input_args.verbose:
+        print "Fc glycan RMSD after pack/min rounds:", Fc_glycan_rmsd_after_packmin
 
 
 
@@ -502,6 +541,10 @@ while not jd.job_complete:
     except:
         metrics = ''
         pass
+
+    # add the pre-metric calculations to the metrics data
+    pre_SSM_metrics = ' '.join( pre_SSM_metrics )
+    metrics += " %s" %pre_SSM_metrics
 
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics

@@ -123,6 +123,8 @@ for decoy in fasc_data_dict.keys():
                     if metric_name not in used_metric_names:
                         used_metric_names.append( metric_name )
                 except:
+                    ## print out decoy name here to debug when not getting all the info from the .fasc file
+                    #print decoy
                     unused_metric_names.append( metric_name )
 
 # check out the passed result filename for .csv extension

@@ -100,6 +100,8 @@ native_order_nums = range( 1, 618 + 1 )
 native_Fc_protein_chains = [ 'A', 'B' ]
 native_FcR_protein_chains = [ 'C' ]
 native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
+native_Fc_glycan_A_chains = [ 'D', 'E' ]
+native_Fc_glycan_B_chains = [ 'F', 'G' ]
 native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 
 # glycosylated decoy
@@ -128,6 +130,8 @@ decoy_order_nums.extend( decoy_FcR_three_mer_nums )
 decoy_Fc_protein_chains = [ 'A', 'B' ]
 decoy_FcR_protein_chains = [ 'C' ]
 decoy_Fc_glycan_chains = [ 'H', 'I', 'J', 'K' ]
+decoy_Fc_glycan_A_chains = [ 'H', 'I' ]
+decoy_Fc_glycan_B_chains = [ 'J', 'K' ]
 decoy_FcR_glycan_chains = [ 'D', 'E', 'F', 'G' ]
 
 # make an appropriate dictionary map
@@ -163,13 +167,23 @@ FoldTree.new_loops = _new_loops
 #### WORKER FUNCTIONS ####
 ##########################
 
-def initialize_rosetta():
-    # called when this file is imported rather than ran directly
+def initialize_rosetta( constant_seed = False, debug = False ):
+    """
+    Initialize Rosetta and mute basic, core, and protocols.
+    If constant_seed == True, use default constant seed 1111111
+    If debug == True, use default constant seed and do not mute Rosetta
+    """
     print "Initializing Rosetta with sugar flags"
 
     # makes Rosetta quiet and sugar I/O ready
     #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
-    init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
+    if constant_seed:
+        init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
+    elif debug:
+        init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
+    else:
+
+        init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
 
 
 
@@ -230,12 +244,17 @@ class hold_chain_and_res_designations_3ay4:
         self.native_Fc_protein_chains = native_Fc_protein_chains
         self.native_FcR_protein_chains = native_FcR_protein_chains
         self.native_Fc_glycan_chains = native_Fc_glycan_chains
+        self.native_Fc_glycan_A_chains = native_Fc_glycan_A_chains
+        self.native_Fc_glycan_B_chains = native_Fc_glycan_B_chains
         self.native_FcR_glycan_chains = native_FcR_glycan_chains
 
     def decoy( self ):
         # decoy information
         self.Fc_protein_nums = decoy_Fc_protein_nums
         self.FcR_main_glycan_nums = decoy_FcR_main_glycan_nums
+        self.Fc_glycan_A_nums = decoy_Fc_glycan_A_nums
+        self.Fc_glycan_A_chains = decoy_Fc_glycan_A_chains
+        self.Fc_glycan_B_chains = decoy_Fc_glycan_B_chains
         """
         self.decoy_Fc_chain_A_nums = decoy_Fc_chain_A_nums
         self.decoy_Fc_glycan_A_nums = decoy_Fc_glycan_A_nums
@@ -3559,7 +3578,8 @@ if __name__ == '__main__':
     
     print "Initializing Rosetta with sugar flags"
     #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
-    init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
+    #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
+    init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
 
 ############################
 #### INITIALIZE ROSETTA ####

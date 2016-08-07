@@ -8,7 +8,7 @@ STARTING POSE (3ay4 without Fc) is a base structure that was acquired from makin
 
 '''
 SAMPLE INPUT
-run glycan_sampling_just_sugar_small_moves_on_native.py project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb project_glyco_files/3ay4_Fc_Glycan.iupac project_utility_files/ ~/pyrosetta_dir/test_pdb_dir/ 1 3 3
+run glycan_sampling_just_sugar_small_moves_on_native_no_packmin_after_reset.py project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb project_glyco_files/3ay4_Fc_Glycan.iupac project_utility_files/ ~/pyrosetta_dir/test_pdb_dir/ 1 3 3
 '''
 
 
@@ -375,7 +375,7 @@ while not jd.job_complete:
     #################################
     #### Fc GLYCAN AREA PACK/MIN ####
     #################################
-    '''
+
     # make backbone and chi MoveMap for the Fc sugars
     min_mm = MoveMap()
     for res_num in testing_pose_info.native_Fc_glycan_nums: 
@@ -400,7 +400,7 @@ while not jd.job_complete:
                                                     residue_range = testing_pose_info.native_Fc_glycan_nums, 
                                                     use_pack_radius = True, 
                                                     pack_radius = 20 )
-
+    '''
     # do 2 pack/mins to try to get to a low-energy structure of and around the Fc glycan
     # Poses that don't get to a negative score here will likely be outliers
     for ii in range( 1, 2 + 1 ):

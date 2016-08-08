@@ -33,7 +33,7 @@ parser.add_argument("num_sugar_small_move_trials", type=int, help="how many Suga
 parser.add_argument("num_moves_per_trial", type=int, help="how many SugarSmallMoves do you want to make within one trial?")
 #parser.add_argument("--just_chain_A", action="store_true", help="do you want the SugarSmallMover (and any reset) to act on the chain A glycan only?")
 parser.add_argument("--LCM_reset", action="store_true", help="do you want to the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan? (Excluding core GlcNAc)")
-parser.add_argument("--light_reset", action="store_true", help="do you want the random reset to be light? +/- 5-10 degrees discluding 0")
+parser.add_argument("--light_reset", action="store_true", help="do you want the random reset to be light? +/- 10-15 degrees discluding 0")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--native_constraint_file", default=None, type=str, help="/path/to/the .cst constraint file you want to use for the protocol")
 parser.add_argument("--scorefxn_file", default=None, type=str, help="/path/to/the .sf scorefxn space-delimited file that tells me which scoring weights beyond the norm you want to use")
@@ -338,9 +338,9 @@ while not jd.job_complete:
                 omega_mult = -1
 
             # create the new phi, psi, and omega
-            reset_phi_num = testing_pose.phi( res_num ) + ( random_range( 5, 10 ) * phi_mult )
-            reset_psi_num = testing_pose.psi( res_num ) + ( random_range( 5, 10 ) * psi_mult )
-            reset_omega_num = testing_pose.omega( res_num ) + ( random_range( 5, 10 ) * omega_mult )
+            reset_phi_num = testing_pose.phi( res_num ) + ( random_range( 10, 15 ) * phi_mult )
+            reset_psi_num = testing_pose.psi( res_num ) + ( random_range( 10, 15 ) * psi_mult )
+            reset_omega_num = testing_pose.omega( res_num ) + ( random_range( 10, 15 ) * omega_mult )
 
             # reset the phi, psi, and omega values for the residue
             testing_pose.set_phi( res_num, reset_phi_num )

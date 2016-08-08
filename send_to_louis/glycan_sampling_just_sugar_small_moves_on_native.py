@@ -52,20 +52,12 @@ import os, sys, random
 
 # check the utility directory
 if not os.path.isdir( input_args.utility_dir ):
-    print "Your argument", input_args.utility_dir, "for utility_directory is not a directory, exiting"
+    print "\nYour utility_dir argument( %s ) does not exist. Please check your input. Exiting." %input_args.utility_dir
     sys.exit()
 
 # add the utility directory to the system path for loading of modules
 sys.path.append( input_args.utility_dir )
 
-
-# collect and create necessary directories for use in metric calculations
-working_dir = os.getcwd() + '/'
-metrics_dump_dir = working_dir + "sugar_small_dir_%s" %str( input_args.num_sugar_small_move_trials )
-try:
-    os.mkdir( metrics_dump_dir )
-except:
-    pass
 
 ## check the validity of the passed arguments
 # make sure the structure_dir passed is valid
@@ -76,9 +68,29 @@ if os.path.isdir( input_args.structure_dir ):
         main_structure_dir = input_args.structure_dir
 else:
     print
-    print "It seems that the directory you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
+    print "It seems that the structure_dir argument you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
     sys.exit()
 
+# make sure the files passed actually exist
+if input_args.native_pdb_file is not None:
+    if not os.path.isfile( input_args.native_pdb_file ):
+        print "\nYour native_pdb_file argument ( %s ) does not exist. Please check your input. Exiting" %input_args.native_pdb_file
+        sys.exit()
+if input_args.glyco_file is not None:
+    if not os.path.isfile( input_args.glyco_file ):
+        print "\nYour glyco_file argument ( %s ) does not exist. Please check your input. Exiting" %input_args.glyco_file
+        sys.exit()
+if input_args.scorefxn_file is not None:
+    if not os.path.isfile( input_args.scorefxn_file ):
+        print "\nYour scorefxn_file argument ( %s ) does not exist. Please check your input. Exiting" %input_args.scorefxn_file
+        sys.exit()
+if input_args.native_constraint_file is not None:
+    if not os.path.isfile( input_args.native_constraint_file ):
+        print "\nYour native_constraint_file argument ( %s ) does not exist. Please check your input. Exiting" %input_args.native_constraint_file
+        sys.exit()
+
+
+## double check the logic of the passed arguments
 # make sure that only one kind of reset argument was set to True
 if input_args.light_reset is True and input_args.LCM_reset is True:
     print "\nYou asked for both a light reset and an LCM reset. Please only specify one type of reset. Exiting."
@@ -106,6 +118,14 @@ if not os.path.isdir( lowest_E_structs_dir ):
         os.mkdir( lowest_E_structs_dir )
     except:
         pass
+
+# collect and create necessary directories for use in metric calculations
+working_dir = os.getcwd() + '/'
+metrics_dump_dir = working_dir + "sugar_small_dir_%s" %str( input_args.num_sugar_small_move_trials )
+try:
+    os.mkdir( metrics_dump_dir )
+except:
+    pass
 
 
 
@@ -278,20 +298,6 @@ while not jd.job_complete:
 
 
     #########################
-    #### ADD CONSTRAINTS ####
-    #########################
-
-    # apply the constraints to the pose if a .cst file was passed
-    if constraint_file_used:
-        try:
-            constraint_setter.apply( testing_pose )
-        except:
-            print "It appears there is something wrong with your constraint file. Please check your input."
-            sys.exit()
-
-
-
-    #########################
     #### Fc GLYCAN RESET ####
     #########################
 
@@ -432,6 +438,20 @@ while not jd.job_complete:
 
     if input_args.verbose:
         print "Fc glycan RMSD after pack/min rounds:", Fc_glycan_rmsd_after_packmin
+
+
+
+    #########################
+    #### ADD CONSTRAINTS ####
+    #########################
+
+    # apply the constraints to the pose if a .cst file was passed
+    if constraint_file_used:
+        try:
+            constraint_setter.apply( testing_pose )
+        except:
+            print "It appears there is something wrong with your constraint file. Please check your input."
+            sys.exit()
 
 
 

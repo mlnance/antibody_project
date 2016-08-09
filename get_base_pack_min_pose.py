@@ -19,7 +19,7 @@ parser.add_argument("structure_directory", type=str, help="where do you want you
 parser.add_argument("utility_directory", type=str, help="where do the utility files live? Give me the directory.")
 parser.add_argument("base_nstruct", type=int, help="how many decoy structures do you want to create to get a base native structure?")
 parser.add_argument("--scorefxn_file", default=None, type=str, help="/path/to/the .sf scorefxn space-delimited file that tells me which scoring weights beyond the norm you want to use")
-parser.add_argument("--fa_intra_rep", default=None, type=str, help="do you want to set fa_intra_rep to 0.440 in the sf?")
+parser.add_argument("--fa_intra_rep", action="store_true", help="do you want to set fa_intra_rep to 0.440 in the sf?")
 input_args = parser.parse_args()
 
 

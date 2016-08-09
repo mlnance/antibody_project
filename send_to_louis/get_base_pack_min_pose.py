@@ -19,6 +19,7 @@ parser.add_argument("structure_directory", type=str, help="where do you want you
 parser.add_argument("utility_directory", type=str, help="where do the utility files live? Give me the directory.")
 parser.add_argument("base_nstruct", type=int, help="how many decoy structures do you want to create to get a base native structure?")
 parser.add_argument("--scorefxn_file", default=None, type=str, help="/path/to/the .sf scorefxn space-delimited file that tells me which scoring weights beyond the norm you want to use")
+parser.add_argument("--fa_intra_rep", default=None, type=str, help="do you want to set fa_intra_rep to 0.440 in the sf?")
 input_args = parser.parse_args()
 
 
@@ -124,8 +125,9 @@ if input_args.scorefxn_file is not None:
 else:
     sf = get_fa_scorefxn()
 
-# fa_intra_rep should always be 0.440 since that's what I've been using
-sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
+# fa_intra_rep should always 0.440 since that's what I've been using
+if input_args.fa_intra_rep:
+    sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
 
 
 # pymol stuff

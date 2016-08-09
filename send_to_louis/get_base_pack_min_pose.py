@@ -141,7 +141,7 @@ info_file_details = []
 info_file_details.append( "Native PDB filename:\t\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
 info_file_details.append( "Creating this many decoys:\t\t%s\n" %str( input_args.base_nstruct ) )
 info_file_details.append( "ScoreFunction file used?:\t\t%s\n" %str( input_args.scorefxn_file ).split( '/' )[-1] )
-info_file_details.append( "Set fa_intra_rep to 0.44?:\t\t%s\n" %str( input_args.fa_intra_rep )
+info_file_details.append( "Set fa_intra_rep to 0.44?:\t\t%s\n" %str( input_args.fa_intra_rep ) )
 info_file_details.append( "Main structure directory:\t\t%s\n" %main_structure_dir )
 info_file_details.append( "Base structure directory:\t\t%s\n" %base_structs_dir )
 info_file_details.append( "Lowest E structure directory:\t\t%s\n" %lowest_E_structs_dir )

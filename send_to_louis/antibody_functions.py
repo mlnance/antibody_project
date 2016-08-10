@@ -182,7 +182,6 @@ def initialize_rosetta( constant_seed = False, debug = False ):
     elif debug:
         init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
     else:
-
         init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
 
 
@@ -869,6 +868,80 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
         pose.set_omega( seqpos, new_omega )
 
     return pose
+
+
+
+def get_res_nums_within_radius( seq_pos, input_pose, radius, include_seq_pos = False ):
+    """
+    Get a list of residue numbers in <input_pose> that are within <radius> A around residue <seq_pos>. Use nbr_atom for calculation.
+    :param seq_pos: int( Pose number of residue of interest
+    :param input_pose: Pose
+    :param radius: float( or int( residues around <seq_pos> within this cutoff distance ))
+    :param include_seq_pos: bool( do you want to include the <seq_pos> you passed as an arg in the returned list? ) Default = False
+    :return: list( residue numbers within <radius> A around <seq_pos> in <input_pose>
+    """
+    # container for the CA or the C1 xyz of each residue in <input_pose>
+    CA_C1_xyz_of_pose = {}
+
+    for res_num in range( 1, input_pose.n_residue() + 1 ):
+        # skip the <seq_pos> if the user specified to do so
+        if res_num == seq_pos and include_seq_pos == False:
+            pass
+        # add all xyz coordinates of each CA or C1 atom in <input_pose> residues
+        else:
+            if input_pose.residue( res_num ).is_carbohydrate():
+                atom_num = input_pose.residue( res_num ).atom_index( "C1" )
+            else:
+                atom_num = input_pose.residue( res_num ).atom_index( "CA" )
+
+            # store the coordinates of this atom in the dict
+            CA_C1_xyz_of_pose[ res_num ] = input_pose.residue( res_num ).atom( atom_num ).xyz()
+
+    # CA or C1 xyz of residue of interest
+    if input_pose.residue( seq_pos ).is_carbohydrate():
+        atom_num = input_pose.residue( seq_pos ).atom_index( "C1" )
+    else:
+        atom_num = input_pose.residue( seq_pos ).atom_index( "CA" )
+    seq_pos_CA_C1_xyz = input_pose.residue( seq_pos ).atom( atom_num ).xyz()
+
+    # container for residues within specified 3 * <radius> to <seq_pos>
+    res_nums_inside_triple_radius = []
+
+    # first collect all residue numbers of those whose CA/C1 distance to <seq_pos> CA/C1 is less than 3 * <radius>
+    for res_num in CA_C1_xyz_of_pose.keys():
+        CA_C1_res_xyz = CA_C1_xyz_of_pose[ res_num ]
+        if CA_C1_res_xyz.distance( seq_pos_CA_C1_xyz ) <= ( 3*radius ):
+            res_nums_inside_triple_radius.append( res_num )
+
+    # collect the xyz of each heavy atom in <seq_pos>
+    seq_pos_heavy_atom_xyzs = {}
+    for seq_pos_atom_num in range( 1, len( input_pose.residue( seq_pos ).atoms() ) + 1 ):
+        #if not input_pose.residue( seq_pos ).atom_is_hydrogen( seq_pos_atom_num ): this returns HO1 as a non-H atom
+        if not input_pose.residue( seq_pos ).atom_is_hydrogen( seq_pos_atom_num ) and not input_pose.residue( seq_pos ).is_virtual( seq_pos_atom_num ):
+            seq_pos_heavy_atom_xyzs[ seq_pos_atom_num ] = ( input_pose.residue( seq_pos ).atom( seq_pos_atom_num ).xyz() )
+
+    # now iter through each heavy atom of residues within 3 * <radius> to <seq_pos>
+    # and see if it's within <radius> of a heavy atom on <seq_pos>
+    res_nums_inside_radius = []
+    for res_num in res_nums_inside_triple_radius:
+        # for each heavy atom in this residue in the <input_pose>
+        for atom_num in range( 1, len( input_pose.residue( res_num ).atoms() ) + 1 ):
+
+            # move on if this residue already has a heavy atom within the <radius>
+            if res_num not in res_nums_inside_radius:
+
+                # get the xyz coordinates for each heavy atom
+                if not input_pose.residue( res_num ).atom_is_hydrogen( atom_num ) and not input_pose.residue( res_num ).is_virtual( atom_num ):
+                    heavy_atom_xyz = input_pose.residue( res_num ).atom( atom_num ).xyz()
+
+                    # check this heavy atom against every heavy atom in the <seq_pos>
+                    for seq_pos_heavy_atom_num in seq_pos_heavy_atom_xyzs.keys():
+                        seq_pos_heavy_atom_xyz = seq_pos_heavy_atom_xyzs[ seq_pos_heavy_atom_num ]
+                        if seq_pos_heavy_atom_xyz.distance( heavy_atom_xyz ) <= radius:
+                            res_nums_inside_radius.append( res_num )
+                            break
+
+    return res_nums_inside_radius
 
 
 
@@ -3578,8 +3651,8 @@ if __name__ == '__main__':
     
     print "Initializing Rosetta with sugar flags"
     #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
-    #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
-    init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
+    init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
+    #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
 
 ############################
 #### INITIALIZE ROSETTA ####

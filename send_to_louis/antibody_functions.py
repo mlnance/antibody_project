@@ -1,56 +1,25 @@
 #!/usr/bin/python
 __author__ = 'morganlnance'
 
-# TODO: move imports to the functions where they actually are needed
-
 
 
 #####################
 #### ALL IMPORTS ####
 #####################
 
-if __name__ == "__main__":
-    print
-    print "Importing modules..."
-else:
-    print
-    print "Importing modules from %s..." %__name__
+# main PyMOL_Mover watcher
+from rosetta import PyMOL_Mover
 
-# bread and butter Rosetta imports
-from rosetta import MoveMap, RotamerTrialsMover, MinMover, \
-    PyMOL_Mover, AtomID, aa_from_oneletter_code, \
-    FoldTree, get_fa_scorefxn, Vector1
-from rosetta.utility import vector1_bool
-from rosetta.numeric import xyzVector_Real
-from rosetta.core.chemical import VariantType
-from rosetta.core.chemical.rings import RingConformer
-from rosetta.core.pose import remove_variant_type_from_pose_residue
-from rosetta.core.scoring.constraints import AtomPairConstraint, AngleConstraint
-from toolbox import mutate_residue, get_hbonds
+# import extras
+import os, sys
 
 # for sugar work
 #from rosetta.protocols.carbohydrates import GlycanRelaxMover
 #from rosetta.protocols.carbohydrates import LinkageConformerMover
-
-# for loop work
-from rosetta import Loop, Loops, add_single_cutpoint_variant
-from rosetta.protocols.loops.loop_closure.ccd import CCDLoopClosureMover
+#from rosetta.core.chemical.rings import RingConformer
 
 # for extra scoring functionality
-from rosetta.core.scoring import score_type_from_name, CA_rmsd
-from rosetta.core.scoring.func import HarmonicFunc, CircularHarmonicFunc
-from rosetta.protocols.analysis import InterfaceAnalyzerMover as IAM
-
-# import extras
-import os
-import sys
-try:
-    import pandas as pd
-    pandas_on = True
-except ImportError:
-    pandas_on = False
-    print "Skipping Pandas import - consider downloading it! Who doesn't love Pandas??"
-    pass
+#from rosetta.core.scoring import CA_rmsd
 
 
 
@@ -156,6 +125,7 @@ def _new_loops( loops ):
         loop = loops[ ii ]
         new_loop( loop )
 
+from rosetta import FoldTree
 FoldTree.new_loop = _new_loop
 FoldTree.new_loops = _new_loops
 
@@ -281,6 +251,9 @@ def align_sugar_virtual_atoms( in_pose ):
     :param in_pose: Pose
     :return: Pose
     """
+    from rosetta import AtomID
+
+
     # copy the input pose
     pose = in_pose.clone()
 
@@ -326,6 +299,10 @@ def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
     :param verbose: bool( print the final weights of the returned ScoreFunction? ) Default = False
     "return: ScoreFunction( fa_scorefxn with adjusted weights of given scoretypes )
     """
+    from rosetta import get_fa_scorefxn
+    from rosetta.core.scoring import score_type_from_name
+
+
     # argument check - check the passed argument is a dict
     if not isinstance( weights_dict, dict ):
         print "You didn't give me a dictionary for your input. I need a dict of ScoreType (or name) : weight. Exiting."
@@ -380,6 +357,10 @@ def make_fa_scorefxn_from_file( scorefxn_file, verbose = False ):
     :param verbose: bool( print the final weights of the returned ScoreFunction? ) Default = False
     "return: ScoreFunction( fa_scorefxn with adjusted weights of given scoretypes )
     """
+    from rosetta import get_fa_scorefxn
+    from rosetta.core.scoring import score_type_from_name
+
+
     # make a standard fa_scorefxn
     sf = get_fa_scorefxn()
 
@@ -465,6 +446,9 @@ def get_score_by_scoretype( sf, input_scoretype, pose, weight = 1.0, verbose = F
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: float( <input_scoretype> score of <pose> )
     """
+    from rosetta.core.scoring import score_type_from_name
+
+
     if verbose:
         print "Getting the total score of a specific ScoreType for the pose"
 
@@ -528,6 +512,9 @@ def get_residue_score_by_scoretype( sf, input_scoretype, seq_pos, pose, weight =
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: float( the <input_scoretype> score of residue <seq_pos> )
     """
+    from rosetta.core.scoring import score_type_from_name
+
+
     if verbose:
         print "Getting and comparing each residue between the two poses based on ScoreType"
 
@@ -735,6 +722,10 @@ def get_sugar_bb_only_sf( weight = 1 ):
     :param weight: int( or float( weight of the sugar_bb term in the sf ) ). Default = 1
     :return: ScoreFunction
     """
+    from rosetta import get_fa_scorefxn
+    from rosetta.core.scoring import score_type_from_name
+
+
     # instantiate a fa ScoreFunction
     sugar_sf = get_fa_scorefxn()
     
@@ -766,6 +757,12 @@ def apply_sugar_constraints_to_sf( sf, pose, weight = 1.0, verbose = False ):
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: ScoreFunction( sf including sugar constraints )
     """
+    from rosetta import AtomID
+    from rosetta.core.scoring.constraints import AtomPairConstraint, AngleConstraint
+    from rosetta.core.scoring import score_type_from_name
+    from rosetta.core.scoring.func import HarmonicFunc, CircularHarmonicFunc
+
+
     # get list of chemical edges ( marked as -2 in FoldTree f )
     edges = pose.fold_tree().get_chemical_edges()
 
@@ -963,7 +960,7 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True,
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: a pack_rotamers_mover object
     """
-    from rosetta import Pose, standard_packer_task
+    from rosetta import Pose, standard_packer_task, RotamerTrialsMover
 
 
     if verbose:
@@ -1083,7 +1080,7 @@ def make_min_mover( sf, input_pose, apply_sf_sugar_constraints = True, jumps = N
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: min_mover object
     """
-    from rosetta import Pose
+    from rosetta import Pose, MoveMap, MinMover
 
 
     if verbose:
@@ -1159,6 +1156,9 @@ def make_movemap_for_loop( loop, allow_bb_movement = True, allow_chi_movement = 
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: MoveMap for Loop
     """
+    from rosetta import MoveMap
+
+
     if verbose:
         print "Making a MoveMap for a Loop"
     
@@ -1185,6 +1185,9 @@ def make_movemap_for_jumps( JUMP_NUMbers, verbose = False ):
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: MoveMap for Jump(s)
     """
+    from rosetta import MoveMap
+
+
     # instantiate a MoveMap
     mm = MoveMap()
 
@@ -1225,6 +1228,9 @@ def make_movemap_for_sugars( pose, allow_bb_movement = True, allow_chi_movement 
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: MoveMap for all sugar residues in <pose>
     """
+    from rosetta import MoveMap
+
+
     if verbose:
         print "Making a MoveMap for a Loop"
     
@@ -1258,6 +1264,9 @@ def make_movemap_for_range( seqpos_list, allow_bb_movement = True, allow_chi_mov
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: MoveMap for all sugar residues in <pose>
     """
+    from rosetta import MoveMap
+
+
     # check to make sure <seqpos_list> is a list
     if not isinstance( seqpos_list, list ):
         print "You didn't pass me a list for your <seqpos_list> argument. That's what I need to make your MoveMap. Exiting."
@@ -1298,6 +1307,9 @@ def do_min_with_this_mm( mm, sf, pose, apply_sf_sugar_constraints = True, minimi
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: minimized Pose
     """
+    from rosetta import MinMover
+
+
     # apply sugar branch point constraints to sf, if desired
     if apply_sf_sugar_constraints:
         apply_sugar_constraints_to_sf( sf, pose )
@@ -1402,6 +1414,9 @@ def ramp_score_weight( sf, score_type_str, target_weight, current_step, total_st
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: the ScoreFunction with the adjusted weight
     """
+    from rosetta.core.scoring import score_type_from_name
+
+
     # get the ScoreType object given the str value passed in
     try:
         score_type = score_type_from_name( score_type_str )
@@ -1471,6 +1486,9 @@ def CCD_loop_closure( loop, pose ):
     :param pose: Pose
     :return: Pose( <pose> with closed <loop> )
     """
+    from rosetta.protocols.loops.loop_closure.ccd import CCDLoopClosureMover
+
+
     # make a MoveMap allowing only the loop to be flexible
     mm = make_movemap_for_loop( loop )
 
@@ -1792,6 +1810,9 @@ def make_loop( start, stop, cut = None ):
     :param cut: int( cutpoint ). Default = None (ie. the midpoint between <start> and <stop>)
     :return: a Loop object
     """
+    from rosetta import Loop
+
+
     # if a cut was specified on input
     if cut is not None:
         loop = Loop( start, stop, cut )
@@ -1812,6 +1833,9 @@ def make_loops( starts, stops, cuts = None ):
     :param cuts: list( int( cutpoints ) ). Default = None (ie. the midpoint between <start> and <stop>)
     :return: a Loops object
     """
+    from rosetta import Loops
+
+
     # check that the arguments passed are lists - need lists for code to work
     if not isinstance( starts, list ):
         print
@@ -1866,6 +1890,9 @@ def make_loops_from_file( loops_file, pose, PDB_numbering = False, anchor_loops 
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: a Loops object
     """
+    from rosetta import Loop, Loops
+
+
     # makes the Loops object that will hold all the Loops created
     loops = Loops()
 
@@ -2029,6 +2056,8 @@ def add_cutpoint_variants( loops, pose ):
     :param pose: Pose
     :return: Pose( <pose> with <loops> that are cutpoint_variants )
     """
+    from rosetta import add_single_cutpoint_variant
+
 
     # for every Loop in the Loops object, add it as a cutpoint variant to the <pose>
     for loop_num in range( 1, loops.num_loop() + 1 ):
@@ -2209,6 +2238,10 @@ def get_seq_pos_from_JUMP_NUM( JUMP_NUM, pose, start = False, verbose = False):
 
 # LOOPs file --> appropriate fold tree
 def hard_code_fold_tree( orig_loops, pose, verbose = False ):
+    from rosetta import FoldTree, Loops
+
+
+    # instantiate an empty FoldTree
     ft = FoldTree()
     
     # make a copy of the original loops as to not alter them for later use
@@ -2403,6 +2436,9 @@ def setup_new_fold_tree( loops_file, pose, PDB_numbering = False, anchor_loops =
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: Pose with the new FoldTree
     """
+    from rosetta import Loops
+
+
     # attach the Loops object to the <pose> to be used when tearing down the FoldTree with restore_original_fold_tree
     pose.loops = Loops()
     
@@ -2444,6 +2480,10 @@ def restore_original_fold_tree( pose, verbose = False ):
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: Pose with original FoldTree
     """
+    from rosetta.core.chemical import VariantType
+    from rosetta.core.pose import remove_variant_type_from_pose_residue
+
+
     # check to make sure there's actually a reason to restore the original FoldTree
     # if pose.loops_file is still None, that means it hasn't been changed  -  therefore nothing to do for this <pose>
     if pose.loops_file is None:
@@ -2503,7 +2543,9 @@ def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK
     :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 20
     :return: packer_task ready to pack a Pose with a SINGLE mutation
     """
-    from rosetta import standard_packer_task
+    from rosetta import standard_packer_task, RotamerTrialsMover, \
+        aa_from_oneletter_code
+    from rosetta.utility import vector1_bool
 
 
     # create a packer task handling a SINGLE mutated residue
@@ -2572,6 +2614,7 @@ def get_best_mutant_of_20( seq_pos, sf, pose, apply_sf_sugar_constraints = True,
     :return: the mutated Pose of the lowest total score out of the twenty mutations
     """
     from rosetta import Pose
+    from toolbox import mutate_residue
 
 
     # apply sugar branch point constraints to sf, if desired
@@ -2691,6 +2734,7 @@ def make_my_new_symmetric_antibody( mutation_string, sf, input_pose, apply_sf_su
     :return: newly mutated Pose
     """
     from rosetta import Pose
+    from toolbox import mutate_residue
 
 
     # no pack min to get best structure!! do that yourself with the dumped pose
@@ -2773,6 +2817,7 @@ def make_my_new_asymmetric_antibody( mutation_string, sf, input_pose, apply_sf_s
     :return: newly mutated Pose
     """
     from rosetta import Pose
+    from toolbox import mutate_residue
 
 
     # no pack min to get best structure!! do that yourself with the dumped pose
@@ -3404,6 +3449,8 @@ def calc_interface_sasa( pose, JUMP_NUM ):
     """
     # imports
     from rosetta import Pose, calc_total_sasa
+    from rosetta.numeric import xyzVector_Real
+
     
     # make sure a valid JUMP_NUM was passed in
     if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
@@ -3438,6 +3485,9 @@ def analyze_interface( pose, JUMP_NUM, pack_separated = True ):
     :param pack_separated: bool( Do you want to pack the protein after you split them apart? ). Default = True
     :return: float( interface_SASA value )
     """
+    from rosetta.protocols.analysis import InterfaceAnalyzerMover as IAM
+
+
     # make sure a valid JUMP_NUM was passed in
     if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
         print
@@ -3486,6 +3536,7 @@ def get_interface_score( JUMP_NUM, sf, pose ):
     :return: float( ddG interface score )
     """
     from rosetta import Pose
+    from rosetta.numeric import xyzVector_Real
 
 
     # get start score
@@ -3531,6 +3582,15 @@ def determine_amino_acid_composition( pose ):
     :param pose: Pose
     :return: a DataFrame or dictionary of the data, depending on if Pandas can be imported
     """
+    try:
+        import pandas as pd
+        pandas_on = True
+    except ImportError:
+        pandas_on = False
+        print "Skipping Pandas import - consider downloading it! Who doesn't love Pandas??"
+        pass
+
+
     # initialize a dictionary for the data
     # won't be used if Pandas import worked
     data_dict = {}

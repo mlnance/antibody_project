@@ -17,9 +17,7 @@ else:
     print "Importing modules from %s..." %__name__
 
 # bread and butter Rosetta imports
-from rosetta import init, pose_from_file, \
-    standard_packer_task, change_cys_state, \
-    Pose, MoveMap, RotamerTrialsMover, MinMover, \
+from rosetta import MoveMap, RotamerTrialsMover, MinMover, \
     PyMOL_Mover, AtomID, aa_from_oneletter_code, \
     FoldTree, get_fa_scorefxn, Vector1
 from rosetta.utility import vector1_bool
@@ -173,6 +171,9 @@ def initialize_rosetta( constant_seed = False, debug = False ):
     If constant_seed == True, use default constant seed 1111111
     If debug == True, use default constant seed and do not mute Rosetta
     """
+    from rosetta import init
+
+
     print "Initializing Rosetta with sugar flags"
 
     # makes Rosetta quiet and sugar I/O ready
@@ -838,6 +839,7 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
     :return: Pose
     """
     # imports
+    from rosetta import Pose
     from rosetta.basic import periodic_range
     from rosetta.numeric.random import rg
 
@@ -961,6 +963,9 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True,
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: a pack_rotamers_mover object
     """
+    from rosetta import Pose, standard_packer_task
+
+
     if verbose:
         print "Making a pack rotamers mover"
         
@@ -1078,6 +1083,9 @@ def make_min_mover( sf, input_pose, apply_sf_sugar_constraints = True, jumps = N
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: min_mover object
     """
+    from rosetta import Pose
+
+
     if verbose:
         print "Making a min mover"
         
@@ -1331,6 +1339,9 @@ def do_pack_min( sf, input_pose, apply_sf_sugar_constraints = True, residue_rang
     :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
     :return: packed and minimized Pose
     """
+    from rosetta import Pose
+
+
     if verbose:
         print "Packing and minimizing the Pose"
         
@@ -1669,6 +1680,9 @@ def get_best_structure_based_on_score( sf, pose, apply_sf_sugar_constraints = Tr
     :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
     :return: Pose( the Pose with the lowest total score after the trials of packing and minimization )
     """
+    from rosetta import Pose
+
+
     # inform user of options depending on how much they want to hear
     if verbose:
         print "\nUsing", outer_trials, "outer loops and", inner_trials, "inner loops to find a low-energy structure based on total score for pose", pose.pdb_info().name().split( '/' )[-1]
@@ -2489,6 +2503,9 @@ def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK
     :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 20
     :return: packer_task ready to pack a Pose with a SINGLE mutation
     """
+    from rosetta import standard_packer_task
+
+
     # create a packer task handling a SINGLE mutated residue
     # tell packer task that only the current <amino_acid> should be allowed to be modified
     aa_bool = vector1_bool()
@@ -2525,6 +2542,9 @@ def do_mutation_pack( seq_pos, amino_acid, sf, mutated_pose, pack_radius = PACK_
     :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 20
     :return: Pose packed around the SINGLE mutation
     """
+    from rosetta import Pose
+
+
     pose = Pose()
     pose.assign( mutated_pose )
     
@@ -2551,6 +2571,9 @@ def get_best_mutant_of_20( seq_pos, sf, pose, apply_sf_sugar_constraints = True,
     :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 20
     :return: the mutated Pose of the lowest total score out of the twenty mutations
     """
+    from rosetta import Pose
+
+
     # apply sugar branch point constraints to sf, if desired
     if apply_sf_sugar_constraints:
         apply_sugar_constraints_to_sf( sf, pose )
@@ -2585,6 +2608,9 @@ def get_best_mutant_of_20( seq_pos, sf, pose, apply_sf_sugar_constraints = True,
 
 
 def make_all_mutations( sf, orig_pose_file, mutant_list_file, pack_around_mut = True, dump_pose = False, dump_dir = None ):
+    from rosetta import Pose
+
+
     # ensure the mutation list filename is accurate and can be opened
     try:
         mutant_list = []
@@ -2664,8 +2690,10 @@ def make_my_new_symmetric_antibody( mutation_string, sf, input_pose, apply_sf_su
     :param dump_dir: str( /path/to/dump/directory/for/pose ). Default = None = current working directory
     :return: newly mutated Pose
     """
-    # no pack min to get best structure!! do that yourself with the dumped pose
+    from rosetta import Pose
 
+
+    # no pack min to get best structure!! do that yourself with the dumped pose
     # print out the mutation string to be created
     if verbose:
         print "Adding the following mutations to your pose:", mutation_string
@@ -2744,8 +2772,10 @@ def make_my_new_asymmetric_antibody( mutation_string, sf, input_pose, apply_sf_s
     :param dump_dir: str( /path/to/dump/directory/for/pose ). Default = None = current working directory
     :return: newly mutated Pose
     """
-    # no pack min to get best structure!! do that yourself with the dumped pose
+    from rosetta import Pose
 
+
+    # no pack min to get best structure!! do that yourself with the dumped pose
     # print out the mutation string to be created
     if verbose:
         print "Adding the following mutations to your pose:", mutation_string
@@ -3373,7 +3403,7 @@ def calc_interface_sasa( pose, JUMP_NUM ):
     :return: float( interface_SASA value )
     """
     # imports
-    from rosetta import calc_total_sasa
+    from rosetta import Pose, calc_total_sasa
     
     # make sure a valid JUMP_NUM was passed in
     if JUMP_NUM <= 0 or JUMP_NUM > pose.num_jump():
@@ -3455,6 +3485,9 @@ def get_interface_score( JUMP_NUM, sf, pose ):
     :param pose: Pose
     :return: float( ddG interface score )
     """
+    from rosetta import Pose
+
+
     # get start score
     start_score = sf( pose )
 

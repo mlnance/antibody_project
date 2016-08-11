@@ -29,7 +29,7 @@ pmm.keep_history()
 data_dir = os.getcwd() + "/mutational_data/"
 if not os.path.isdir( data_dir ):
     os.mkdir( data_dir )
-data_filename = "alanine_scan.csv"
+data_filename = "alanine_scan_fresh_start_low_E_native.csv"
 
 # initialize rosetta with sugar flags
 initialize_rosetta()
@@ -42,7 +42,7 @@ pmm.apply( native_pose )
 
 # instantiate full atom score function and score pose
 sf = get_fa_scorefxn()
-native_E_start = sf( native_pose )
+nat_E = sf( native_pose )
 
 
 # create some constant data
@@ -54,16 +54,21 @@ ALA_pose = pose_from_sequence( "AAA" )
 orig_AA = []
 position = []
 native_E = []
+native_E_res = []
 mut_E = []
+mut_E_res = []
 ddG = []
+ddG_res = []
 
-# for all non-sugar residues, mutate to alanine
-#    for seq_pos in range(1, native_pose.total_residue() + 1):
-for seq_pos in range(8, 9):
+# used to build a new Ala residue
+res_factory = ResidueFactory()
+
+# mutate all residues to Ala
+# make sure residue is not a sugar or a branch point
+# also skipping Cys residues because they're just being sassy
+for seq_pos in range(1, native_pose.total_residue() + 1):
     res = native_pose.residue( seq_pos )
 
-    # make sure residue is not a sugar or a branch point
-    # also skipping Cys residues because they're just being sassy
     # replacing alanines too for the heck of it. The ddG should be very close to 0 if this works
     if not res.name1() == 'C':
         if not res.is_carbohydrate():
@@ -72,7 +77,7 @@ for seq_pos in range(8, 9):
                 orig_AA_name1 = str( native_pose.residue( seq_pos ).name1() )
                 orig_AA.append( orig_AA_name1 )
                 position.append( seq_pos )
-                native_E.append( native_E_start )
+                native_E.append( nat_E )
 
                 # get a copy of the Pose
                 mutant = Pose()
@@ -94,9 +99,7 @@ for seq_pos in range(8, 9):
                     ALA_restype = ALA_pose.conformation().residue_type( 2 )
 
                 # build the Ala
-                res_factory = ResidueFactory()
-
-                # this uses the backbone information from the current residue at this position to build the new Ala
+                # this function uses the backbone information from the current residue at this position to build the new Ala
                 # if this isn't a Gly residue, use the CB information as well
                 if mutant.residue( seq_pos ).name1() != "G":
                     new_ALA_res = res_factory.create_residue( ALA_restype, mutant.residue( seq_pos ), mutant.conformation(), preserve_c_beta=True )
@@ -137,10 +140,17 @@ for seq_pos in range(8, 9):
                 # visualize mutation
                 pmm.apply(mutant)
 
+
                 # score and add to list for dataframe
                 new_E = sf( mutant )
+                new_E_res = mutant.energies().residue_total_energy( seq_pos )
+                nat_E_res = native_pose.energies().residue_total_energy( seq_pos )
+
                 mut_E.append( new_E )
-                ddG.append( new_E - native_E_start )
+                mut_E_res.append( new_E_res )
+                native_E_res.append( nat_E_res )
+                ddG.append( new_E - nat_E )
+                ddG_res.append( new_E_res - nat_E_res )
 
 
 # print data and add data to dataframe
@@ -148,8 +158,11 @@ df = pd.DataFrame()
 df["orig_AA"] = orig_AA
 df["seq_pos"] = position
 df["native_E"] = native_E
+df["native_E_res"] = native_E_res
 df["mut_E"] = mut_E
+df["mut_E_res"] = mut_E_res
 df["ddG"] = ddG
+df["ddG_res"] = ddG_res
 print df
 
 # output results to file

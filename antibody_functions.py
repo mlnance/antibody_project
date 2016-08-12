@@ -29,7 +29,8 @@ pmm = PyMOL_Mover()
 
 
 # global variables
-AA_list = [ 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y' ]
+AA_name1_list = [ 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y' ]
+AA_name3_list = [ "ALA", "CYS", "ASP", "GLN", "PHE", "GLY", "HIS", "ILE", "LYS", "MET", "ASN", "PRO", "GLU", "ARG", "SER", "THR", "THR", "VAL", "TRP", "TYR" ]
 all_letters_list = [ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' ]
 CUTOFF_DISTANCE = 5.0  # used when calculating the number of residue contacts at the interface
 PACK_RADIUS = 20.0  # used when making mutations to structures, repacks in this area
@@ -2625,7 +2626,7 @@ def get_best_mutant_of_20( seq_pos, sf, pose, apply_sf_sugar_constraints = True,
     orig_amino_acid = pose.residue( seq_pos ).name1()
     print "Mutating", seq_pos, orig_amino_acid
 
-    for amino_acid in AA_list:
+    for amino_acid in AA_name1_list:
         print "Now mutating to", amino_acid, "..."
 
         # mutate to a new residue
@@ -3602,7 +3603,7 @@ def determine_amino_acid_composition( pose ):
     # get number of amino acid residues
     res_total = ( pose.total_residue() - pose.sequence().count( 'Z' ) )
 
-    for res_type in AA_list:
+    for res_type in AA_name1_list:
         count = float( pose.sequence().count( res_type ) )
         res_count.append( count )
         percentage.append( round( ( count / res_total * 100 ), 2 ) )
@@ -3610,13 +3611,13 @@ def determine_amino_acid_composition( pose ):
     # if global Pandas import was successful, create a DataFrame
     if pandas_on:
         df_AA_composition = pd.DataFrame()
-        df_AA_composition["Res_Type"] = AA_list
+        df_AA_composition["Res_Type"] = AA_name1_list
         df_AA_composition["Count"] = res_count
         df_AA_composition["Percentage"] = percentage
         
     # else create a dictionary
     else:
-        data_dict["Res_Type"] = AA_list
+        data_dict["Res_Type"] = AA_name1_list
         data_dict["Count"] = res_count
         data_dict["Percentage"] = percentage
         

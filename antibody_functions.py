@@ -422,6 +422,24 @@ def show_score_breakdown( sf, pose ):
 
 
 
+def show_score_breakdown_by_res( sf, res_num, pose ):
+    """
+    Shows the breakdown of the <pose>'s total score by printing the score for the <res_num> of each nonzero weighted ScoreType in <sf>
+    :param sf: ScoreFunction
+    :param res_num: int( Pose residue number )
+    :param pose: Pose
+    """
+    # get the string version of the residue's energies from Pose
+    sf( pose )
+    res_energies_obj = pose.energies().residue_total_energies( res_num )
+    res_energies = res_energies_obj.show_nonzero().strip().split( ' ' )
+
+    # print out each score
+    for ii in range( 1, len( res_energies ) + 1, 2 ):
+        print res_energies[ ii - 1 ], res_energies[ ii ]
+
+
+
 def show_sf_weights_breakdown( scorefxn ):
     """
     Shows the breakdown of nonzeroweighted ScoreTypes in <scorefxn>

@@ -6,11 +6,13 @@ __author__="morgalnance"
 from antibody_functions import initialize_rosetta, load_pose, \
     make_pack_rotamers_mover, get_res_nums_within_radius, \
     native_Fc_glycan_nums, native_Fc_protein_nums, \
-    get_contact_map_between_range1_range2
+    native_FcR_protein_nums , \
+    get_contact_map_between_range1_range2, get_interface_score
 from rosetta import Pose, get_fa_scorefxn, PyMOL_Mover, \
     MoveMap, MinMover
 from rosetta.core.chemical import VariantType
 from rosetta.core.pose import remove_variant_type_from_pose_residue
+from toolbox import get_hbonds
 
 # mutation-related imports
 from rosetta import pose_from_sequence, ResidueFactory
@@ -46,11 +48,13 @@ info = native_pose.pdb_info()
 sf = get_fa_scorefxn()
 nat_E = sf( native_pose )
 
-
 # create some constant data
 AA = 'ALA'
 PACK_RADIUS = 5.0
 ALA_pose = pose_from_sequence( "AAA" )
+nat_interface_E = get_interface_score( 2, sf, native_pose )
+nat_nhbonds = get_hbonds( native_pose ).nhbonds()
+
 
 # insantiate lists for data (will be put into pandas dataframe)
 orig_AA = []
@@ -58,19 +62,26 @@ pose_position = []
 pdb_position = []
 pdb_chain = []
 within_10A_of_Fc_glycan_res = []
-native_E = []
-native_E_res = []
+within_10A_of_FcR_interface = []
 mut_E = []
-mut_E_res = []
+native_E = []
 ddG = []
+mut_E_res = []
+native_E_res = []
 ddG_res = []
+mut_interface_E = []
+native_interface_E = []
+ddG_interface = []
+dhbonds = []
 
 # used to build a new Ala residue
 res_factory = ResidueFactory()
 
-# get the 10A contact map between Fc protein and Fc glycan for use in determining if the Fc protein mutation
-# is within 10A of an Fc glycan residue
+# get the 10A contact map between Fc protein and Fc glycan/FcR protein
 Fc_protein_to_Fc_glycan_cmap = get_contact_map_between_range1_range2( native_Fc_protein_nums, native_Fc_glycan_nums, native_pose, cutoff = 10 )
+Fc_protein_to_FcR_protein_cmap = get_contact_map_between_range1_range2( native_Fc_protein_nums, native_FcR_protein_nums, native_pose, cutoff = 10 )
+
+Ka_258 = 1.12
 
 
 # mutate all residues to Ala
@@ -78,6 +89,7 @@ Fc_protein_to_Fc_glycan_cmap = get_contact_map_between_range1_range2( native_Fc_
 # also skipping Cys residues because they're just being sassy
 residues_that_didnt_work = []
 #for seq_pos in range(1, native_pose.total_residue() + 1):
+#for seq_pos in native_Fc_protein_nums[1:2]:
 for seq_pos in native_Fc_protein_nums:
     res = native_pose.residue( seq_pos )
 
@@ -91,7 +103,6 @@ for seq_pos in native_Fc_protein_nums:
                 pose_position.append( seq_pos )
                 pdb_position.append( native_pose.pdb_info().pose2pdb( seq_pos ).strip().split( ' ' )[0] )
                 pdb_chain.append( native_pose.pdb_info().pose2pdb( seq_pos ).strip().split( ' ' )[1] )
-                native_E.append( nat_E )
 
                 # if this is an Fc protein residue, determine if it is within 10A of the Fc glycan
                 # keeping this here for now in case I decide to do the alanine scan on the whole protein
@@ -99,6 +110,13 @@ for seq_pos in native_Fc_protein_nums:
                     # use the contact map created earlier to determine if this residue is near the glycan
                     # since the contact map was made between the protein and glycan, just check to see if this res is a key
                     within_10A_of_Fc_glycan_res.append( seq_pos in Fc_protein_to_Fc_glycan_cmap.keys() )
+
+                    # use the contact map to determine if this residue is within 10A of the Fc-FcR interface
+                    within_10A_of_FcR_interface.append( seq_pos in Fc_protein_to_FcR_protein_cmap.keys() )
+                    
+                # otherwise it's a residue outside the Fc protein, so just put None
+                else:
+                    within_10A_of_Fc_glycan_res.append( None )
                         
                         
                 # get a copy of the Pose
@@ -166,15 +184,28 @@ for seq_pos in native_Fc_protein_nums:
 
 
                     # score and add to list for dataframe
+                    # total score
                     new_E = sf( mutant )
+                    mut_E.append( new_E )
+                    native_E.append( nat_E )
+                    ddG.append( new_E - nat_E )
+
+                    # total score of residue
                     new_E_res = mutant.energies().residue_total_energy( seq_pos )
                     nat_E_res = native_pose.energies().residue_total_energy( seq_pos )
-
-                    mut_E.append( new_E )
                     mut_E_res.append( new_E_res )
                     native_E_res.append( nat_E_res )
-                    ddG.append( new_E - nat_E )
                     ddG_res.append( new_E_res - nat_E_res )
+
+                    # interface score
+                    new_interface_E = get_interface_score( 2, sf, mutant )
+                    mut_interface_E.append( new_interface_E )
+                    native_interface_E.append( nat_interface_E )
+                    ddG_interface.append( new_interface_E - nat_interface_E )
+
+                    # num hbonds
+                    new_nhbonds = get_hbonds( mutant ).nhbonds()
+                    dhbonds.append( new_nhbonds - nat_nhbonds )
                 except:
                     residues_that_didnt_work.append( seq_pos )
                     pass
@@ -187,12 +218,17 @@ df["pose_num"] = pose_position
 df["pdb_num"] = pdb_position
 df["pdb_chain"] = pdb_chain
 df["within_10A_of_Fc_glycan_res"] = within_10A_of_Fc_glycan_res
+df["within_10A_of_FcR_interface"] = within_10A_of_FcR_interface
 df["native_E"] = native_E
 df["mut_E"] = mut_E
+df["ddG"] = ddG
 df["native_E_res"] = native_E_res
 df["mut_E_res"] = mut_E_res
-df["ddG"] = ddG
 df["ddG_res"] = ddG_res
+df["native_interface_E"] = native_interface_E
+df["mut_interface_E"] = mut_interface_E
+df["ddG_interface"] = ddG_interface
+df["dhbonds"] = dhbonds
 print df
 
 # output results to file

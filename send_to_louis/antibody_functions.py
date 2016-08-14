@@ -842,6 +842,131 @@ def apply_sugar_constraints_to_sf( sf, pose, weight = 1.0, verbose = False ):
 
 
 
+def create_random_AtomPair_cst_file( residues_to_be_constrained, residues_to_be_constrained_against, pose, num_of_atoms_per_res, cst_filename, dist_max = 10.0, stdev = 1.0, tolerance = 0.5 ):
+    """
+    Constrain <num_of_atoms_per_res> heavy atoms from each residue from <residues_to_be_constrained> to a heavy atom from <residues_to_be_constrained_against> in <pose>
+    THIS COULD ENTER AN INFINITE LOOP. TODO: NEED REVISIT THE LOGIC OF THIS CODE WHEN I MOVE ON FROM 3AY4
+    Since this will be random, the only thing ensured is that the atoms are not H or virtual, and that the same atom-to-atom cst is not repeated. Otherwise, a single atom could have multiple constraints.
+    Standard function call writes out a FLAT_HARMOINIC function with a <stdev> of 1.0 and a <tolerance> of 0.5
+    :param residues_to_be_constrained: list( residues whose atom(s) should be constrained )
+    :param residues_to_be_constrained_against: list( residues to whom the atom(s) should be constrained against )
+    :param pose: Pose
+    :param num_of_atoms_per_res: int( how many atoms per residue should be constrained )
+    :param cst_filename: str( /path/to/cst filename you desire ) Default behavior is to add .cst if not already there
+    :param dist_max: float( the max distance between the two atoms in the constraint ). Default = 10.0
+    :param stdev: float( standard deviation for the FLAT_HARMONIC function )
+    :param tolerance: float( tolerance for the FLAT_HARMONIC function )
+    :return: bool( True if successful, False if not )
+    """
+    # imports
+    from random import choice
+
+
+    # change the input var names to something shorter
+    cst_residues = residues_to_be_constrained
+    cst_residues.sort()
+    cst_options = residues_to_be_constrained_against
+    cst_options.sort()
+    natoms = num_of_atoms_per_res
+
+    # constrain as many atoms as specified by user to atoms found in residues_to_be_constrained_against
+    # if no atom-to-atom distances satisfy <dist_max>, then that residue just isn't being constrained
+    atom_pair_cst_lines = []
+    for cst_res_num in cst_residues:
+        cst_res = pose.residue( cst_res_num ) 
+
+        # create empty lists to keep info for each atom that passes <dist_max> filter
+        # dictionary makes more sense, but the logic is difficult. List positions stay the same anyway
+        cst_atom_num_list = []
+        to_cst_atom_num_list = []
+        to_cst_res_num_list = []
+        atom_pair_dist_list = []
+        for cst_atom_num in range( 1, cst_res.natoms() + 1 ):
+            cst_atom = cst_res.atom( cst_atom_num )
+
+            # if this is a non-hydrogen, non-virtual atom
+            if (not cst_res.atom_is_hydrogen( cst_atom_num )) and (not cst_res.is_virtual( cst_atom_num )):
+                # collect atom indices of atoms within <dist_max>
+                for to_cst_res_num in cst_options:
+                    to_cst_res = pose.residue( to_cst_res_num )
+
+                    # check every heavy atom within the other residues given
+                    for to_cst_atom_num in range( 1, to_cst_res.natoms() + 1 ):
+                        # get the to_cst_atom info
+                        to_cst_atom = to_cst_res.atom( to_cst_atom_num )
+
+                        # if this is a non-hydrogen, non-virtual atom
+                        if (not to_cst_res.atom_is_hydrogen( to_cst_atom_num )) and (not to_cst_res.is_virtual( to_cst_atom_num )):
+                            # if this atom is within <dist_max> of the cst_atom
+                            atom_pair_dist = cst_atom.xyz().distance( to_cst_atom.xyz() )
+                            if atom_pair_dist <= dist_max:
+                                # update the lists with this atom-pair cst info
+                                cst_atom_num_list.append( cst_atom_num )
+                                to_cst_atom_num_list.append( to_cst_atom_num )
+                                to_cst_res_num_list.append( to_cst_res_num )
+                                atom_pair_dist_list.append( str( round( atom_pair_dist, 2 ) ) )
+
+        # grab the index numbers of the atom-pairs to be constrained
+        atom_pair_cst_index_numbers = []
+
+        # if there are fewer atoms than atom-pair constraints desired, but not zero, then add them all to the AtomPair cst file
+        if ( len( cst_atom_num_list ) != 0 ) and (len( cst_atom_num_list ) < natoms):
+            atom_pair_cst_index_numbers = range( len( cst_atom_num_list ) )
+        # else, pick as many random index numbers as desired
+        elif ( len( cst_atom_num_list ) != 0 ) and (len( cst_atom_num_list ) >= natoms):
+            index_options = range( len( cst_atom_num_list ) )
+            for ii in range( natoms ):
+                index_choice = choice( index_options )
+                atom_pair_cst_index_numbers.append( index_choice )
+                index_options.remove( index_choice )
+        # otherwise, this residue has no atoms passing the <dist_max> filter, so skip it
+        else:
+            pass
+
+        # create the AtomPair constraints using the index numbers
+        for index_num in atom_pair_cst_index_numbers:
+            # pull out the needed information by index number
+            cst_atom_num = cst_atom_num_list[ index_num ]
+            to_cst_atom_num = to_cst_atom_num_list[ index_num ]
+            to_cst_res_num = to_cst_res_num_list[ index_num ]
+
+            # get the corresponding atom names
+            cst_atom_name = cst_res.atom_name( cst_atom_num ).strip()
+            to_cst_atom_name = pose.residue( to_cst_res_num ).atom_name( to_cst_atom_num ).strip()
+
+            # get the PDB numbering info the tag in the cst file
+            # this splits on the space between the PDB num and the chain
+            pdb_name = pose.pdb_info().pose2pdb( cst_res_num ).strip().split( ' ' )
+            cst_res_pdb_name = pdb_name[1] + pdb_name[0]
+            pdb_name = pose.pdb_info().pose2pdb( to_cst_res_num ).strip().split( ' ' )
+            to_cst_res_pdb_name = pdb_name[1] + pdb_name[0]
+            tag = "_to_".join( [ cst_res_pdb_name, to_cst_res_pdb_name ] )
+
+            # create the AtomPair cst line for the cst file
+            atom_pair_cst_line = "AtomPair %s %s %s %s FLAT_HARMONIC %s %s %s %s\n" %( cst_atom_name, 
+                                                                                       str( cst_res_num ), 
+                                                                                       to_cst_atom_name, 
+                                                                                       str( to_cst_res_num ), 
+                                                                                       str( atom_pair_dist_list[ index_num ] ), 
+                                                                                       str( stdev ), 
+                                                                                       str( tolerance ), 
+                                                                                       tag )
+            atom_pair_cst_lines.append( atom_pair_cst_line )
+
+    # add .cst to the end of the cst_filename, if not already there
+    if not cst_filename.endswith( ".cst" ):
+        cst_filename += ".cst"
+
+    # write out the new cst file
+    try:
+        with open( cst_filename, "wb" ) as fh:
+            fh.writelines( atom_pair_cst_lines )
+        return True
+    except:
+        return False
+        
+
+
 def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True, set_omega = True ):
     """
     Randomly resets the phi, psi, and omega values of the sugar residue <seqpos> in <pose> to old_value +/- angle_max/2
@@ -889,14 +1014,14 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
 
 
 
-def get_res_nums_within_radius( seq_pos, input_pose, radius, include_seq_pos = False ):
+def get_atom_nums_within_radius( seq_pos, atom_num, input_pose, radius ):
     """
-    Get a list of residue numbers in <input_pose> that are within <radius> A around residue <seq_pos>. Use nbr_atom for calculation.
-    :param seq_pos: int( Pose number of residue of interest
+    Get a dict of residue numbers : atom nums in <input_pose> that are within <radius> Ang around atom <atom_num> in residue <seq_pos>. Uses heavy, non-virtual atoms for determination.
+    :param seq_pos: int( Pose number of residue of interest )
+    :param atom_num: int( atom index number of atom of interest )
     :param input_pose: Pose
     :param radius: float( or int( residues around <seq_pos> within this cutoff distance ))
-    :param include_seq_pos: bool( do you want to include the <seq_pos> you passed as an arg in the returned list? ) Default = False
-    :return: list( residue numbers within <radius> A around <seq_pos> in <input_pose>
+    :return: dict( keys = resiudes numbers, values = corresponding atom numbers within <radius> cutoff )
     """
     # container for the CA or the C1 xyz of each residue in <input_pose>
     CA_C1_xyz_of_pose = {}

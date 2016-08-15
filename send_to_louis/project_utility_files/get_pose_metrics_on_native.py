@@ -54,7 +54,8 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
         analyze_contact_map, calc_Fnats_with_contact_maps, \
         get_scoretype_with_biggest_score_diff, get_res_with_biggest_score_diff
     from pose_metrics_util import Fc_glycan_metrics, \
-        pseudo_interface_energy_3ay4, check_GlcNAc_to_Phe_contacts
+        pseudo_interface_energy_3ay4, check_GlcNAc_to_Phe_contacts, \
+        avg_dist_from_native_Fc_glycan_ring_atoms
     
     
     
@@ -109,6 +110,14 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_Fc_glycan_data.Fc_glycan_sasa_contributed ) )
     metric_data.append( "delta_Fc_glycan_sasa_contributed:" )
     metric_data.append( str( delta_Fc_glycan_sasa_contributed ) )
+
+
+    # average ring atom distances (not rmsd as there is no alignment) of decoy to native
+    for ring_residue in working_info.native_Fc_glycan_nums_except_core_GlcNAc:
+        # decoy numbering is the same as native, so just use the same number
+        ring_atoms_avg_dist = avg_dist_from_native_Fc_glycan_ring_atoms( working, ring_residue, native, ring_residue )
+        metric_data.append( "ring_atoms_avg_dist_res_%s:" %str( ''.join( working.pdb_info().pose2pdb( ring_residue ).strip().split( ' ' ) ) ) )
+        metric_data.append( str( round( ring_atoms_avg_dist, 2 ) ) )
     
 
     ## pseudo-inferface energy 
@@ -143,7 +152,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( "delta_res_biggest_score_diff_tot_score:" )
     metric_data.append( str( working_residue_score_data.biggest_delta_score ) )
     metric_data.append( "decoy_res_num:" )
-    metric_data.append( str( working_residue_score_data.decoy_num ) )
+    metric_data.append( str( ''.join( working.pdb_info().pose2pdb( working_residue_score_data.decoy_num ).strip().split( ' ' ) ) ) )
     
 
     # delta standard interaction energy ( across an interface defined by a JUMP number )

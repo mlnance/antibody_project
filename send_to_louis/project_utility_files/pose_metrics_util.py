@@ -250,7 +250,7 @@ def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
 
 
 def Fc_glycan_rmsd( working, working_Fc_glycan_chains, native, native_Fc_glycan_chains, decoy_num, dump_dir ):
-    '''
+    """
     :param working: decoy Pose()
     :param working_Fc_glycan_chains: list( the chain id's for the working Fc glycan ). Ex = [ 'H', 'I' ]
     :param native: native Pose()
@@ -258,7 +258,7 @@ def Fc_glycan_rmsd( working, working_Fc_glycan_chains, native, native_Fc_glycan_
     :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
     :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
     return: float( Fc glycan rmsd )
-    '''
+    """
     # imports
     import os
     from rosetta import Pose
@@ -311,8 +311,48 @@ def Fc_glycan_rmsd( working, working_Fc_glycan_chains, native, native_Fc_glycan_
 
 
 
+def avg_dist_from_native_Fc_glycan_ring_atoms( working, working_Fc_glycan_num, native, native_Fc_glycan_num ):
+    """
+    Return the average distance of the <working_Fc_glycan_num> sugar residue's ring atoms from the <native_Fc_glycan_num> residue.
+    Uses xyz coordinates using residue(x).type().ring_atoms() as we currently know exactly where the right answer is given that we are using the native.
+    :param working: decoy Pose()
+    :param working_Fc_glycan_num: int( the working Fc glycan residue Pose number of interest )
+    :param native: native Pose()
+    :param native_Fc_glycan_num: int( the native Fc glycan residue Pose number of interest )
+    :return: float( average distance of working ring atoms from native )
+    """
+    # imports
+    from numpy import mean
+
+
+    # grab the atom indicies of the rings
+    # this function was written to collect ring atoms for all rings in this residue, so we'll just work with the first (and only) ring for this system
+    # it returns a Rosetta list so it is indexed starting at 1, not 0
+    working_ring_atoms = working.residue( working_Fc_glycan_num ).type().ring_atoms()[1]
+    native_ring_atoms = native.residue( native_Fc_glycan_num ).type().ring_atoms()[1]
+
+    # for each atom in the working pose, get its distance to the xyz of the native atom
+    ring_atom_xyzs = []
+    for ring_atom_num in range( 1, len( working_ring_atoms ) + 1 ):
+        # get the ring atom index numbers
+        working_ring_atom_num = working_ring_atoms[ ring_atom_num ]
+        native_ring_atom_num = native_ring_atoms[ ring_atom_num ]
+
+        # get the distance between the two atoms in xyz space
+        working_ring_atom_xyz = working.residue( working_Fc_glycan_num ).atom( working_ring_atom_num ).xyz()
+        native_ring_atom_xyz = native.residue( native_Fc_glycan_num ).atom( native_ring_atom_num ).xyz()
+        ring_atom_dist = working_ring_atom_xyz.distance( native_ring_atom_xyz )
+        ring_atom_xyzs.append( ring_atom_dist )
+
+    # get the average distance between each ring atom of the decoy to the native
+    avg_ring_atoms_dist = mean( ring_atom_xyzs )
+
+    return avg_ring_atoms_dist
+
+
+
 def Fc_glycan_metrics( working, native, working_Fc_glycan_chains, native_Fc_glycan_chains, sf, decoy_num, dump_dir ):
-    '''
+    """
     Return the glycan RMSD contribution of the two Fc glycans in 3ay4 (may work for other PDBs, but I don't know yet)
     Fc_glycan_buried_sasa = complex with Fc glycan - ( complex without Fc glycan + just Fc glycan )
     hbonds contributed by Fc glycans = total hbonds in Pose - total hbonds in Pose without Fc glycans - just Fc glycan hbonds
@@ -324,7 +364,7 @@ def Fc_glycan_metrics( working, native, working_Fc_glycan_chains, native_Fc_glyc
     :param decoy_num: int( the number of the decoy for use when dumping its Fc glycan )
     :param dump_dir: str( /path/to/dump_dir for the temp pdb files made. Files will be deleted )
     :return: obj( DataHolder that contains Fc_glycan_rmsd, Fc_glycan_tot_score, Fc_glycan_buried_sasa, and Fc_glycan_internal_hbonds, Fc_glycan_hbonds_contributed )
-    '''
+    """
     #################
     #### IMPORTS ####
     #################

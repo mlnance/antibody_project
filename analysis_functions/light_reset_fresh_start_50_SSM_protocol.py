@@ -38,8 +38,10 @@ def get_r_of_line_of_best_fit_binned_Fc_glycan_rmsd( data, metric ):
     """
     """
     data_holder = {}
+    stdev_data_holder = {}
+    bin_size = 1
 
-    for ii in range( 0, int(ceil(max(data["Fc_glycan_rmsd"]))) ):
+    for ii in np.arange( 0, int(ceil(max(data["Fc_glycan_rmsd"]))) + bin_size, bin_size ):
         # get data corresponding to decoys that fall within ii <= Fc_glycan_rmsd <= ii_plus_one
         binned_data = data[ ( data["Fc_glycan_rmsd"] >= ii ) & ( data["Fc_glycan_rmsd"] < (ii + 1) ) ]
 
@@ -55,12 +57,21 @@ def get_r_of_line_of_best_fit_binned_Fc_glycan_rmsd( data, metric ):
     # now for each bin that doesn't include None, get the r of the line for this data
     x_data = []
     y_data = []
-    for x in range( 0, int(ceil(max(data["Fc_glycan_rmsd"]))) ):
+    for x in np.arange( 0, int(ceil(max(data["Fc_glycan_rmsd"]))) + bin_size, bin_size ):
         # skip None entries
         if data_holder[x] is not None:
             x_data.append( x )
             y_data.append( data_holder[x] )
     m, b, r, p, std_err = linregress( x_data, y_data )
+    #if metric == "hbonds":
+    #    fig, ax = plt.subplots(figsize=(30,15))
+    #    plt.subplot( 111 )
+    #    plt.scatter( x_data, y_data )
+    #    plt.plot( x_data, [ ( m*x + b ) for x in x_data ], c="red" )
+    #    plot_title = "hbonds"
+    #    plt.suptitle( plot_title, fontsize = 24 )
+    #    plt.subplots_adjust(top=0.87)
+    #    plt.savefig( plot_title, dpi=120, transparent=True )
 
     return r
 
@@ -70,33 +81,40 @@ def print_r_squared_data( data, r_squared_dict, name ):
     r_squared_keys.sort( reverse = True )
     
     for r_squared in r_squared_keys:
-        print r_squared, r_squared_dict[ r_squared ], name
+        if r_squared > 0.3:
+            print r_squared, r_squared_dict[ r_squared ], name
 
 
 def print_other_data( data ):
-    print "MC min:", min( data[ "MonteCarlo_acceptance_rate" ] ), "max:", max( data[ "MonteCarlo_acceptance_rate" ] ), "mean:", np.mean( data[ "MonteCarlo_acceptance_rate" ] ), "median:", np.median( data[ "MonteCarlo_acceptance_rate" ] )
+    print "MC min:", min( data[ "MonteCarlo_acceptance_rate" ] ), "max:", max( data[ "MonteCarlo_acceptance_rate" ] ), "mean:", round( np.mean( data[ "MonteCarlo_acceptance_rate" ] ), 1 ), "median:", np.median( data[ "MonteCarlo_acceptance_rate" ] )
 
-    rmsd_data = data[ data["Fc_glycan_rmsd"] <= 2 ]
-    rmsd_count = len( rmsd_data["Fc_glycan_rmsd"] )
-    print "% Fc_glycan_rmsd <= 2:", round( ( float(rmsd_count) / float(len( data["Fc_glycan_rmsd"])) ) * 100, 2 )
+    top10_total_score_data = data.sort( "total_score" ).head( 10 )
+    rmsd_count = len( top10_total_score_data[ top10_total_score_data[ "Fc_glycan_rmsd" ] <= 1 ] )
+    print "Top10 total_score count Fc_glycan_rmsd <= 1:", rmsd_count
+    Fnat_count = len( top10_total_score_data[ top10_total_score_data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"] >= 90.0 ] )
+    print "Top10 total_score count Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A >= 90%:", Fnat_count
 
-    Fnat_data = data[ data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"] >= 80 ]
-    Fnat_count = len( Fnat_data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"] )
-    print "% Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A >= 80:", round( ( float(Fnat_count) / float(len( data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"])) ) * 100, 2 )
-
+    top10_pseudo_interface_energy_data = data.sort( "pseudo_interface_energy" ).head( 10 )
+    rmsd_count = len( top10_pseudo_interface_energy_data[ top10_pseudo_interface_energy_data[ "Fc_glycan_rmsd" ] <= 1 ] )
+    print "Top10 pseudo_interface_energy count Fc_glycan_rmsd <= 1:", rmsd_count
+    Fnat_count = len( top10_pseudo_interface_energy_data[ top10_pseudo_interface_energy_data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"] >= 90.0 ] )
+    print "Top10 pseudo_interface_energy count Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A >= 90%:", Fnat_count
 
 
 
 low_E_native_data = pd.read_csv( "/Users/Research/pyrosetta_dir/metric_data/fresh_start/get_base_pack_min_pose.csv" )
+decoys_below_2A_dict = {}
+decoys_above_F_protein_80_Fnat = {}
 
 
-#############################################################
-#### SSM-50 data using full Fc glycan LCM reset and ramp ####
-#############################################################
+
+###############################################################
+#### SSM-50 data using full Fc glycan light reset and ramp ####
+###############################################################
 ###########
 #### 1 ####
 ###########
-# am2_5_mpt_light_reset_10_15, with ramp. Comparing against no light reset (which is the same as the above used no reset data from LCM reset sets)
+# am2_5_mpt_light_reset_10_15
 path_to_using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15 = "/Users/Research/pyrosetta_dir/metric_data/fresh_start/using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15.csv"
 using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data = pd.read_csv( path_to_using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15 )
 path_to_using_native_full_glycan_50_SSM_am2_5_mpt_no_reset = "/Users/Research/pyrosetta_dir/metric_data/fresh_start/using_native_full_glycan_50_SSM_am2_5_mpt_no_reset.csv"
@@ -108,6 +126,7 @@ low_E_native_total_score = np.mean( using_native_full_glycan_50_SSM_am2_5_mpt_li
 metrics = list( using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data.columns.values )
 r_squared_to_metric_dict = {}
 log10_r_squared_to_metric_dict = {}
+binned_r_squared_to_metric_dict = {}
 for metric in metrics:
     if metric == "atom_pair_constraint" or metric == "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A":
 #    if metric != "filename" and metric != "Fc_glycan_rmsd":
@@ -119,6 +138,12 @@ for metric in metrics:
 
         r = get_r_of_line_of_best_fit( using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data, metric, log10 )
         log10_r_squared_to_metric_dict[ r**2 ] = metric
+
+for metric in metrics:
+    if metric != "filename" and not metric.startswith( "delta" ) and metric != "Fc_glycan_rmsd":
+        binned_r = get_r_of_line_of_best_fit_binned_Fc_glycan_rmsd( using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data, metric)
+        binned_r_squared_to_metric_dict[ binned_r**2 ] = metric
+
 
 fig, ax = plt.subplots(figsize=(40,25))
 plt.subplot( 321 )
@@ -140,7 +165,7 @@ y = low_E_native_total_score
 sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
 sc = plt.scatter( using_native_full_glycan_50_SSM_am2_5_mpt_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_am2_5_mpt_no_reset_data[ "total_score" ], marker='v', s=20, c="orange", clip_on=False )
 sc = plt.scatter( using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data[ "total_score" ] )
-#sc = plt.scatter( using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data[ "total_score" ], c=using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data[ "atom_pair_constraint" ] )
+#sc = plt.scatter( using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data[ "total_score" ], c=using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data[ "sugar_bb" ] )
 #plt.colorbar(sc)
 ymins = [ floor(y), floor(min(using_native_full_glycan_50_SSM_am2_5_mpt_no_reset_data[ "total_score" ])), floor(min(using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data[ "total_score" ])) ]
 ymax = ceil( np.percentile(using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data[ "total_score" ], 80) )
@@ -203,9 +228,10 @@ plt.close()
 # print data
 print_r_squared_data( using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data, r_squared_to_metric_dict, "linear" )
 print_r_squared_data( using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data, log10_r_squared_to_metric_dict, "log10" )
+print_r_squared_data( using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data, binned_r_squared_to_metric_dict, "binned rmsd" )
 print_other_data( using_native_full_glycan_50_SSM_am2_5_mpt_light_reset_10_15_data )
-print "50 25 light reset"
-print
+print "50 25 am2_5_mpt, light reset 10 15"
+print "\n\n"
 
 
 
@@ -213,18 +239,19 @@ print
 ###########
 #### 2 ####
 ###########
-# am2_5_mpt_two_glycan_to_protein_atoms_tightest_light_reset_10_15, with ramp. Comparing against no light reset (which is the same as the above used no reset data from LCM reset sets)
+# am2_5_mpt_light_reset_10_15_two_glycan_to_protein_atoms_tightest
 path_to_using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15 = "/Users/Research/pyrosetta_dir/metric_data/fresh_start/using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15.csv"
 using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data = pd.read_csv( path_to_using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15 )
 path_to_using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_no_reset = "/Users/Research/pyrosetta_dir/metric_data/fresh_start/using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_no_reset.csv"
 using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_no_reset_data = pd.read_csv( path_to_using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_no_reset )
 
-low_E_native_pseudo_interface_energy = np.mean( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data["pseudo_interface_energy"] - using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data["delta_pseudo_interface_energy"] )
-low_E_native_total_score = np.mean( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data["total_score"] - using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data["delta_total_score"] )
+low_E_native_pseudo_interface_energy = np.mean( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "pseudo_interface_energy" ] - using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "delta_pseudo_interface_energy" ] )
+low_E_native_total_score = np.mean( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "total_score" ] - using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "delta_total_score" ] )
 
 metrics = list( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data.columns.values )
 r_squared_to_metric_dict = {}
 log10_r_squared_to_metric_dict = {}
+binned_r_squared_to_metric_dict = {}
 for metric in metrics:
     if metric == "atom_pair_constraint" or metric == "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A":
 #    if metric != "filename" and metric != "Fc_glycan_rmsd":
@@ -236,6 +263,12 @@ for metric in metrics:
 
         r = get_r_of_line_of_best_fit( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data, metric, log10 )
         log10_r_squared_to_metric_dict[ r**2 ] = metric
+
+for metric in metrics:
+    if metric != "filename" and not metric.startswith( "delta" ) and metric != "Fc_glycan_rmsd":
+        binned_r = get_r_of_line_of_best_fit_binned_Fc_glycan_rmsd( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data, metric)
+        binned_r_squared_to_metric_dict[ binned_r**2 ] = metric
+
 
 fig, ax = plt.subplots(figsize=(40,25))
 plt.subplot( 321 )
@@ -257,7 +290,7 @@ y = low_E_native_total_score
 sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
 sc = plt.scatter( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_no_reset_data[ "total_score" ], marker='v', s=20, c="orange", clip_on=False )
 sc = plt.scatter( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "total_score" ] )
-#sc = plt.scatter( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "total_score" ], c=using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "atom_pair_constraint" ] )
+#sc = plt.scatter( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "total_score" ], c=using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "sugar_bb" ] )
 #plt.colorbar(sc)
 ymins = [ floor(y), floor(min(using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_no_reset_data[ "total_score" ])), floor(min(using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "total_score" ])) ]
 ymax = ceil( np.percentile(using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data[ "total_score" ], 80) )
@@ -320,9 +353,10 @@ plt.close()
 # print data
 print_r_squared_data( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data, r_squared_to_metric_dict, "linear" )
 print_r_squared_data( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data, log10_r_squared_to_metric_dict, "log10" )
+print_r_squared_data( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data, binned_r_squared_to_metric_dict, "binned rmsd" )
 print_other_data( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_light_reset_10_15_data )
-print "50 25 two_glycan_to_protein_atoms_tightest light reset"
-print
+print "50 25 two_glycan_to_protein_atoms_tightest_am2_5_mpt, light reset 10 15"
+print "\n\n"
 
 
 
@@ -330,18 +364,19 @@ print
 ###########
 #### 3 ####
 ###########
-# am2_5_mpt_two_glycan_to_protein_atoms_tightest_light_reset_10_15, with ramp. Comparing against no light reset (which is the same as the above used no reset data from LCM reset sets)
+# am2_5_mpt_light_reset_10_15_two_glycan_to_protein_atoms_tightest_double_hbond
 path_to_using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15 = "/Users/Research/pyrosetta_dir/metric_data/fresh_start/using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15.csv"
 using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data = pd.read_csv( path_to_using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15 )
 path_to_using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_no_reset = "/Users/Research/pyrosetta_dir/metric_data/fresh_start/using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_no_reset.csv"
 using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_no_reset_data = pd.read_csv( path_to_using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_no_reset )
 
-low_E_native_pseudo_interface_energy = np.mean( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data["pseudo_interface_energy"] - using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data["delta_pseudo_interface_energy"] )
-low_E_native_total_score = np.mean( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data["total_score"] - using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data["delta_total_score"] )
+low_E_native_pseudo_interface_energy = np.mean( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "pseudo_interface_energy" ] - using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "delta_pseudo_interface_energy" ] )
+low_E_native_total_score = np.mean( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "total_score" ] - using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "delta_total_score" ] )
 
 metrics = list( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data.columns.values )
 r_squared_to_metric_dict = {}
 log10_r_squared_to_metric_dict = {}
+binned_r_squared_to_metric_dict = {}
 for metric in metrics:
     if metric == "atom_pair_constraint" or metric == "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A":
 #    if metric != "filename" and metric != "Fc_glycan_rmsd":
@@ -353,6 +388,12 @@ for metric in metrics:
 
         r = get_r_of_line_of_best_fit( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data, metric, log10 )
         log10_r_squared_to_metric_dict[ r**2 ] = metric
+
+for metric in metrics:
+    if metric != "filename" and not metric.startswith( "delta" ) and metric != "Fc_glycan_rmsd":
+        binned_r = get_r_of_line_of_best_fit_binned_Fc_glycan_rmsd( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data, metric)
+        binned_r_squared_to_metric_dict[ binned_r**2 ] = metric
+
 
 fig, ax = plt.subplots(figsize=(40,25))
 plt.subplot( 321 )
@@ -374,7 +415,7 @@ y = low_E_native_total_score
 sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
 sc = plt.scatter( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_no_reset_data[ "total_score" ], marker='v', s=20, c="orange", clip_on=False )
 sc = plt.scatter( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "total_score" ] )
-#sc = plt.scatter( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "total_score" ], c=using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "atom_pair_constraint" ] )
+#sc = plt.scatter( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "total_score" ], c=using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "sugar_bb" ] )
 #plt.colorbar(sc)
 ymins = [ floor(y), floor(min(using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_no_reset_data[ "total_score" ])), floor(min(using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "total_score" ])) ]
 ymax = ceil( np.percentile(using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data[ "total_score" ], 80) )
@@ -437,6 +478,7 @@ plt.close()
 # print data
 print_r_squared_data( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data, r_squared_to_metric_dict, "linear" )
 print_r_squared_data( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data, log10_r_squared_to_metric_dict, "log10" )
+print_r_squared_data( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data, binned_r_squared_to_metric_dict, "binned rmsd" )
 print_other_data( using_native_full_glycan_50_SSM_two_glycan_to_protein_atoms_tightest_am2_5_mpt_double_hbond_light_reset_10_15_data )
-print "50 25 two_glycan_to_protein_atoms_tightest light reset double hbond"
-print
+print "50 25 two_glycan_to_protein_atoms_tightest_am2_5_mpt, light reset 10 15, double hbond"
+print "\n\n"

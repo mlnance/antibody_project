@@ -42,16 +42,19 @@ def print_r_squared_data( data, r_squared_dict, name ):
 
 
 def print_other_data( data ):
-    print "MC min:", min( data[ "MonteCarlo_acceptance_rate" ] ), "max:", max( data[ "MonteCarlo_acceptance_rate" ] ), "mean:", np.mean( data[ "MonteCarlo_acceptance_rate" ] ), "median:", np.median( data[ "MonteCarlo_acceptance_rate" ] )
+    print "MC min:", min( data[ "MonteCarlo_acceptance_rate" ] ), "max:", max( data[ "MonteCarlo_acceptance_rate" ] ), "mean:", round( np.mean( data[ "MonteCarlo_acceptance_rate" ] ), 1 ), "median:", np.median( data[ "MonteCarlo_acceptance_rate" ] )
 
-    rmsd_data = data[ data["Fc_glycan_rmsd"] <= 2 ]
-    rmsd_count = len( rmsd_data["Fc_glycan_rmsd"] )
-    print "% Fc_glycan_rmsd <= 2:", round( ( float(rmsd_count) / float(len( data["Fc_glycan_rmsd"])) ) * 100, 2 )
+    top10_total_score_data = data.sort( "total_score" ).head( 10 )
+    rmsd_count = len( top10_total_score_data[ top10_total_score_data[ "Fc_glycan_rmsd" ] <= 1 ] )
+    print "Top10 total_score count Fc_glycan_rmsd <= 1:", rmsd_count
+    Fnat_count = len( top10_total_score_data[ top10_total_score_data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"] >= 90.0 ] )
+    print "Top10 total_score count Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A >= 90%:", Fnat_count
 
-    Fnat_data = data[ data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"] >= 80 ]
-    Fnat_count = len( Fnat_data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"] )
-    print "% Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A >= 80:", round( ( float(Fnat_count) / float(len( data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"])) ) * 100, 2 )
-
+    top10_pseudo_interface_energy_data = data.sort( "pseudo_interface_energy" ).head( 10 )
+    rmsd_count = len( top10_pseudo_interface_energy_data[ top10_pseudo_interface_energy_data[ "Fc_glycan_rmsd" ] <= 1 ] )
+    print "Top10 pseudo_interface_energy count Fc_glycan_rmsd <= 1:", rmsd_count
+    Fnat_count = len( top10_pseudo_interface_energy_data[ top10_pseudo_interface_energy_data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"] >= 90.0 ] )
+    print "Top10 pseudo_interface_energy count Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A >= 90%:", Fnat_count
 
 
 

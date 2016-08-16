@@ -30,7 +30,8 @@ pmm = PyMOL_Mover()
 
 # global variables
 AA_name1_list = [ 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y' ]
-AA_name3_list = [ "ALA", "CYS", "ASP", "GLN", "PHE", "GLY", "HIS", "ILE", "LYS", "MET", "ASN", "PRO", "GLU", "ARG", "SER", "THR", "THR", "VAL", "TRP", "TYR" ]
+AA_name3_list = [ "ALA", "CYS", "ASP", "GLU", "PHE", "GLY", "HIS", "ILE", "LYS", "LEU", "MET", "ASN", "PRO", "GLN", "ARG", "SER", "THR", "VAL", "TRP", "TYR" ]
+AA_name1_to_name3 = { 'A':"ALA", 'C':"CYS", 'D':"ASP", 'E':"GLU", 'F':"PHE", 'G':"GLY", 'H':"HIS", 'I':"ILE", 'K':"LYS", 'L':"LEU", 'M':"MET", 'N':"ASN", 'P':"PRO", 'Q':"GLN", 'R':"ARG", 'S':"SER", 'T':"THR", 'V':"VAL", 'W':"TRP", 'Y':"TYR" }
 all_letters_list = [ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' ]
 CUTOFF_DISTANCE = 5.0  # used when calculating the number of residue contacts at the interface
 PACK_RADIUS = 20.0  # used when making mutations to structures, repacks in this area

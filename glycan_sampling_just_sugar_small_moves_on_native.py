@@ -364,17 +364,17 @@ while not jd.job_complete:
     #############################
 
     # find out how much the reset (if any) moved the glycan
-    pre_SSM_metrics = []
-    if input_args.LCM_reset or input_args.light_reset:
-        Fc_glycan_rmsd_after_reset = Fc_glycan_rmsd( testing_pose, testing_pose_info.native_Fc_glycan_chains, 
-                                                     native_pose, native_pose_info.native_Fc_glycan_chains, 
-                                                     cur_decoy_num, metrics_dump_dir )
-
-        pre_SSM_metrics.append( "Fc_glycan_rmsd_after_reset:" )
-        pre_SSM_metrics.append( str( Fc_glycan_rmsd_after_reset ) )
-
-        if input_args.verbose:
-            print "Fc glycan RMSD after reset:", Fc_glycan_rmsd_after_reset
+    #pre_SSM_metrics = []
+    #if input_args.LCM_reset or input_args.light_reset:
+    #    Fc_glycan_rmsd_after_reset = Fc_glycan_rmsd( testing_pose, testing_pose_info.native_Fc_glycan_chains, 
+    #                                                 native_pose, native_pose_info.native_Fc_glycan_chains, 
+    #                                                 cur_decoy_num, metrics_dump_dir )
+    #
+    #    pre_SSM_metrics.append( "Fc_glycan_rmsd_after_reset:" )
+    #    pre_SSM_metrics.append( str( Fc_glycan_rmsd_after_reset ) )
+    #
+    #    if input_args.verbose:
+    #        print "Fc glycan RMSD after reset:", Fc_glycan_rmsd_after_reset
 
 
 
@@ -429,15 +429,15 @@ while not jd.job_complete:
     #############################
 
     # find out how much the pack/min moved the glycan
-    Fc_glycan_rmsd_after_packmin = Fc_glycan_rmsd( testing_pose, testing_pose_info.native_Fc_glycan_chains, 
-                                                 native_pose, native_pose_info.native_Fc_glycan_chains, 
-                                                 cur_decoy_num, metrics_dump_dir )
-
-    pre_SSM_metrics.append( "Fc_glycan_rmsd_after_packmin:" )
-    pre_SSM_metrics.append( str( Fc_glycan_rmsd_after_packmin ) )
-
-    if input_args.verbose:
-        print "Fc glycan RMSD after pack/min rounds:", Fc_glycan_rmsd_after_packmin
+    #Fc_glycan_rmsd_after_packmin = Fc_glycan_rmsd( testing_pose, testing_pose_info.native_Fc_glycan_chains, 
+    #                                             native_pose, native_pose_info.native_Fc_glycan_chains, 
+    #                                             cur_decoy_num, metrics_dump_dir )
+    #
+    #pre_SSM_metrics.append( "Fc_glycan_rmsd_after_packmin:" )
+    #pre_SSM_metrics.append( str( Fc_glycan_rmsd_after_packmin ) )
+    #
+    #if input_args.verbose:
+    #    print "Fc glycan RMSD after pack/min rounds:", Fc_glycan_rmsd_after_packmin
 
 
 
@@ -563,8 +563,8 @@ while not jd.job_complete:
         pass
 
     # add the pre-metric calculations to the metrics data
-    pre_SSM_metrics = ' '.join( pre_SSM_metrics )
-    metrics += " %s" %pre_SSM_metrics
+    #pre_SSM_metrics = ' '.join( pre_SSM_metrics )
+    #metrics += " %s" %pre_SSM_metrics
 
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics

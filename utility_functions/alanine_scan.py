@@ -6,18 +6,20 @@ __author__="morgalnance"
 from antibody_functions import initialize_rosetta, load_pose, \
     make_pack_rotamers_mover, get_res_nums_within_radius, \
     native_Fc_glycan_nums, native_Fc_protein_nums, \
-    native_FcR_protein_nums , \
-    get_contact_map_between_range1_range2, get_interface_score
+    native_FcR_protein_nums , get_interface_score, \
+    get_contact_map_between_range1_range2
 from rosetta import Pose, get_fa_scorefxn, PyMOL_Mover, \
     MoveMap, MinMover
-from rosetta.core.chemical import VariantType
-from rosetta.core.pose import remove_variant_type_from_pose_residue
 from toolbox import get_hbonds
 
 # mutation-related imports
 from rosetta import pose_from_sequence, ResidueFactory
 #from rosetta.protocols.simple_moves import MutateResidue
 #from toolbox import mutate_residue
+
+# functions used in prior setup
+#from rosetta.core.pose import remove_variant_type_from_pose_residue
+#from rosetta.core.chemical import VariantType
 
 # general imports
 import os, sys

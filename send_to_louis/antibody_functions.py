@@ -2677,6 +2677,14 @@ def restore_original_fold_tree( pose, verbose = False ):
 #### MUTATIONAL WORKER FUNCTIONS ####
 #####################################
 
+def mutate_residue( pose_num, new_res, input_pose, pdb_num = False, pdb_chain = None ):
+    """
+    Mutate residue at position <pose_num> to <new_res>
+    <new_res> can be a single-letter or three-letter residue code
+    If you are giving a pdb number, set <pdb_num> to True AND give me a <pdb_chain> letter id
+    """
+
+
 def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK_RADIUS ):
     """
     Returns a packer task that can handle a <pose> with a SINGLE mutation at <seq_pos>
@@ -2877,8 +2885,7 @@ def make_my_new_symmetric_antibody( mutation_string, sf, input_pose, apply_sf_su
     :param dump_dir: str( /path/to/dump/directory/for/pose ). Default = None = current working directory
     :return: newly mutated Pose
     """
-    from rosetta import Pose
-    from toolbox import mutate_residue
+    from rosetta import Pose, pose_from_sequence, ResidueFactory
 
 
     # no pack min to get best structure!! do that yourself with the dumped pose
@@ -3174,7 +3181,7 @@ def analyze_contact_map( contact_map, pose ):
     carb_carb_contacts = 0
 
     # instantiate contact distances data list
-    contact_distances = []
+    #contact_distances = []
 
     # instantiate carbohydrate to residue contact polarity data counts
     carb_to_polar_contacts = 0
@@ -3210,10 +3217,10 @@ def analyze_contact_map( contact_map, pose ):
 
             ## record the contact distance using nbr atoms
             # get the atoms used as the center for these residues
-            resnum_nbr_xyz = list( pose.residue( resnum ).nbr_atom_xyz() )
-            contact_resnum_nbr_xyz = list( pose.residue( contact_resnum ).nbr_atom_xyz() )
-            contact_dist = calc_distance( resnum_nbr_xyz, contact_resnum_nbr_xyz )
-            contact_distances.append( contact_dist )
+            #resnum_nbr_xyz = list( pose.residue( resnum ).nbr_atom_xyz() )
+            #contact_resnum_nbr_xyz = list( pose.residue( contact_resnum ).nbr_atom_xyz() )
+            #contact_dist = calc_distance( resnum_nbr_xyz, contact_resnum_nbr_xyz )
+            #contact_distances.append( contact_dist )
 
     # calculate fraction of contact types
     num_contacts = sum( [ len( contacts ) for contacts in contact_map.values() ] )
@@ -3258,10 +3265,10 @@ def analyze_contact_map( contact_map, pose ):
     data_holder.carb_to_polar_fraction = carb_to_polar_fraction
     data_holder.carb_to_nonpolar_fraction = carb_to_nonpolar_fraction
     data_holder.carb_to_aromatic_fraction = carb_to_aromatic_fraction
-    data_holder.contact_distances = contact_distances
-    data_holder.contact_distance_avg = calc_avg_of_list( contact_distances )
-    data_holder.contact_distance_max = max( contact_distances )
-    data_holder.contact_distance_min = min( contact_distances )
+    #data_holder.contact_distances = contact_distances
+    #data_holder.contact_distance_avg = calc_avg_of_list( contact_distances )
+    #data_holder.contact_distance_max = max( contact_distances )
+    #data_holder.contact_distance_min = min( contact_distances )
 
     return data_holder
 

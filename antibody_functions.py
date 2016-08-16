@@ -32,6 +32,7 @@ pmm = PyMOL_Mover()
 AA_name1_list = [ 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y' ]
 AA_name3_list = [ "ALA", "CYS", "ASP", "GLU", "PHE", "GLY", "HIS", "ILE", "LYS", "LEU", "MET", "ASN", "PRO", "GLN", "ARG", "SER", "THR", "VAL", "TRP", "TYR" ]
 AA_name1_to_name3 = { 'A':"ALA", 'C':"CYS", 'D':"ASP", 'E':"GLU", 'F':"PHE", 'G':"GLY", 'H':"HIS", 'I':"ILE", 'K':"LYS", 'L':"LEU", 'M':"MET", 'N':"ASN", 'P':"PRO", 'Q':"GLN", 'R':"ARG", 'S':"SER", 'T':"THR", 'V':"VAL", 'W':"TRP", 'Y':"TYR" }
+AA_name3_to_name1 = { "ALA":'A', "CYS":'C', "ASP":'D', "GLU":'E', "PHE":'F', "GLY":'G', "HIS":'H', "ILE":'I', "LYS":'K', "LEU":'L', "MET":'M', "ASN":'N', "PRO":'P', "GLN":'Q', "ARG":'R', "SER":'S', "THR":'T', "VAL":'V', "TRP":'W', "TYR":'Y' }
 all_letters_list = [ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' ]
 CUTOFF_DISTANCE = 5.0  # used when calculating the number of residue contacts at the interface
 PACK_RADIUS = 20.0  # used when making mutations to structures, repacks in this area
@@ -1697,6 +1698,50 @@ def calc_distance( vec1, vec2 ):
 
 
 
+def get_res_nums_within_radius( seq_pos, input_pose, radius, include_seq_pos = False ):
+    """
+    Use the nbr_atom_xyz to find residue numbers within <radius> of <pose_num> in <pose>
+    :param seq_pos: int( Pose residue number )
+    :param input_pose: Pose
+    :param radius: int or float( radius around <pose_num> to use to select resiudes )
+    :param include_seq_pos: bool( do you want to include <seq_pos> in the return list? ) Default = False
+    :return: list( Pose residue numbers within <radius> of <pose_num>
+    """
+    # clone the <input_pose>
+    pose = input_pose.clone()
+
+    # container for the centers of each residue in pose
+    centers_of_res = []
+
+    # fill up the centers container
+    for res_num in range( 1, pose.n_residue() + 1 ):
+        center = pose.residue( res_num ).nbr_atom_xyz()
+        centers_of_res.append( center )
+
+    # container for residues inside the <radius>
+    res_nums_in_radius = []
+
+    # nbr_xyz of the residue of interest
+    seq_pos_xyz = pose.residue( seq_pos ).nbr_atom_xyz()
+
+    for res_num in range( 1, pose.n_residue() + 1 ):
+        # this will get the xyz of the residue of interest, but it will be removed from the final list if desired
+        # (since it will be added as 0 will always be less than <radius>)
+        # get the center of the residue
+        center = pose.residue( res_num ).nbr_atom_xyz()
+
+        # keep the residue number if the nbr_atom_xyz is less than <radius>
+        if center.distance( seq_pos_xyz ) <= radius:
+            res_nums_in_radius.append( res_num )
+
+    # if the user didn't want the residue of interest in the return list, remove it
+    if not include_seq_pos:
+        res_nums_in_radius.remove( seq_pos )
+
+    return res_nums_in_radius
+
+
+
 def compare_pose_energy_per_residue( sf, pose1, pose2, diff_cutoff = 1.0, detailed_analysis = False, compare_using_this_scoretype = None, weight = 1.0, verbose = False ):
     """
     Uses the ScoreFunction <sf> to compare the individual energy per residue of <pose1> and returns the count of residues that have a difference of greater than +/- 1 of <diff_cutoff> compared to the corresponding residue in <pose2>
@@ -2678,12 +2723,114 @@ def restore_original_fold_tree( pose, verbose = False ):
 #### MUTATIONAL WORKER FUNCTIONS ####
 #####################################
 
-def mutate_residue( pose_num, new_res, input_pose, pdb_num = False, pdb_chain = None ):
+def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb_chain = None, pack_radius = 5 ):
     """
-    Mutate residue at position <pose_num> to <new_res>
-    <new_res> can be a single-letter or three-letter residue code
+    Mutate residue at position <pose_num> to <new_res_name>
+    <new_res_name> can be a single-letter or three-letter residue code
     If you are giving a pdb number, set <pdb_num> to True AND give me a <pdb_chain> letter id
+    :param pose_num: int( Pose number for residue )
+    :param new_res_name: str( one- or three-letter code for the new amino acid. Example 'A' or "THR" )
+    :param input_pose: Pose
+    :param sf: ScoreFunction ( used for packing )
+    :param pdb_num: bool( did you give me a PDB number instead? Set to True if so. Give me a <pdb_chain> too then ) Default = False (Pose number)
+    :param pdb_chain: str( PDB chain id such as 'A' or 'X'. Must have set <pdb_num> to True as well
+    :param pack_radius: int or float( how far out in Angstroms do you want to pack around the mutation site? ) Default = 5
+    :return: mutated Pose
     """
+    # imports
+    from rosetta import Pose, pose_from_sequence, ResidueFactory, MoveMap, MinMover
+
+
+    # copy over the input pose
+    pose = input_pose.clone()
+
+    # check if <pdb_chain> was given if <pdb_num> is True
+    if pdb_num == True:
+        if pdb_chain is None:
+            print "\nYou told me you gave me a PDB number, but you did not give me a PDB chain id. Set <pdb_chain> to the appropriate chain id. Returning the original pose."
+            return pose
+
+    # check the logic of the input arguments
+    # ensure the <new_res_name> is a valid residue
+    if len( new_res_name ) != 1 and len( new_res_name ) != 3:
+        print "\nYou did not give me a single- or three-letter amino acid code. '%s' did not work. Returning the original pose." %new_res_name
+        return pose
+    # if it is a single-letter code
+    if len( new_res_name ) == 1 and new_res_name.upper() not in AA_name1_list:
+        print "\nIt appears that '%s' is not a valid single-letter amino acid code. Returning the original pose." %new_res_name
+        return pose
+    # if it is a three-letter code
+    elif len( new_res_name ) == 3 and new_res_name.upper() not in AA_name3_list:
+        print "\nIt appears that '%s' is not a valid three-letter amino acid code. Returning the original pose." %new_res_name
+        return pose
+    # otherwise, use the <new_res_name> argument to get the appropriate three-letter amino acid code
+    if len( new_res_name ) == 1:
+        new_res_name = AA_name1_to_name3[ new_res_name.upper() ]
+        single_new_res_name = new_res_name
+    else:
+        new_res_name = new_res_name.upper()
+        single_new_res_name = AA_name3_to_name1[ new_res_name.upper() ]
+
+    # ensure <pose_num> (and <pdb_chain>) exists in the pose
+    if not pdb_num:
+        if not 1 <= pose_num <= pose.n_residue():
+            print "\nYou appear to have given me an invalid Pose residue number. Ensure residue number %s exists in your Pose. Returning the original pose." %pose_num
+            return pose
+    # if it's a PDB number, check it exists as well using the <pdb_chain> too
+    else:
+        # get the actual pose number
+        pose_num = pose.pdb_info().pdb2pose( pdb_chain, pose_num )
+        if pose_num == 0:
+            print "\nYour PDB number and chain ( %s chain %s ) don't seem to exist in the pose. Check your input. Returning the original pose." %( pose_num, pdb_chain )
+            return pose
+
+    # move on to the mutation
+    # instantiate a ResidueFactory
+    res_factory = ResidueFactory()
+
+    # create a three-mer of the <new_res_name> desired
+    # want a three-mer because it's easier to deal with a new amino acid that does not have a special end VariantType
+    threemer = pose_from_sequence( single_new_res_name * 3 )
+
+    # get the ResidueType from the middle <new_res_name> in the threemer
+    res_type = threemer.conformation().residue_type( 2 )
+
+    # build the new residue and preserve the CB information from the original pose
+    new_residue = res_factory.create_residue( res_type, 
+                                              current_rsd = pose.residue( pose_num ), 
+                                              conformation = pose.conformation(), 
+                                              preserve_c_beta = True )
+
+    # replace the old residue in the pose
+    pose.replace_residue( pose_num, new_residue, orient_backbone = True )
+
+    # get residue numbers (including mutation site) to be packed and minimized
+    res_nums_around_mutation_site = get_res_nums_within_radius( pose_num, pose, pack_radius, include_seq_pos = True )
+
+    # pack around mutation
+    pack_rotamers_mover = make_pack_rotamers_mover( sf, pose,
+                                                    apply_sf_sugar_constraints = False,
+                                                    pack_branch_points = True,
+                                                    residue_range = res_nums_around_mutation_site )
+    pack_rotamers_mover.apply( pose )
+
+    # minimize around mutation
+    min_mm = MoveMap()
+    for res_num in res_nums_around_mutation_site:
+        min_mm.set_bb( res_num, True )
+        min_mm.set_chi( res_num, True )
+    min_mover = MinMover( movemap_in = min_mm,
+                          scorefxn_in = sf,
+                          min_type_in = "dfpmin_strong_wolfe",
+                          tolerance_in = 0.01,
+                          use_nb_list_in = True )
+    min_mover.apply( pose )
+
+    # make a new name for this pose
+    pose.pdb_info().name( "mutant" )
+
+    return pose
+
 
 
 def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK_RADIUS ):

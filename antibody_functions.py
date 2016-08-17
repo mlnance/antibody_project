@@ -2719,6 +2719,8 @@ def restore_original_fold_tree( pose, verbose = False ):
 
 
 
+
+
 #####################################
 #### MUTATIONAL WORKER FUNCTIONS ####
 #####################################
@@ -2995,13 +2997,25 @@ def get_best_mutant_of_20( pose_num, sf, input_pose, pdb_num = False, pdb_chain 
 
 def read_3ay4_mutation_file( mutation_filepath ):
     """
-    Return a list of mutations to be made where the file structure is <mutation> <chain id> such as S123A A (Ser at PDB site 123 to Ala on chain A)
-    Chain designation is optional. If the mutation should be made on both sides, then leave blank
-    This is designed to read mutations for 3ay4 at the moment
-    Mutations and their chain designations are separated by a single white space
-    Commented lines are ignored
+    Return a list of mutations to be made by reading a mutation file designated by the <mutation_filepath>
+    Assumes PDB numbering!!!
+    Chain designations are separated by '_', multiple mutations are separated by '+'. See below for examples
+    Five possible formats for a mutation string
+    1) Single point mutation on both sides (symmetrical)
+       A123T (Ala at position 123 on chain A and B to Thr)
+    2) Single point mutation on a specific side (asymmetrical)
+       A123T_B (Ala at position 123 on chain B to Thr)
+    3) Multiple point mutations on both sides (symmetrical)
+       A123T+S456Y (Ala at position 123 to Thr and Ser at position 456 to Tyr both on chain A and B)
+    4) Multiple point mutations on a specific chain (asymmetrical)
+       A123T_A+S456Y_B (Ala at position 123 to Thr on chain A and Ser at position 456 to Tyr on chain B)
+    5) Multiple point mutations with a combination of symmetrical and asymmetrical
+       A123T+S456Y_B (Ala at position 123 to Thr on chain A and B and Ser at position 456 to Try on chain B)
+    Chain designation is optional. If the mutation should be made on both sides, then don't add a chain designation
+    This is designed to read mutations for 3ay4 at the moment as it assumes chain A and B
+    Commented lines in the file are ignored are ignored
     :param mutation_filepath: str( /path/to/file with mutation strings desired )
-    :return: list( <mutation>_<chain id> )
+    :return: list( mutations to be made )
     """
     try:
         f = open( mutation_filepath, "rb" )
@@ -3011,260 +3025,18 @@ def read_3ay4_mutation_file( mutation_filepath ):
         raise
 
     # for each line specifying a mutation
-    mutations = []
+    all_mutations = []
     for line in lines:
         # strip off the carriage return
-        line = line.rstrip()
+        mutation = line.strip()
 
-        # skip over comments
-        if line != '' and line[0] != '#':
-            # mutation specifications should be split by whitespace, so grab the chain id (if it exists) which will be the second entry
-            # if a chain id was given
-            try:
-                chain_id = line.split( ' ' )[1].strip()
-                mutations.append( line.split( ' ' )[0].strip() + '_' + chain_id )
-            # if a chain id was not given, then nothing will be in this space
-            except:
-                mutations.append( line.split( ' ' )[0].strip() )
+        # skip over comments and blank lines
+        if mutation != '' and not mutation.startswith( '#' ):
+            all_mutations.append( mutation )
 
-    return mutations
+    return all_mutations
 
 
-
-
-def make_all_mutations( mutations_str, sf, input_pose, pack_around_mut = True, dump_pose = False, dump_dir = None ):
-    """
-    Using a string of mutations, mutate <input_pose> and, if desired, pack around mutation and dump mutant into <dump_dir>
-    Mutation string works as follows for 3ay4: T123Y
-    """
-    # imports
-    from rosetta import Pose
-
-
-    # ensure the mutation list filename is accurate and can be opened
-    try:
-        mutant_list = []
-        f = open( mutant_list_file, 'rb' )
-        lines = f.readlines()
-        for line in lines:
-            line = line.rstrip()
-            if line != '' and line[0] != '#':
-                mutant_list.append( line )
-    except IOError:
-        print
-        print
-        print mutant_list_file, "didn't work. Check your input"
-        sys.exit()
-    except:
-        print
-        print
-        print "Unexpected error"
-        raise
-    
-    # ensure the validity of the orig_pose_file path
-    if os.path.isfile( orig_pose_file ):
-        orig_pose = Pose()
-        orig_pose.assign( load_pose( orig_pose_file ) )
-    else:
-        print orig_pose_file, "is not a valid file path"
-        print "Exiting"
-        sys.exit()
-    
-    # if no dump directory was given, use the current working directory
-    if dump_dir is None:
-        dump_dir = os.getcwd()
-
-    # if one was given, ensure it is valid; otherwise, create that directory
-    else:
-        if not os.path.isdir( dump_dir ):
-            os.mkdir( dump_dir )
-
-    # for each mutation in list, run the mutation function given sym or asym designation
-    for mut_line_full in mutant_list:
-        mut_line = mut_line_full.split( ' ' )
-        mut = mut_line[ 0 ]
-        symmetry = mut_line[ 1 ]
-        if symmetry == '' or symmetry == "sym":
-            print "Symmetrical", mut
-            make_my_new_symmetric_antibody( mut, sf, orig_pose, 
-                                            pack_around_mut = pack_around_mut, 
-                                            dump_pose = dump_pose, 
-                                            dump_dir = dump_dir )
-        elif symmetry == "asym":
-            print "Asymmetrical", mut
-            make_my_new_asymmetric_antibody( mut, sf, orig_pose, 
-                                             pack_around_mut = pack_around_mut, 
-                                             dump_pose = dump_pose, 
-                                             dump_dir = dump_dir )
-        else:
-            print "'%s'" %symmetry, "isn't a valid a symmetrical designation. Please put 'sym' or 'asym'"
-            print "Exiting"
-            sys.exit()
-    
-    return True
-
-
-
-def make_my_new_symmetric_antibody( mutation_string, sf, input_pose, apply_sf_sugar_constraints = True, pack_around_mut = True, dump_pose = False, dump_dir = None, verbose = False ):
-    """
-    Turn <input_pose> into a mutant with mutations specified by <mutation_string>. If specified, dump mutant into <dump_dir>
-    IMPORTANT: Since the Fc region of antibodies are symmetric, this code automatically takes the mutation from chain A and mutates its equivalent in chain B
-    Example format for mutation_string ( 1 mutation A245F. Multiple mutations A245F_L98K_S600Q )
-    Mutant <pose> will not be packed and minimized as it cannot handle multiple mutations. Instead, take dumped Pose and do it then
-    :param mutation_string: format str( <single letter code of original amino acid><PDB sequence position><single letter code of new amino acid> ). Split multiple mutations using '_'
-    :param sf: ScoreFunction
-    :param input_pose: Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
-    :param pack_around_mut: bool( do you want to pack around the mutation(s) made? ). Default = True = Yes
-    :param dump_pose: bool( do you want to dump your mutated pose? ). Default = False = No
-    :param dump_dir: str( /path/to/dump/directory/for/pose ). Default = None = current working directory
-    :return: newly mutated Pose
-    """
-    from rosetta import Pose, pose_from_sequence, ResidueFactory
-
-
-    # no pack min to get best structure!! do that yourself with the dumped pose
-    # print out the mutation string to be created
-    if verbose:
-        print "Adding the following mutations to your pose:", mutation_string
-    
-    # move the passed pose into a separate Pose object
-    pose = Pose()
-    pose.assign( input_pose )
-
-    # apply sugar branch point constraints to sf, if desired
-    if apply_sf_sugar_constraints:
-        apply_sugar_constraints_to_sf( sf, pose )
-
-    # get list of mutations to make
-    mutations = mutation_string.split( '_' )
-
-    # mutate all residues in chain A and chain B
-    # mutate first residue in chain A and chain B so the rest can be a loop
-    for mut in mutations:
-        orig_amino_acid = mut[ 0 ]
-        new_amino_acid = mut[ -1 ]
-
-        # seq pos is always from 1 to one minus however many characters are in the string
-        pdb_seq_pos = mut[ 1:( len( mut ) - 1 ) ]
-
-        # get pose positions for both chain A
-        pose_A_pos = pose.pdb_info().pdb2pose( 'A', int( pdb_seq_pos ) )
-        pose_B_pos = pose.pdb_info().pdb2pose( 'B', int( pdb_seq_pos ) )
-
-        # ensure that the original amino acid the user specified is actually there
-        if pose.residue( pose_A_pos ).name1() != orig_amino_acid and pose.residue( pose_B_pos ).name1() != orig_amino_acid:
-            print "Hold up! What you said was the original amino acid is actually incorrect!!"
-            print "You told me there was originally a", orig_amino_acid, "at position", pdb_seq_pos, "but there actually was a", pose.residue( pose_A_pos ).name1(), ". Exiting."
-            sys.exit()
-
-        # make mutation with no pack or min (doing our own packing just to get rid of clashes for each point mutation)
-        # for chain A mutation
-        pose.assign( mutate_residue( pose, pose_A_pos, new_amino_acid ) )
-
-        # for chain B mutation
-        pose.assign( mutate_residue( pose, pose_B_pos, new_amino_acid ) )
-        
-        # pack around mutations, if desired
-        if pack_around_mut:
-            pose.assign( do_mutation_pack( pose_A_pos, new_amino_acid, sf, pose ) )
-            pose.assign( do_mutation_pack( pose_B_pos, new_amino_acid, sf, pose ) )
-        
-    # dump the new pose if desired
-    if dump_pose:
-        pose.pdb_info().name( mutation_string )
-        if dump_dir is None:
-            filename = mutation_string + ".pdb"
-            pose.dump_pdb( filename )
-            return pose
-        else:
-            # add a slash to the end of the directory name if there wasn't already one there
-            if not dump_dir.endswith( '/' ):
-                dump_dir += '/'
-            filename = dump_dir + mutation_string + ".pdb"
-            pose.dump_pdb( filename )
-            return pose
-    
-    return pose
-
-
-
-def make_my_new_asymmetric_antibody( mutation_string, sf, input_pose, apply_sf_sugar_constraints = True, pack_around_mut = True, dump_pose = False, dump_dir = None, verbose = False ):
-    """
-    Turn <input_pose> into an asymmetric mutant with mutations specified by <mutation_string>. If specified, dump mutant into <dump_dir>
-    Mutant <pose> will not be packed and minimized as it cannot handle multiple mutations. Instead, take dumped Pose and do it then
-    :param mutation_string: format str( <single letter code of original amino acid><PDB sequence position><single letter code of new amino acid>_<chain id> ). Split multiple mutations using '+'
-    :param sf: ScoreFunction
-    :param input_pose: Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
-    :param pack_around_mut: bool( do you want to pack around the mutation(s) made? ). Default = True = Yes
-    :param dump_pose: bool( do you want to dump your mutated pose? ). Default = False = No
-    :param dump_dir: str( /path/to/dump/directory/for/pose ). Default = None = current working directory
-    :return: newly mutated Pose
-    """
-    from rosetta import Pose
-    from toolbox import mutate_residue
-
-
-    # no pack min to get best structure!! do that yourself with the dumped pose
-    # print out the mutation string to be created
-    if verbose:
-        print "Adding the following mutations to your pose:", mutation_string
-    
-    # move the passed pose into a separate Pose object
-    pose = Pose()
-    pose.assign( input_pose )
-
-    # apply sugar branch point constraints to sf, if desired
-    if apply_sf_sugar_constraints:
-        apply_sugar_constraints_to_sf( sf, pose )
-
-    # get list of mutations to make
-    mutations = mutation_string.split( '+' )
-
-    # mutate all residues in chain A and chain B
-    # mutate first residue in chain A and chain B so the rest can be a loop
-    for mut in mutations:
-        chain_id = mut.split( '_' )[ -1 ]
-        mut_string = mut.split( '_' )[ 0 ]
-        orig_amino_acid = mut_string[ 0 ]
-        new_amino_acid = mut_string[ -1 ]
-
-        # seq pos is always from 1 to one minus however many characters are in the mutation string
-        pdb_seq_pos = mut_string[ 1:( len( mut_string ) - 1 ) ]
-
-        # get pose position of residue
-        pose_pos = pose.pdb_info().pdb2pose( chain_id, int( pdb_seq_pos ) )
-
-        # ensure that the original amino acid the user specified is actually there
-        if pose.residue( pose_pos ).name1() != orig_amino_acid:
-            print "Hold up! What you said was the original amino acid is actually incorrect!!"
-            print "You told me there was originally a", orig_amino_acid, "at position", pdb_seq_pos, "but there actually was a", pose.residue( pose_pos ).name1(), ". Exiting."
-            sys.exit()
-
-        # make the point mutation
-        pose.assign( mutate_residue( pose, pose_pos, new_amino_acid ) )
-        
-        # pack the mutation, if desired
-        if pack_around_mut:
-            pose.assign( do_mutation_pack( pose_pos, new_amino_acid, sf, pose ) )
-        
-    # dump the new pose if desired
-    if dump_pose:
-        pose.pdb_info().name( mutation_string )
-        if dump_dir is None:
-            filename = mutation_string + ".pdb"
-            pose.dump_pdb( filename )
-            return pose
-        else:
-            # add a slash to the end of the directory name if there wasn't already one there
-            if not dump_dir.endswith( '/' ):
-                dump_dir += '/'
-            filename = dump_dir + mutation_string + ".pdb"
-            pose.dump_pdb( filename )
-            return pose
-        
-    return pose
 
 
 

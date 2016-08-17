@@ -2765,11 +2765,11 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
         return pose
     # otherwise, use the <new_res_name> argument to get the appropriate three-letter amino acid code
     if len( new_res_name ) == 1:
-        new_res_name = AA_name1_to_name3[ new_res_name.upper() ]
-        single_new_res_name = new_res_name
+        single_new_res_name = new_res_name.upper()
+        new_res_name = AA_name1_to_name3[ single_new_res_name ]
     else:
         new_res_name = new_res_name.upper()
-        single_new_res_name = AA_name3_to_name1[ new_res_name.upper() ]
+        single_new_res_name = AA_name3_to_name1[ new_res_name ]
 
     # ensure <pose_num> (and <pdb_chain>) exists in the pose
     if not pdb_num:
@@ -2902,55 +2902,142 @@ def do_mutation_pack( seq_pos, amino_acid, sf, mutated_pose, pack_radius = PACK_
 #### MAIN MUTANT POSE CREATION ####
 ###################################
 
-def get_best_mutant_of_20( seq_pos, sf, pose, apply_sf_sugar_constraints = True, rounds = 1, pack_radius = PACK_RADIUS ):
+def get_best_mutant_of_20( pose_num, sf, input_pose, pdb_num = False, pdb_chain = None, pack_radius = 5, verbose = False, pmm = None ):
     """
-    For a single position <seq_pos>, mutated to all 20 amino acids, pack and minimize over the given number of <rounds>, and return the best mutant pose
-    :param seq_pos: int( the residue position that will be mutated )
-    :param sf: ScoreFunction
-    :param pose: Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
-    :param rounds: int( the number of times to pack and minimize the <pose> after the mutation ). Default = 1
-    :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 20
+    For a single position <pos_num>, mutate to all 20 amino acids and return the best mutant pose
+    You can give a Pose residue position or a PDB residue position. Just specify if it is a PDB position and give the pdb_chain
+    :param pose_num: int( Pose number for residue )
+    :param sf: ScoreFunction ( used for packing )
+    :param input_pose: Pose
+    :param pdb_num: bool( did you give me a PDB number instead? Set to True if so. Give me a <pdb_chain> too then ) Default = False (Pose number)
+    :param pdb_chain: str( PDB chain id such as 'A' or 'X'. Must have set <pdb_num> to True as well
+    :param pack_radius: int or float( how far out in Angstroms do you want to pack around the mutation site? ) Default = 5
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
     :return: the mutated Pose of the lowest total score out of the twenty mutations
     """
-    from rosetta import Pose
-    from toolbox import mutate_residue
+    # make a copy of the pose
+    pose = input_pose.clone()
 
+    # if desired, send the native Pose to PyMOL
+    if pmm is not None:
+        pose.pdb_info().name( "native" )
+        pmm.apply( pose )
 
-    # apply sugar branch point constraints to sf, if desired
-    if apply_sf_sugar_constraints:
-        apply_sugar_constraints_to_sf( sf, pose )
+    # get the original amino acid at this position
+    orig_amino_acid = pose.residue( pose_num ).name1()
 
-    # talk to user
-    orig_amino_acid = pose.residue( seq_pos ).name1()
-    print "Mutating", seq_pos, orig_amino_acid
+    # get the starting score
+    start_score = sf( pose )
 
+    # talk to user, if desired
+    if verbose:
+        if pdb_num is True:
+            print "Mutating", orig_amino_acid, "at PDB position", pose_num, "on chain", pdb_chain
+        else:
+            print "Mutating", orig_amino_acid, "at Pose position", pose_num
+
+    # create data holders
+    # mutants: key = new amino acid, value = mutant Pose
+    mutants = {}
+
+    # mutant_scores will be used to keep track of the lowest E mut
+    # key = new amino acid, value = mutant Pose score
+    mutant_scores = {}
+    
+    # mutate this position to all 20 amino acids
     for amino_acid in AA_name1_list:
-        print "Now mutating to", amino_acid, "..."
+        # make a copy of the pose
+        mutant_pose = pose.clone()
+
+        if verbose:
+            if orig_amino_acid == amino_acid:
+                print "Now mutating", orig_amino_acid, "back to", amino_acid, "..."
+            else:
+                print "Now mutating", orig_amino_acid, "to", amino_acid, "..."
 
         # mutate to a new residue
-        mutant_pose = mutate_residue( pose, seq_pos, amino_acid )
+        mutant_pose = mutate_residue( pose_num, amino_acid, pose, sf, pdb_num = pdb_num, pdb_chain = pdb_chain, pack_radius = pack_radius )
 
-        # do one round of packmin to get rid of clashes and prepare for comparison
-        mutant_pose = do_mutation_pack( seq_pos, amino_acid, sf, mutant_pose, pack_radius )
+        # if desired, send the mutant Pose to PyMOL
+        if pmm is not None:
+            mutant_pose.pdb_info().name( orig_amino_acid + "to" + amino_acid )
+            pmm.apply( mutant_pose )
 
-        # do mutation packmin as many times as specified, saving the best scored one
-        for ii in range( rounds ):
-            # assign a temp pose that will be separately packmined
-            temp_pose = Pose()
-            temp_pose.assign( mutant_pose )
+        # add the mutant_pose to the dict with the key being the mutation amino acid
+        mutants[ amino_acid ] = mutant_pose
 
-            # packmin the temp pose
-            temp_pose = do_mutation_pack( seq_pos, amino_acid, sf, temp_pose )
+        # collect the energy information of this mutant
+        mutant_scores[ amino_acid ] = sf( mutant_pose )
 
-            # (re)-assign best pose to whichever packmin pose is better (temp or orig)
-            best_mutant = compare_pose_energy_per_residue( sf, mutant_pose, temp_pose )
+    # find the best mutant Pose by using mutant_scores dict information
+    lowest_score = None
+    best_mutation = None
+    for amino_acid in mutant_scores.keys():
+        # if this is the first mutation checked, update lowest_score and amino_acid with this mutation's information
+        if lowest_score is None:
+            lowest_score = mutant_scores[ amino_acid ]
+            best_mutation = amino_acid
+        # otherwise it is not empty, so compare the other mutations to this one. Keep the lowest score
+        else:
+            if mutant_scores[ amino_acid ] < lowest_score:
+                lowest_score = mutant_scores[ amino_acid ]
+                best_mutation = amino_acid
 
-    return best_mutant
+    if verbose:
+        ddG = lowest_score - start_score
+        print "The best mutation was from", orig_amino_acid, "to", best_mutation, "with a total_score ddG of", ddG
+
+    # return the best mutant from the mutants dictionary using the score information
+    return mutants[ best_mutation ]
 
 
 
-def make_all_mutations( sf, orig_pose_file, mutant_list_file, pack_around_mut = True, dump_pose = False, dump_dir = None ):
+def read_3ay4_mutation_file( mutation_filepath ):
+    """
+    Return a list of mutations to be made where the file structure is <mutation> <chain id> such as S123A A (Ser at PDB site 123 to Ala on chain A)
+    Chain designation is optional. If the mutation should be made on both sides, then leave blank
+    This is designed to read mutations for 3ay4 at the moment
+    Mutations and their chain designations are separated by a single white space
+    Commented lines are ignored
+    :param mutation_filepath: str( /path/to/file with mutation strings desired )
+    :return: list( <mutation>_<chain id> )
+    """
+    try:
+        f = open( mutation_filepath, "rb" )
+        lines = f.readlines()
+    except:
+        print "Something is wrong with your <mutation_filepath> ( %s ). Please check your input." %mutation_filepath
+        raise
+
+    # for each line specifying a mutation
+    mutations = []
+    for line in lines:
+        # strip off the carriage return
+        line = line.rstrip()
+
+        # skip over comments
+        if line != '' and line[0] != '#':
+            # mutation specifications should be split by whitespace, so grab the chain id (if it exists) which will be the second entry
+            # if a chain id was given
+            try:
+                chain_id = line.split( ' ' )[1].strip()
+                mutations.append( line.split( ' ' )[0].strip() + '_' + chain_id )
+            # if a chain id was not given, then nothing will be in this space
+            except:
+                mutations.append( line.split( ' ' )[0].strip() )
+
+    return mutations
+
+
+
+
+def make_all_mutations( mutations_str, sf, input_pose, pack_around_mut = True, dump_pose = False, dump_dir = None ):
+    """
+    Using a string of mutations, mutate <input_pose> and, if desired, pack around mutation and dump mutant into <dump_dir>
+    Mutation string works as follows for 3ay4: T123Y
+    """
+    # imports
     from rosetta import Pose
 
 

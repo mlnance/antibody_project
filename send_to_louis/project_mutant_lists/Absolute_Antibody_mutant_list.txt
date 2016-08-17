@@ -1,0 +1,8 @@
+# Genentech
+S239D_A330L_I332E
+
+# MedImmune
+F243L
+
+# Xencor
+G236A

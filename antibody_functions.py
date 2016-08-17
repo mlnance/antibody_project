@@ -29,7 +29,8 @@ pmm = PyMOL_Mover()
 
 
 # global variables
-AA_name1_list = [ 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y' ]
+#AA_name1_list = [ 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y' ]
+AA_name1_list = [ 'A', 'C', 'D' ]
 AA_name3_list = [ "ALA", "CYS", "ASP", "GLU", "PHE", "GLY", "HIS", "ILE", "LYS", "LEU", "MET", "ASN", "PRO", "GLN", "ARG", "SER", "THR", "VAL", "TRP", "TYR" ]
 AA_name1_to_name3 = { 'A':"ALA", 'C':"CYS", 'D':"ASP", 'E':"GLU", 'F':"PHE", 'G':"GLY", 'H':"HIS", 'I':"ILE", 'K':"LYS", 'L':"LEU", 'M':"MET", 'N':"ASN", 'P':"PRO", 'Q':"GLN", 'R':"ARG", 'S':"SER", 'T':"THR", 'V':"VAL", 'W':"TRP", 'Y':"TYR" }
 AA_name3_to_name1 = { "ALA":'A', "CYS":'C', "ASP":'D', "GLU":'E', "PHE":'F', "GLY":'G', "HIS":'H', "ILE":'I', "LYS":'K', "LEU":'L', "MET":'M', "ASN":'N', "PRO":'P', "GLN":'Q', "ARG":'R', "SER":'S', "THR":'T', "VAL":'V', "TRP":'W', "TYR":'Y' }
@@ -2765,7 +2766,7 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
     elif len( new_res_name ) == 3 and new_res_name.upper() not in AA_name3_list:
         print "\nIt appears that '%s' is not a valid three-letter amino acid code. Returning the original pose." %new_res_name
         return pose
-    # otherwise, use the <new_res_name> argument to get the appropriate three-letter amino acid code
+   # otherwise, use the <new_res_name> argument to get the appropriate three-letter amino acid code
     if len( new_res_name ) == 1:
         single_new_res_name = new_res_name.upper()
         new_res_name = AA_name1_to_name3[ single_new_res_name ]
@@ -2837,6 +2838,7 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
 
 def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK_RADIUS ):
     """
+    OUTDATED AS OF 17 AUGUST 2016 BUT KEEPING FOR REFERENCE
     Returns a packer task that can handle a <pose> with a SINGLE mutation at <seq_pos>
     :param amino_acid: str( ONE LETTER amino acid code for the SINGLE mutated residue )
     :param seq_pos: int( sequence position of the mutated residue )
@@ -2878,6 +2880,7 @@ def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK
 
 def do_mutation_pack( seq_pos, amino_acid, sf, mutated_pose, pack_radius = PACK_RADIUS ):
     """
+    OUTDATED AS OF 17 AUGUST 2016 BUT KEEPING FOR REFERENCE
     Returns a packed and minimized <pose> that has a SINGLE mutation of <amino_acid> at <seq_pos>
     :param seq_pos: int( sequence position of the mutated residue _
     :param amino_acid: str( ONE LETTER amino acid code for the SINGLE mutated residue )
@@ -2904,7 +2907,112 @@ def do_mutation_pack( seq_pos, amino_acid, sf, mutated_pose, pack_radius = PACK_
 #### MAIN MUTANT POSE CREATION ####
 ###################################
 
-def get_best_mutant_of_20( pose_num, sf, input_pose, pdb_num = False, pdb_chain = None, pack_radius = 5, verbose = False, pmm = None ):
+def get_best_3ay4_mutant_of_20_symmetrical( pose_num, sf, input_pose, pdb_num = False, pack_radius = 5, verbose = False, pmm = None ):
+    """
+    For a single position <pos_num> (both chain A and chain B), mutate to all 20 amino acids and return the best mutant pose
+    You can give a Pose residue position or a PDB residue position. Just specify if it is a PDB position by setting <pdb_num> to True
+    :param pose_num: int( Pose number for residue )
+    :param sf: ScoreFunction ( used for packing )
+    :param input_pose: Pose
+    :param pdb_num: bool( did you give me a PDB number instead? Set to True if so ) Default = False
+    :param pack_radius: int or float( how far out in Angstroms do you want to pack around the mutation site? ) Default = 5
+    :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
+    :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
+    :return: the mutated Pose of the lowest total score out of the twenty mutations
+    """
+    # make a copy of the pose
+    pose = input_pose.clone()
+
+    # if desired, send the native Pose to PyMOL
+    if pmm is not None:
+        pose.pdb_info().name( "native" )
+        pmm.apply( pose )
+
+    # get the original amino acid at this position
+    # if the PDB number was given, get the Pose number
+    if pdb_num is True:
+        pose_num1 = pose.pdb_info().pdb2pose( 'A', pose_num )
+        pose_num2 = pose.pdb_info().pdb2pose( 'B', pose_num )
+
+        # make sure the amino acid at the PDB position specified is the same on chain A as it is on chain B
+        if pose.residue( pose_num1 ).name1() != pose.residue( pose_num2 ).name1():
+            print "There is something wrong with your symmetrical Pose. The residues at position", pose_num, "on chain A and B are not the same. Exiting."
+            sys.exit()
+
+        # get the original amino acid
+        orig_amino_acid = pose.residue( pose_num1 ).name1()
+    # else, if the Pose number was given, get the original amino acid directly
+    else:
+        orig_amino_acid = pose.residue( pose_num ).name1()
+
+    # get the starting score
+    start_score = sf( pose )
+
+    # talk to user, if desired
+    if verbose:
+        if pdb_num is True:
+            print "Mutating", orig_amino_acid, "at PDB position", pose_num, "on chain A and B"
+        else:
+            print "Mutating", orig_amino_acid, "at Pose position", pose_num
+
+    # create data holders
+    # mutants: key = new amino acid, value = mutant Pose
+    mutants = {}
+
+    # mutant_scores will be used to keep track of the lowest E mut
+    # key = new amino acid, value = mutant Pose score
+    mutant_scores = {}
+    
+    # mutate this position to all 20 amino acids
+    for amino_acid in AA_name1_list:
+        # make a copy of the pose
+        mutant_pose = pose.clone()
+
+        if verbose:
+            if orig_amino_acid == amino_acid:
+                print "Now mutating", orig_amino_acid, "back to", amino_acid, "..."
+            else:
+                print "Now mutating", orig_amino_acid, "to", amino_acid, "..."
+
+        # mutate to a new residue
+        mutant_pose = mutate_residue( pose_num, amino_acid, mutant_pose, sf, pdb_num = pdb_num, pdb_chain = 'A', pack_radius = pack_radius )
+        mutant_pose = mutate_residue( pose_num, amino_acid, mutant_pose, sf, pdb_num = pdb_num, pdb_chain = 'B', pack_radius = pack_radius )
+
+        # if desired, send the mutant Pose to PyMOL
+        if pmm is not None:
+            mutant_pose.pdb_info().name( orig_amino_acid + "to" + amino_acid )
+            pmm.apply( mutant_pose )
+
+        # add the mutant_pose to the dict with the key being the mutation amino acid
+        mutants[ amino_acid ] = mutant_pose
+
+        # collect the energy information of this mutant
+        mutant_scores[ amino_acid ] = sf( mutant_pose )
+
+    # find the best mutant Pose by using mutant_scores dict information
+    lowest_score = None
+    best_mutation = None
+    for amino_acid in mutant_scores.keys():
+        # if this is the first mutation checked, update lowest_score and amino_acid with this mutation's information
+        if lowest_score is None:
+            lowest_score = mutant_scores[ amino_acid ]
+            best_mutation = amino_acid
+        # otherwise it is not empty, so compare the other mutations to this one. Keep the lowest score
+        else:
+            if mutant_scores[ amino_acid ] < lowest_score:
+                lowest_score = mutant_scores[ amino_acid ]
+                best_mutation = amino_acid
+
+    if verbose:
+        ddG = lowest_score - start_score
+        print "The best mutation was from", orig_amino_acid, "to", best_mutation, "with a total_score ddG of", ddG
+
+    # return the best mutant from the mutants dictionary using the score information
+    return mutants[ best_mutation ]
+
+
+
+def get_best_3ay4_mutant_of_20_asymmetrical( pose_num, sf, input_pose, pdb_num = False, pdb_chain = None, pack_radius = 5, verbose = False, pmm = None ):
     """
     For a single position <pos_num>, mutate to all 20 amino acids and return the best mutant pose
     You can give a Pose residue position or a PDB residue position. Just specify if it is a PDB position and give the pdb_chain
@@ -2921,13 +3029,28 @@ def get_best_mutant_of_20( pose_num, sf, input_pose, pdb_num = False, pdb_chain 
     # make a copy of the pose
     pose = input_pose.clone()
 
+    # argument check
+    # check if <pdb_chain> was given if <pdb_num> is True
+    if pdb_num == True:
+        if pdb_chain is None:
+            print "\nYou told me you gave me a PDB number, but you did not give me a PDB chain id to create an asymmetrical antibody. Set <pdb_chain> to the appropriate chain id. Returning the original pose."
+            return pose
+
     # if desired, send the native Pose to PyMOL
     if pmm is not None:
         pose.pdb_info().name( "native" )
         pmm.apply( pose )
 
     # get the original amino acid at this position
-    orig_amino_acid = pose.residue( pose_num ).name1()
+    # if the PDB number was given, get the Pose number
+    if pdb_num is True:
+        pose_num1 = pose.pdb_info().pdb2pose( pdb_chain, pose_num )
+
+        # get the original amino acid
+        orig_amino_acid = pose.residue( pose_num1 ).name1()
+    # else, if the Pose number was given, get the original amino acid directly
+    else:
+        orig_amino_acid = pose.residue( pose_num ).name1()
 
     # get the starting score
     start_score = sf( pose )
@@ -2959,11 +3082,11 @@ def get_best_mutant_of_20( pose_num, sf, input_pose, pdb_num = False, pdb_chain 
                 print "Now mutating", orig_amino_acid, "to", amino_acid, "..."
 
         # mutate to a new residue
-        mutant_pose = mutate_residue( pose_num, amino_acid, pose, sf, pdb_num = pdb_num, pdb_chain = pdb_chain, pack_radius = pack_radius )
+        mutant_pose = mutate_residue( pose_num, amino_acid, mutant_pose, sf, pdb_num = pdb_num, pdb_chain = pdb_chain, pack_radius = pack_radius )
 
         # if desired, send the mutant Pose to PyMOL
         if pmm is not None:
-            mutant_pose.pdb_info().name( orig_amino_acid + "to" + amino_acid )
+            mutant_pose.pdb_info().name( orig_amino_acid + "to" + amino_acid + "_chain" + pdb_chain )
             pmm.apply( mutant_pose )
 
         # add the mutant_pose to the dict with the key being the mutation amino acid

@@ -1,5 +1,5 @@
 # Genentech
-S239D_A330L_I332E
+S239D+A330L+I332E
 
 # MedImmune
 F243L

@@ -260,7 +260,7 @@ def avg_dist_from_native_Fc_glycan_ring_atoms( working, working_Fc_glycan_num, n
     :return: float( average distance of working ring atoms from native )
     """
     # imports
-    from numpy import mean
+    from util import get_mean
 
 
     # grab the atom indicies of the rings
@@ -283,7 +283,7 @@ def avg_dist_from_native_Fc_glycan_ring_atoms( working, working_Fc_glycan_num, n
         ring_atom_xyzs.append( ring_atom_dist )
 
     # get the average distance between each ring atom of the decoy to the native
-    avg_ring_atoms_dist = mean( ring_atom_xyzs )
+    avg_ring_atoms_dist = get_mean( ring_atom_xyzs )
 
     return avg_ring_atoms_dist
 

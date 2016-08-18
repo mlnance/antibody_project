@@ -578,3 +578,14 @@ def get_score_term_from_fasc_data_dict( fasc_data_dict, score_term ):
             pass
         
     return score_term_dict
+
+
+
+def get_mean( data ):
+    """
+    Return the mean of the integers and/or floats in <data>
+    :param data: list( numbers )
+    :return float( mean of data )
+    """
+    data = [ float( x ) for x in data ]
+    return sum( data ) / float( len( data ) )

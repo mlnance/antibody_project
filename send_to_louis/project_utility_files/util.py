@@ -80,6 +80,115 @@ def calc_distance( vec1, vec2 ):
 
 
 
+def renumber_PDB_file( pdb_filename ):
+    """
+    Renumber each residue starting with residue 1 and chain A to residue X and chain Y
+    :param pdb_filename: str( /path/to/pdb filename )
+    :return: str( new pdb filename )
+    """
+    import sys
+    from line_definitions import ATOM_line, HETNAM_line, \
+        LINK_line, SSBOND_line
+
+
+    # try to open up the PDB file
+    try:
+        f = open( pdb_filename, 'r' )
+        pdb = f.readlines()
+        f.close()
+    except IOError:
+        print pdb_filename, "doesn't exist in this directory. Did you mean to download it? Exiting."
+        sys.exit()
+
+    # create a dictionary of old unique names to new unique names (resname_reschain_resnum)
+    old_to_new_dict = {}
+    last_chain_seen = ''
+    new_res_chain = 'A'
+    new_res_num = 1
+
+    for line in pdb:
+        if line.startswith( "ATOM" ):
+            ATOM = ATOM_line( line )
+
+            # use the first line to create needed information
+            if last_chain_seen == '':
+                last_chain_seen = ATOM.res_chain
+
+            # update the last_chain_seen
+            if last_chain_seen != ATOM.res_chain:
+                last_chain_seen = ATOM.res_chain
+                new_res_chain = chr( ord( new_res_chain ) + 1 )
+
+            # connect the new residue name with its old one
+            if ATOM.uniq_res_name not in old_to_new_dict.keys():
+                # create the new residue name
+                new_res_name = '_'.join( [ ATOM.res_name, new_res_chain, str( new_res_num ) ] )
+
+                # add the new name to the dictionary
+                old_to_new_dict[ ATOM.uniq_res_name ] = new_res_name
+
+                # increase the new_res_num
+                new_res_num += 1
+
+    # renumber each ATOM, HETNAM, SSBOND, and LINK line using the old_to_new_dict
+    new_pdb = []
+    for line in pdb:
+        # otherwise collect relevant information depending on what kind of line this is
+        if line.startswith( "ATOM" ):
+            LINE = ATOM_line( line )
+            new_uniq_res_name = old_to_new_dict[ LINE.uniq_res_name ]
+            new_res_chain = new_uniq_res_name.split( '_' )[1]
+            new_res_num = new_uniq_res_name.split( '_' )[2]
+            new_line = LINE.renumber_line( new_res_chain, new_res_num )
+            new_pdb.append( new_line + "\n" )
+
+        elif line.startswith( "HETNAM" ):
+            LINE = HETNAM_line( line )
+            new_uniq_res_name = old_to_new_dict[ LINE.uniq_res_name ]
+            new_res_chain = new_uniq_res_name.split( '_' )[1]
+            new_res_num = new_uniq_res_name.split( '_' )[2]
+            new_line = LINE.renumber_line( new_res_chain, new_res_num )
+            new_pdb.append( new_line + "\n" )
+
+        elif line.startswith( "LINK" ):
+            LINE = LINK_line( line )
+
+            # have to renumber two parts of this line
+            new_uniq_res1_name = old_to_new_dict[ LINE.uniq_res1_name ]
+            new_res1_chain = new_uniq_res1_name.split( '_' )[1]
+            new_res1_num = new_uniq_res1_name.split( '_' )[2]
+            new_uniq_res2_name = old_to_new_dict[ LINE.uniq_res2_name ]
+            new_res2_chain = new_uniq_res2_name.split( '_' )[1]
+            new_res2_num = new_uniq_res2_name.split( '_' )[2]
+
+            new_line = LINE.renumber_line( new_res1_chain, new_res1_num, new_res2_chain, new_res2_num )
+            new_pdb.append( new_line + "\n" )
+
+        elif line.startswith( "SSBOND" ):
+            LINE = SSBOND_line( line )
+
+            # have to renumber two parts of this line
+            new_uniq_res1_name = old_to_new_dict[ LINE.uniq_res1_name ]
+            new_res1_chain = new_uniq_res1_name.split( '_' )[1]
+            new_res1_num = new_uniq_res1_name.split( '_' )[2]
+            new_uniq_res2_name = old_to_new_dict[ LINE.uniq_res2_name ]
+            new_res2_chain = new_uniq_res2_name.split( '_' )[1]
+            new_res2_num = new_uniq_res2_name.split( '_' )[2]
+
+            new_line = LINE.renumber_line( new_res1_chain, new_res1_num, new_res2_chain, new_res2_num )
+            new_pdb.append( new_line + "\n" )
+
+        elif line.startswith( "TER" ):
+            new_pdb.append( line )
+
+        # else I don't care for the line
+        else:
+            pass
+
+    return new_pdb
+
+
+
 def renumber_PDB( pdb_filename, new_filename = None, reverse  = False ):
     # try to open up the PDB file
     try:
@@ -469,3 +578,14 @@ def get_score_term_from_fasc_data_dict( fasc_data_dict, score_term ):
             pass
         
     return score_term_dict
+
+
+
+def get_mean( data ):
+    """
+    Return the mean of the integers and/or floats in <data>
+    :param data: list( numbers )
+    :return float( mean of data )
+    """
+    data = [ float( x ) for x in data ]
+    return sum( data ) / float( len( data ) )

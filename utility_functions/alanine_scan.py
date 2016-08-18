@@ -6,7 +6,7 @@ __author__="morgalnance"
 from antibody_functions import initialize_rosetta, load_pose, \
     make_pack_rotamers_mover, get_res_nums_within_radius, \
     native_Fc_glycan_nums, native_Fc_protein_nums, \
-    native_FcR_protein_nums , get_interface_score, \
+    native_FcR_protein_nums, get_interface_score, \
     get_contact_map_between_range1_range2
 from rosetta import Pose, get_fa_scorefxn, PyMOL_Mover, \
     MoveMap, MinMover

@@ -1,0 +1,36 @@
+Info for this run of /home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/fresh_start/glycan_sampling_just_50_sugar_small_moves_with_ramp/light_reset_checks/am2_5_mpt/./glycan_sampling_just_sugar_small_moves_on_native.py
+
+Native PDB filename:			lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb
+Sugar filename:				3ay4_Fc_Glycan.iupac
+Creating this many decoys:		1000
+Number of SugarSmallMove trials:	50
+Number of SugarSmallMoves per trial:	5
+LCM reset of Fc glycan?:		False
+Light reset of Fc glycan?:		True
+Using score ramping?:			True
+Native constraint file used?:		None
+ScoreFunction file used?:		None
+Angle multiplier used:			2.0
+Main structure directory:		/home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/fresh_start/glycan_sampling_just_50_sugar_small_moves_with_ramp/light_reset_checks/am2_5_mpt/
+Base structure directory:		/home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/fresh_start/glycan_sampling_just_50_sugar_small_moves_with_ramp/light_reset_checks/am2_5_mpt/base_structs/
+Lowest E structure directory:		/home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/fresh_start/glycan_sampling_just_50_sugar_small_moves_with_ramp/light_reset_checks/am2_5_mpt/lowest_E_structs/
+
+Score weights used in main_sf:
+fa_atr: 1.0 * 2 in ramp
+fa_rep: 0.55 * 0.5 in ramp
+fa_sol: 0.9375
+fa_intra_rep: 0.44
+fa_elec: 0.875
+pro_close: 1.25
+hbond_sr_bb: 1.17
+hbond_lr_bb: 1.17
+hbond_bb_sc: 1.17
+hbond_sc: 1.1
+dslf_fa13: 1.25
+rama: 0.25
+omega: 0.625
+fa_dun: 0.7
+p_aa_pp: 0.4
+yhh_planarity: 0.625
+ref: 1.0
+sugar_bb: 1.0

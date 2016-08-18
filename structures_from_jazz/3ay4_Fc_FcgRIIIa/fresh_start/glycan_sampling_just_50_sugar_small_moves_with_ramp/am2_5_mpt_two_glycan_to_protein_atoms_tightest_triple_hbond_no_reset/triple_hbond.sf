@@ -1,0 +1,6 @@
+fa_intra_rep 0.440
+atom_pair_constraint 1.0
+hbond_sr_bb * 3
+hbond_lr_bb * 3
+hbond_bb_sc * 3
+hbond_sc * 3

@@ -1,0 +1,29 @@
+Info for this run of /home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/fresh_start/get_base_pack_min_pose/std_sf/./get_base_pack_min_pose.py
+
+Native PDB filename:			native_crystal_struct_3ay4_Fc_FcgRIII.pdb
+Creating this many decoys:		1000
+ScoreFunction file used?:		None
+Set fa_intra_rep to 0.44?:		False
+Main structure directory:		/home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/fresh_start/get_base_pack_min_pose/std_sf/
+Base structure directory:		/home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/fresh_start/get_base_pack_min_pose/std_sf/base_structs/
+Lowest E structure directory:		/home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/fresh_start/get_base_pack_min_pose/std_sf/lowest_E_structs/
+
+Score weights used in sf:
+fa_atr: 1.0
+fa_rep: 0.55
+fa_sol: 0.9375
+fa_intra_rep: 0.005
+fa_elec: 0.875
+pro_close: 1.25
+hbond_sr_bb: 1.17
+hbond_lr_bb: 1.17
+hbond_bb_sc: 1.17
+hbond_sc: 1.1
+dslf_fa13: 1.25
+rama: 0.25
+omega: 0.625
+fa_dun: 0.7
+p_aa_pp: 0.4
+yhh_planarity: 0.625
+ref: 1.0
+sugar_bb: 1.0

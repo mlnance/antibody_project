@@ -1,0 +1,4 @@
+fa_intra_rep 0.440
+atom_pair_constraint 1.0
+fa_atr * 2
+fa_rep * 0.5

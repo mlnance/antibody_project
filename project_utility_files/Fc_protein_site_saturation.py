@@ -24,7 +24,7 @@ pmm.keep_history()
 data_dir = os.getcwd() + "/mutational_data/"
 if not os.path.isdir( data_dir ):
     os.mkdir( data_dir )
-data_filename = "Fc_protein_site_saturation_fresh_start_low_E_native.csv"
+data_filename = "Fc_protein_near_Fc_glycan_10A_site_saturation_fresh_start_low_E_native.csv"
 
 # initialize rosetta with sugar flags
 initialize_rosetta()

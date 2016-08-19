@@ -24,13 +24,13 @@ pmm.keep_history()
 data_dir = os.getcwd() + "/mutational_data/"
 if not os.path.isdir( data_dir ):
     os.mkdir( data_dir )
-data_filename = "Fc_protein_near_Fc_glycan_10A_site_saturation_fresh_start_low_E_native.csv"
+data_filename = "Fc_protein_full_site_saturation_fresh_start_low_E_native.csv"
 
 # initialize rosetta with sugar flags
 initialize_rosetta()
 
 # create pose object, assign info object, and send pose to pymol
-native_pose = load_pose( "/Users/mlnance/pyrosetta_dir/project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb" )
+native_pose = load_pose( "/Users/Research/pyrosetta_dir/project_structs/lowest_E_double_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb" )
 native_pose.pdb_info().name( "native_pose" )
 info = native_pose.pdb_info()
 #pmm.apply( native_pose )
@@ -49,6 +49,7 @@ pdb_position = []
 pdb_chain = []
 new_AA_list = []
 was_best_mutation = []
+within_10A_of_Fc_glycan = []
 within_10A_of_FcR_interface = []
 native_E_list = []
 mut_E_list = []
@@ -63,23 +64,22 @@ dhbonds_list = []
 
 
 # get the 10A contact map between Fc protein and Fc glycan
-# Fc protein residues within 10A of the Fc glycan will be the ones getting mutated
 # my code will skip over branch points so ASN 297 is okay to have in this contact map
 Fc_protein_to_Fc_glycan_cmap = get_contact_map_between_range1_range2( native_Fc_protein_nums, 
                                                                       native_Fc_glycan_nums, 
                                                                       native_pose, 
                                                                       cutoff = 10 )
 
-# get the 10A contact map between Fc protein residues that are within 10A of the Fc glycan to the FcR protein
-Fc_protein_to_FcR_protein_cmap = get_contact_map_between_range1_range2( Fc_protein_to_Fc_glycan_cmap.keys(), 
+# get the 10A contact map between Fc protein that are within 10A of the FcR protein
+Fc_protein_to_FcR_protein_cmap = get_contact_map_between_range1_range2( native_Fc_protein_nums, 
                                                                         native_FcR_protein_nums, 
                                                                         native_pose, 
                                                                         cutoff = 10 )
 
 
-# for each Fc protein residue near the Fc glycan, mutate each residue to all 20 amino acids
+# for each Fc protein, mutate each residue to all 20 amino acids
 # and pack within 10A around the mutation site
-for seq_pos in Fc_protein_to_Fc_glycan_cmap.keys():
+for seq_pos in native_Fc_protein_nums:
     res = native_pose.residue( seq_pos )
 
     # used to store scores for each mutation to then determine which was best
@@ -118,9 +118,13 @@ for seq_pos in Fc_protein_to_Fc_glycan_cmap.keys():
                     native_E_list.append( native_E )
                     native_E_interface_list.append( native_E_interface )
 
+                    # check if this Fc protein residue is within 10A of the Fc glycan
+                    if seq_pos in Fc_protein_to_Fc_glycan_cmap.keys():
+                        within_10A_of_Fc_glycan.append( True )
+                    else:
+                        within_10A_of_Fc_glycan.append( False )
+
                     # check if this Fc protein residue is within 10A of the FcR protein
-                    # only Fc protein residues within 10A of the Fc glycan are used in this count, so this is
-                    # checking if they're also within 10A of the FcR protein
                     if seq_pos in Fc_protein_to_FcR_protein_cmap.keys():
                         within_10A_of_FcR_interface.append( True )
                     else:
@@ -182,6 +186,7 @@ df["new_AA"] = new_AA_list
 df["pose_num"] = pose_position
 df["pdb_num"] = pdb_position
 df["pdb_chain"] = pdb_chain
+df["within_10A_of_Fc_glycan"] = within_10A_of_Fc_glycan
 df["within_10A_of_FcR_interface"] = within_10A_of_FcR_interface
 df["was_best_mutation"] = was_best_mutation
 df["native_E"] = native_E_list

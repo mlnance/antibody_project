@@ -293,6 +293,160 @@ def align_sugar_virtual_atoms( in_pose ):
 
 
 
+def get_ideal_SugarBB_phi_psi_info( sugar_num, input_pose, verbose = False ):
+    """
+    CHI Phi: determines if residue is axial or equatorial at its anomeric position (ie. if alpha or beta sugar) and returns appropriate statistic
+    CHI Psi: determines if residue is axial or equatorial at the attachment position to its parent residue and returns appropriate statistic
+    See core::pose::carbohydrates::util::get_linkage_type_for_residue_for_CHI and core::chemical::carbohydrates::LinkageType for more information
+    :param sugar_num: int( Pose number for sugar residue of interest )
+    :param input_pose: Pose
+    :param verbose: bool( do you also want to print out the data? ) Default = False
+    :return: list( ideal_phi_major, ideal_phi_stdev_major, ideal_phi_minor, ideal_phi_stdev_minor, ideal_psi, ideal_psi_stdev, anomeric_position, linkage_type )
+    :return: None if error occured, NA if no information
+    """
+    # imports
+    from rosetta.core.id import phi_dihedral, psi_dihedral
+    from rosetta.core.pose.carbohydrates import get_linkage_type_for_residue_for_CHI
+    # for C++ to Python value converter
+    from rosetta.core.chemical.carbohydrates import LinkageType
+
+
+    # instantiate the data holders
+    # data taken from Jason's RosettaCarbohydrates Tutorial/Demo 2 (Scoring & Packing)
+    # this describes the sugar_bb (SugarBB) data taken from the CHI energy function (Grant & Woods, Curr. Opin. Struct. Biol, 2014, 28C, 47-55
+    # specific values taken from http://www.ncbi.nlm.nih.gov/pubmed/24375430 (Nivedha & Woods, J Comput Chem, 2014, 35(7), 526-39
+    # -360 for values greater than 180 for the sake of Rosetta
+    # phi information
+    ideal_alpha_phi = 72.5
+    ideal_alpha_phi_stdev = 17.5  # ( 55-90)
+    ideal_beta_phi_major = 290 - 360
+    ideal_beta_phi_stdev_major = 15 # (275-305) - 360
+    ideal_beta_phi_minor = 55
+    ideal_beta_phi_stdev_minor = 15 # (40-70)
+
+    # psi information
+    ideal_2ax_3eq_4ax_psi = 242.5 - 360
+    ideal_2ax_3eq_4ax_psi_stdev = 42.5 # (200-285) - 360
+    ideal_2eq_3ax_4eq_psi = 112.5
+    ideal_2eq_3ax_4eq_psi_stdev = 37.5 # (75-150)
+
+    # check that the residue number passed actually exists
+    try:
+        sugar_res = input_pose.residue( sugar_num )
+    except RuntimeError:
+        print "\nIt appears that residue number", sugar_num, "does not actually exist in the Pose. Check your input. Returning None."
+        return None
+
+    # check that the residue passed is actually a sugar
+    if not sugar_res.is_carbohydrate():
+        print "\nIt appears that residue number", sugar_num, "is not actually a carbohydrate residue. Check your input. Returning None."
+        return None
+
+    # return the different combinations of ideal phi/psi statistics based on the anomeric position (phi) and the linkage position (psi)
+    anomeric_position = str( get_linkage_type_for_residue_for_CHI( phi_dihedral, sugar_res, input_pose ) )
+    linkage_type = str( get_linkage_type_for_residue_for_CHI( psi_dihedral, sugar_res, input_pose ) )
+
+    # Python isn't smart enough to store two values created in the source code, so replace linkage_type if necessary
+    # N_LINK_TYPES = 4, which is also what _2EQ_3AX_4EQ_LINKS equals. So it gets overwritten apparently from C++ --> Python
+    if linkage_type == "N_LINK_TYPES":
+        linkage_type = "_2EQ_3AX_4EQ_LINKS"
+
+    # alpha sugar with _2AX_3EQ_4AX_LINKS LinkageType
+    if anomeric_position == "ALPHA_LINKS" and linkage_type == "_2AX_3EQ_4AX_LINKS":
+        if verbose:
+            print "Residue number:", sugar_num
+            print "  ", anomeric_position, linkage_type
+            print "   ideal phi major:", ideal_alpha_phi
+            print "\tideal phi stdev major:", ideal_alpha_phi_stdev
+            print "   ideal phi minor:", "NA", 
+            print "\tideal phi stdev minor:", "NA"
+            print "      actual phi:", input_pose.phi( sugar_num )
+            print "   ideal psi:", ideal_2ax_3eq_4ax_psi, 
+            print "\tideal psi stdev:", ideal_2ax_3eq_4ax_psi_stdev
+            print "      actual psi:", input_pose.psi( sugar_num )
+        return [ ideal_alpha_phi, ideal_alpha_phi_stdev, "NA", "NA", ideal_2ax_3eq_4ax_psi, ideal_2ax_3eq_4ax_psi_stdev, anomeric_position, linkage_type ]
+
+    # alpha sugar with _2EQ_3AX_4EQ_LINKS LinkageType
+    elif anomeric_position == "ALPHA_LINKS" and linkage_type == "_2EQ_3AX_4EQ_LINKS":
+        if verbose:
+            print "Residue number:", sugar_num
+            print "  ", anomeric_position, linkage_type
+            print "   ideal phi major:", ideal_alpha_phi
+            print "\tideal phi stdev major:", ideal_alpha_phi_stdev
+            print "   ideal phi minor:", "NA", 
+            print "\tideal phi stdev minor:", "NA"
+            print "      actual phi:", input_pose.phi( sugar_num )
+            print "   ideal psi:", ideal_2eq_3ax_4eq_psi, 
+            print "\tideal psi stdev:", ideal_2eq_3ax_4eq_psi_stdev
+            print "      actual psi:", input_pose.psi( sugar_num )
+        return [ ideal_alpha_phi, ideal_alpha_phi_stdev, "NA", "NA", ideal_2eq_3ax_4eq_psi, ideal_2eq_3ax_4eq_psi_stdev, anomeric_position, linkage_type ]
+
+    # alpha sugar with LINKAGE_NA LinkageType
+    elif anomeric_position == "ALPHA_LINKS" and linkage_type == "LINKAGE_NA":
+        if verbose:
+            print "Residue number:", sugar_num
+            print "  ", anomeric_position, linkage_type
+            print "   ideal phi major:", ideal_alpha_phi
+            print "\tideal phi stdev major:", ideal_alpha_phi_stdev
+            print "   ideal phi minor:", "NA", 
+            print "\tideal phi stdev minor:", "NA"
+            print "      actual phi:", input_pose.phi( sugar_num )
+            print "   ideal psi:", "NA", 
+            print "\tideal psi stdev:", "NA"
+            print "      actual psi:", input_pose.psi( sugar_num )
+        return [ ideal_alpha_phi, ideal_alpha_phi_stdev, "NA", "NA", "NA", "NA", anomeric_position, linkage_type ]
+
+    # beta sugar with _2AX_3EQ_4AX_LINKS LinkageType
+    elif anomeric_position == "BETA_LINKS" and linkage_type == "_2AX_3EQ_4AX_LINKS":
+        if verbose:
+            print "Residue number:", sugar_num
+            print "  ", anomeric_position, linkage_type
+            print "   ideal phi major:", ideal_beta_phi_major, 
+            print "\tideal phi stdev major:", ideal_beta_phi_stdev_major
+            print "   ideal phi minor:", ideal_beta_phi_minor, 
+            print "\t\tideal phi stdev minor:", ideal_beta_phi_stdev_minor
+            print "      actual phi:", input_pose.phi( sugar_num )
+            print "   ideal psi:", ideal_2ax_3eq_4ax_psi, 
+            print "\t\tideal psi stdev:", ideal_2ax_3eq_4ax_psi_stdev
+            print "      actual psi:", input_pose.psi( sugar_num )
+        return [ ideal_beta_phi_major, ideal_beta_phi_stdev_major, ideal_beta_phi_minor, ideal_beta_phi_stdev_minor, ideal_2ax_3eq_4ax_psi, ideal_2ax_3eq_4ax_psi_stdev, anomeric_position, linkage_type ]
+
+    # beta sugar with _2EQ_3AX_4EQ_LINKS LinkageType
+    elif anomeric_position == "BETA_LINKS" and linkage_type == "_2EQ_3AX_4EQ_LINKS":
+        if verbose:
+            print "Residue number:", sugar_num
+            print "  ", anomeric_position, linkage_type
+            print "   ideal phi major:", ideal_beta_phi_major, 
+            print "\tideal phi stdev major:", ideal_beta_phi_stdev_major
+            print "   ideal phi minor:", ideal_beta_phi_minor, 
+            print "\t\tideal phi stdev minor:", ideal_beta_phi_stdev_minor
+            print "      actual phi:", input_pose.phi( sugar_num )
+            print "   ideal psi:", ideal_2eq_3ax_4eq_psi, 
+            print "\t\tideal psi stdev:", ideal_2eq_3ax_4eq_psi_stdev
+            print "      actual psi:", input_pose.psi( sugar_num )
+        return [ ideal_beta_phi_major, ideal_beta_phi_stdev_major, ideal_beta_phi_minor, ideal_beta_phi_stdev_minor, ideal_2eq_3ax_4eq_psi, ideal_2eq_3ax_4eq_psi_stdev, anomeric_position, linkage_type ]
+
+    # beta sugar with LINKAGE_NA LinkageType
+    elif anomeric_position == "BETA_LINKS" and linkage_type == "LINKAGE_NA":
+        if verbose:
+            print "Residue number:", sugar_num
+            print "  ", anomeric_position, linkage_type
+            print "   ideal phi major:", ideal_beta_phi_major, 
+            print "\tideal phi stdev major:", ideal_beta_phi_stdev_major
+            print "   ideal phi minor:", ideal_beta_phi_minor, 
+            print "\t\tideal phi stdev minor:", ideal_beta_phi_stdev_minor
+            print "      actual phi:", input_pose.phi( sugar_num )
+            print "   ideal psi:", "NA",
+            print "\tideal psi stdev:", "NA"
+            print "      actual psi:", input_pose.psi( sugar_num )
+        return [ ideal_beta_phi_major, ideal_beta_phi_stdev_major, ideal_beta_phi_minor, ideal_beta_phi_stdev_minor, "NA", "NA", anomeric_position, linkage_type ]
+
+    # otherwise, there is no information for this carbohydrate anomeric/LinkageType information
+    else:
+        return [ "NA", "NA", "NA", "NA", "NA", "NA" ]
+
+
+
 def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
     """
     Return an sf from get_fa_scoretype but with adjusted weights <scoretypes> with given <weights>

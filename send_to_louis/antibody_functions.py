@@ -74,8 +74,6 @@ native_Fc_glycan_B_chains = [ 'F', 'G' ]
 native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 
 # glycosylated decoy
-# decoy designations are commented out for now as my protocol does not use the glycosylate_pose function
-'''
 decoy_Fc_chain_A_nums = range( 1, 215 + 1 )
 decoy_Fc_glycan_A_nums = range( 603, 610 + 1)
 decoy_Fc_chain_B_nums = range( 216, 431 + 1 )
@@ -104,7 +102,7 @@ decoy_Fc_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 decoy_Fc_glycan_A_chains = [ 'H', 'I' ]
 decoy_Fc_glycan_B_chains = [ 'J', 'K' ]
 decoy_FcR_glycan_chains = [ 'D', 'E', 'F', 'G' ]
-'''
+
 
 # make an appropriate dictionary map
 native_to_decoy_res_map = {}
@@ -222,6 +220,7 @@ class hold_chain_and_res_designations_3ay4:
         self.native_Fc_glycan_B_chains = native_Fc_glycan_B_chains
         self.native_FcR_glycan_chains = native_FcR_glycan_chains
 
+    # decoy designations are commented out for now as my protocol does not use the glycosylate_pose function
     '''
     def decoy( self ):
         # decoy information

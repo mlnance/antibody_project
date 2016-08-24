@@ -295,6 +295,57 @@ def align_sugar_virtual_atoms( in_pose ):
 
 
 
+def get_ideal_LCM_phi_psi_info( linkage_conformer_filename, verbose = False ):
+    """
+    Pulls out ideal phi/psi/omega according to linkage type from a <linkage_conformer_filename> data file
+    This file should be column/tab delimited
+    :param linkage_conformer_filename: str( /path/to/linkage conformer data. See default.table in database/chemical/carbohydrates/linkage_conformers
+    :param verbose: bool( do you also want to print out the data? ) Default = False
+    :return:
+    """
+    # imports
+    import csv, os
+    from rosetta.core.chemical.carbohydrates import CarbohydrateInfo
+
+
+    # check that linkage_conformer_filename exists as a file
+    if not os.path.isfile( linkage_conformer_filename ):
+        print "\nArgument error. The path to <linkage_conformer_filename> ( %s ) does not exist. Returning None." %linkage_conformer_filename
+        return None
+
+    # pull out the linkage conformer data lines
+    # the file should be delimited by tabs (\t)
+    linkage_conformer_lines = []
+    with open( linkage_conformer_filename, "rb" ) as fh:
+        # read the file separated by columns
+        reader = csv.reader( fh, delimiter="\t" )
+        for line in reader:
+            # skip empty lines and lines that aren't separated by columns (likely commented lines)
+            # csv reader returns each line as a list
+            if line != [] and len( line ) != 1:
+                linkage_conformer_lines.append( line )
+
+    # the first line in the list should be the headers, the rest should be the actual data
+    header_info = linkage_conformer_lines[ 0 ]
+    linkage_conformer_data = linkage_conformer_lines[ 1: ]
+
+    # create a dictionary for the header info to the index number of the column
+    index_to_header_dict = {}
+    for ii in range( len( header_info ) ):
+        # this is a commented line, so replace the '#' and any spaces with ''
+        column_name = header_info[ ii ].replace( '#', '' ).replace( ' ', '' )
+
+        # add the column name and its index number to the dictionary
+        index_to_header_dict[ ii ] = column_name
+
+    # create a dictionary for each line of data, adding to each key a list of the data
+    # dict: key = non-reducing_reducing : value = [ [ population, phi_mean, phi_stdev, psi_mean, psi_stdev, omega_mean, omega_stdev, omega2_mean, omega2_stdev
+    nonred_to_red_data_dict = {}
+ 
+    return header_to_index_dict
+
+
+
 def get_ideal_SugarBB_phi_psi_info( sugar_num, input_pose, verbose = False ):
     """
     CHI Phi: determines if residue is axial or equatorial at its anomeric position (ie. if alpha or beta sugar) and returns appropriate statistic
@@ -445,7 +496,87 @@ def get_ideal_SugarBB_phi_psi_info( sugar_num, input_pose, verbose = False ):
 
     # otherwise, there is no information for this carbohydrate anomeric/LinkageType information
     else:
-        return [ "NA", "NA", "NA", "NA", "NA", "NA" ]
+        return [ "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA" ]
+
+
+
+def set_glycan_to_ideal_SugarBB_phi_psi( sugar_nums, input_pose, verbose = False ):
+    """
+    Given a list of <sugar_nums>, reset the phi and psi of each residue to the ideal phi and psi determined by the SugarBB statistical data (the sugar_bb scoring term implements the CHI energy function using this data)
+    Only changes phi and psi if statistical data is available for the given anomeric position and/or linkage type
+    Can give this function a single residue number as well, instead of a list of residue numbers
+    :param sugar_nums: list( carbohydrate residue Pose numbers ) or int( single carbohydrate residue Pose number )
+    :param input_pose: Pose
+    :param verbose: bool( do you want to print out the phi and psi reset information for each residue? ) Default = False
+    :return: Pose
+    """
+    # ensure that either a list of ints was passed, or a single int was passed
+    # if the input argument is a list, ensure it is a list of valid ints
+    if type( sugar_nums ) == list:
+        for sugar_num in sugar_nums:
+            if not type( sugar_num ) == int:
+                print "\nArgument error. You gave me a list for <sugar_nums>, but it does not only contain integers. Returning input Pose."
+                return input_pose
+            # ensure the residue number is found within the <input_pose> as well
+            if not sugar_num in range( 1, input_pose.n_residue() + 1 ):
+                print "\nArgument error. You gave me a list of residue numbers where one or more numbers is not actually within the Pose range. Returning input Pose."
+                return input_pose
+            # also ensure it is a carbohydrate residue
+            if not input_pose.residue( sugar_num ).is_carbohydrate():
+                print "\nArgument error. You gave me a list of residue numbers where one or more numbers is not actually a carbohydrate. Returning input Pose."
+                return input_pose                
+    else:
+        # if it's not a list, ensure it is a valid int
+        if not type( sugar_nums ) == int:
+            print "\nArgument error. You gave didn't give me a list or an int for <sugar_nums>. Returning input Pose."
+            return input_pose
+        # if an int was passed, ensure it is found within <input_pose>
+        else:
+            if not sugar_nums in range( 1, input_pose.n_residue() + 1 ):
+                print "\nArgument error. You gave me a single residue number, but it is not actually within the Pose range. Returning input Pose."
+                return input_pose
+            # also ensure it is a carbohydrate residue
+            if not input_pose.residue( sugar_nums ).is_carbohydrate():
+                print "\nArgument error. You gave me a single residue number, but it is not actually a carbohydrate. Returning input Pose."
+                return input_pose                
+
+    # copy over the input_pose
+    pose = input_pose.clone()
+
+    # if a single residue was given, put it into a list
+    if type( sugar_nums ) == int:
+        sugar_nums = [ sugar_nums ]
+
+    # use get_ideal_SugarBB_phi_psi_info to set sugar residue(s) to statistical ideal phi/psi
+    if type( sugar_nums ) == list:
+        for sugar_num in sugar_nums:
+            # get ideal data
+            # order of data in list: [ ideal_phi_major, ideal_phi_stdev_major, ideal_phi_minor, ideal_phi_stdev_minor, ideal_psi, ideal_psi_stdev, anomeric_position, linkage_type ]
+            # returns "NA" for value if no statistical data is available
+            ideal_data_list = get_ideal_SugarBB_phi_psi_info( sugar_num, pose )
+
+            # reset phi and psi, if statistical data is available
+            # ideal phi major (never NA, a sugar is always alpha or beta)
+            ideal_phi_major = ideal_data_list[ 0 ]
+            pose.set_phi( sugar_num, ideal_phi_major )
+
+            # ideal psi (could be NA for sugars whose connection is not on linkage number 2, 3, or 4
+            ideal_psi = ideal_data_list[ 4 ]
+            if ideal_psi != "NA":
+                pose.set_psi( sugar_num, ideal_psi )
+
+            # different verbose possibilities based on statistical data available
+            if verbose:
+                if ideal_psi != "NA":
+                    print "Residue", sugar_num
+                    print "   old phi:", input_pose.phi( sugar_num ), "new phi:", ideal_phi_major
+                    print "   old psi:", input_pose.psi( sugar_num ), "new psi:", ideal_psi
+                else:
+                    print "Residue", sugar_num
+                    print "   old phi:", input_pose.phi( sugar_num ), "new phi:", ideal_phi_major
+                    print "   old psi:", input_pose.psi( sugar_num ), "no new psi; no statistical data available for residue type"        
+
+    return pose
 
 
 
@@ -4182,6 +4313,7 @@ if __name__ == '__main__':
     #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
     init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
     #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
+    #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed -run:debug -out:level 500" )
 
 ############################
 #### INITIALIZE ROSETTA ####

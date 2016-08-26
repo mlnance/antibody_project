@@ -295,6 +295,81 @@ def align_sugar_virtual_atoms( in_pose ):
 
 
 
+def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose, set_3_D_and_F_phi_to_native = False ):
+    """
+    Set the Fc glycan (intended for 3ay4) to the ideal values from the LCM data found in default.table in database/chemical/carbohydrates/linkage_conformers
+    :param input_pose: Pose
+    :param set_3_D_and_F_phi_to_native: bool( do you want to set residue 3 on chains D and F to the native phi value? ) Default = False
+    :return: Pose
+    """
+    # data pulled from LCM table
+    # phi
+    phi_data = { 217: -75.9, 
+                 218: -86.5, 
+                 219: 71.5, 
+                 220: -80.1, 
+                 221: 64.7, 
+                 222: -80.1, 
+                 223: -71.4, 
+                 441: -75.9, 
+                 442: -86.5, 
+                 443: 71.5, 
+                 444: -80.1, 
+                 445: 64.7, 
+                 446: -80.1, 
+                 447: -71.4 }
+
+    # psi
+    psi_data = { 219 : -120.6, 
+                 220 : -87.2, 
+                 223 : 132.2, 
+                 221 : 178.5, 
+                 222 : -87.2, 
+                 217 : 119.0, 
+                 218 : 110.7, 
+                 441 : 119.0, 
+                 442 : 110.7, 
+                 443 : -120.6, 
+                 444 : -87.2, 
+                 445 : 178.5, 
+                 446 : -87.2, 
+                 447 : 132.2 }
+
+    # omega
+    omega_data = { 219 : 0, 
+                   220 : 0, 
+                   223 : 0, 
+                   221 : -171.5, 
+                   222 : 0, 
+                   217 : 0, 
+                   218 : 0, 
+                   441 : 0, 
+                   442 : 0, 
+                   443 : 0, 
+                   444 : 0, 
+                   445 : -171.5, 
+                   446 : 0, 
+                   447 : 0 }
+
+    # get a copy of the input_pose
+    pose = input_pose.clone()
+
+    # set the phi, psi, and omega to ideal data
+    for glyc_num in native_Fc_glycan_nums_except_core_GlcNAc:
+        # set residue 3 on chain D and F to native value, if desired
+        if set_3_D_and_F_phi_to_native is True:
+            if glyc_num == 218 or glyc_num == 442:
+                pose.set_phi( glyc_num, -110.7 )
+        else:
+            pose.set_phi( glyc_num, phi_data[ glyc_num ] )
+        pose.set_psi( glyc_num, psi_data[ glyc_num ] )
+        # setting the omega to 0 doesn't do anything to glycans if they don't have an omega
+        pose.set_omega( glyc_num, omega_data[ glyc_num ] )
+
+    return pose
+
+
+
 def get_ideal_LCM_phi_psi_info( linkage_conformer_filename, verbose = False ):
     """
     Pulls out ideal phi/psi/omega according to linkage type from a <linkage_conformer_filename> data file
@@ -342,7 +417,7 @@ def get_ideal_LCM_phi_psi_info( linkage_conformer_filename, verbose = False ):
     # dict: key = non-reducing_reducing : value = [ [ population, phi_mean, phi_stdev, psi_mean, psi_stdev, omega_mean, omega_stdev, omega2_mean, omega2_stdev
     nonred_to_red_data_dict = {}
  
-    return header_to_index_dict
+    return "NOT DONE WITH THIS FUNCTION YET"
 
 
 
@@ -1393,6 +1468,7 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True,
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: a pack_rotamers_mover object
     """
+    # imports
     from rosetta import Pose, standard_packer_task, RotamerTrialsMover
 
 
@@ -1985,13 +2061,13 @@ def calc_distance( vec1, vec2 ):
 
 
 
-def get_res_nums_within_radius( seq_pos, input_pose, radius, include_seq_pos = False ):
+def get_res_nums_within_radius( res_num_in, input_pose, radius, include_res_num = False ):
     """
     Use the nbr_atom_xyz to find residue numbers within <radius> of <pose_num> in <pose>
-    :param seq_pos: int( Pose residue number )
+    :param res_num_in: int( Pose residue number )
     :param input_pose: Pose
     :param radius: int or float( radius around <pose_num> to use to select resiudes )
-    :param include_seq_pos: bool( do you want to include <seq_pos> in the return list? ) Default = False
+    :param include_res_num: bool( do you want to include <res_num> in the return list? ) Default = False
     :return: list( Pose residue numbers within <radius> of <pose_num>
     """
     # clone the <input_pose>
@@ -2009,7 +2085,7 @@ def get_res_nums_within_radius( seq_pos, input_pose, radius, include_seq_pos = F
     res_nums_in_radius = []
 
     # nbr_xyz of the residue of interest
-    seq_pos_xyz = pose.residue( seq_pos ).nbr_atom_xyz()
+    res_num_xyz = pose.residue( res_num_in ).nbr_atom_xyz()
 
     for res_num in range( 1, pose.n_residue() + 1 ):
         # this will get the xyz of the residue of interest, but it will be removed from the final list if desired
@@ -2018,14 +2094,53 @@ def get_res_nums_within_radius( seq_pos, input_pose, radius, include_seq_pos = F
         center = pose.residue( res_num ).nbr_atom_xyz()
 
         # keep the residue number if the nbr_atom_xyz is less than <radius>
-        if center.distance( seq_pos_xyz ) <= radius:
+        if center.distance( res_num_xyz ) <= radius:
             res_nums_in_radius.append( res_num )
 
     # if the user didn't want the residue of interest in the return list, remove it
-    if not include_seq_pos:
-        res_nums_in_radius.remove( seq_pos )
+    if not include_res_num:
+        res_nums_in_radius.remove( res_num_in )
 
     return res_nums_in_radius
+
+
+
+def get_res_nums_within_radius_of_residue_list( residues, input_pose, radius, include_res_nums = False ):
+    """
+    Find all residue numbers around the list of <residues> given in <input_pose> within <radius> Angstroms.
+    Set <include_residues> if you want to include the list of passed <residues> in the return list of residue numbers.
+    :param residues: list( Pose residue numbers )
+    :param input_pose: Pose
+    :param radius: int() or float( radius in Angstroms )
+    :param include_res_nums: bool( do you want to include the passed <residues> in the return list of resiude numbers? ) Default = False
+    :return: list( residues around passed <residues> list within <radius> Angstroms
+    """
+    # argument check: ensure passed <residues> argument is a list
+    if type( residues ) != list:
+        print "\nArgument error. You're supposed to past me a list of residue numbers for the <residues> argument. Returning None."
+        return None
+
+    # use get_res_nums_within_radius to get all residue numbers
+    residues_within_radius = []
+    for res_num in residues:
+        residues_within_radius.extend( get_res_nums_within_radius( res_num, input_pose, radius, include_res_num = include_res_nums ) )
+
+
+    # get the set of the list and sort the residue numbers
+    set_of_residues_within_radius = [ res for res in set( residues_within_radius ) ]
+
+    # it is possible that there are still residues from <residues> in the list, so remove them one by one if desired
+    if not include_res_nums:
+        for res in residues:
+            try:
+                set_of_residues_within_radius.remove( res )
+            except ValueError:
+                pass
+
+    # sort
+    set_of_residues_within_radius.sort()
+
+    return set_of_residues_within_radius
 
 
 

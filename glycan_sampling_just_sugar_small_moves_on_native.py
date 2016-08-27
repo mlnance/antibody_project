@@ -150,7 +150,9 @@ except:
 from rosetta import Pose, pose_from_file, get_fa_scorefxn, \
     PyMOL_Mover, MonteCarlo, PyJobDistributor, MoveMap
 from rosetta.numeric.random import random_range, uniform
+from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
 from rosetta.core.scoring import score_type_from_name
+from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
 from rosetta.protocols.simple_moves import ConstraintSetMover
 from rosetta.protocols.carbohydrates import LinkageConformerMover
 from rosetta import SmallMover, MinMover
@@ -325,9 +327,8 @@ while not jd.job_complete:
             # make a MoveMap for this single residue
             res_mm = MoveMap()
 
-            # set bb and chi to True
+            # set bb to True ( phi, psi, omega )
             res_mm.set_bb( res_num, True )
-            res_mm.set_chi( res_num, True )
 
             # make an appropriate LinkageConformerMover
             lcm = LinkageConformerMover()
@@ -335,6 +336,7 @@ while not jd.job_complete:
 
             # if the user only wants to use ideals, but within the different population clusters
             if input_args.use_population_ideal_LCM_reset:
+                # set_idealize_torsions uses ideal values instead of sampling from stdev
                 lcm.set_idealize_torsions( True )
                 # use_conformer_population_stats is True by default, but setting for clarity
                 lcm.set_use_conformer_population_stats( True )
@@ -351,8 +353,12 @@ while not jd.job_complete:
                 # this option of LCM reset doesn't actually use the LCM, just ideal data from it
                 # so there is no actual call to lcm.apply()
 
-            # else, standard LCM reset using (by default) population data
+            # else, standard LCM reset using (by default) population data and a stdev of 1
             else:
+                # setting these options for clarity
+                lcm.set_use_conformer_population_stats( True )
+                lcm.set_x_standard_deviations( 1 )
+
                 # apply the LCM
                 lcm.apply( testing_pose )
 
@@ -385,9 +391,10 @@ while not jd.job_complete:
             reset_omega_num = testing_pose.omega( res_num ) + ( random_range( 10, 15 ) * omega_mult )
 
             # reset the phi, psi, and omega values for the residue
-            testing_pose.set_phi( res_num, reset_phi_num )
-            testing_pose.set_psi( res_num, reset_psi_num )
-            testing_pose.set_omega( res_num, reset_omega_num )
+            # using this instead of set_phi (etc) because this explicitly calls align_virtual_atoms_in_carbohydrate_residue
+            set_glycosidic_torsion( phi_dihedral, testing_pose, res_num, reset_phi_num )
+            set_glycosidic_torsion( psi_dihedral, testing_pose, res_num, reset_psi_num )
+            set_glycosidic_torsion( omega_dihedral, testing_pose, res_num, reset_omega_num )
 
         pmm.apply( testing_pose )                                                      
         if input_args.verbose:

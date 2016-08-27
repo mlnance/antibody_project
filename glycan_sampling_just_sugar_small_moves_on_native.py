@@ -348,8 +348,8 @@ while not jd.job_complete:
             elif input_args.use_ideal_LCM_reset:
                 # this is hardcoded data at the moment
                 # setting residue 3 on chain D and F (the Man with the branch) to the native phi for now to see if that would help get better decoys
-                testing_pose = set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = True )
-                #testing_pose = set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = True, set_3_D_and_F_phi_to_native = True )
+                testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = True ) )
+                #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = True, set_3_D_and_F_phi_to_native = True ) )
 
                 # this option of LCM reset doesn't actually use the LCM, just ideal data from it
                 # so there is no actual call to lcm.apply()

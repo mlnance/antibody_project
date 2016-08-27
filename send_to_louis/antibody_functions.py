@@ -295,23 +295,14 @@ def align_sugar_virtual_atoms( in_pose ):
 
 
 
-def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = False ):
-    """
-    Set the Fc glycan (intended for 3ay4) to the ideal values from the LCM data found in default.table in database/chemical/carbohydrates/linkage_conformers
-    If you want to use any native values (such as the Man branch), you must give a native pose as well
-    If you want to set phi/psi/omega to within +/- the ideal standard deviation using LCM data, set <use_ideal_stdev> to True
-    :param input_pose: Pose
-    :param use_ideal_stdev: bool( do you want to sample within +/- <ideal_stdev> of the phi/psi/omega values from the LCM data? ) Default = False
-    :param set_3_D_and_F_phi_to_native: bool( do you want to set residue 3 on chains D and F to the native phi value? ) Default = False
-    :return: Pose
-    """
-    # imports
-    from rosetta.basic import periodic_range
-    from rosetta.numeric.random import rg
-    from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
-    from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
 
 
+def get_3ay4_ideal_LCM_phi_psi_info():
+    """
+    Data is pulled from the highest population cluster from default.table in database/chemical/carbohydrates/linkage_conformers
+    Returns data for native_Fc_glycan_nums_except_core_GlcNAc
+    :return: dict( phi_ideal ), dict( phi_stdev ), dict( psi_ideal ), dict( psi_stdev ), dict( omega_data ), dict( omega_stdev )
+    """
     # data pulled from LCM table
     # phi
     phi_data = { 217: -75.9, 
@@ -406,6 +397,31 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
                     446 : 0, 
                     447 : 0 }
 
+    return phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev
+
+
+
+def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = False ):
+    """
+    Set the Fc glycan (intended for 3ay4) to the ideal values from the LCM data found in default.table in database/chemical/carbohydrates/linkage_conformers
+    If you want to use any native values (such as the Man branch), you must give a native pose as well
+    If you want to set phi/psi/omega to within +/- the ideal standard deviation using LCM data, set <use_ideal_stdev> to True
+    :param input_pose: Pose
+    :param use_ideal_stdev: bool( do you want to sample within +/- <ideal_stdev> of the phi/psi/omega values from the LCM data? ) Default = False
+    :param set_3_D_and_F_phi_to_native: bool( do you want to set residue 3 on chains D and F to the native phi value? ) Default = False
+    :return: Pose
+    """
+    # imports
+    from rosetta.basic import periodic_range
+    from rosetta.numeric.random import rg
+    from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
+    from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
+
+
+    # data pulled from LCM table
+    # returned as phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev
+    phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev = get_3ay4_ideal_LCM_phi_psi_info()
+
     # get a copy of the input_pose
     pose = input_pose.clone()
 
@@ -465,8 +481,8 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
 
     return pose
 
-
-
+'''
+# TODO: finish this function! There is a function that must do this buried in Rosetta as CarbohydrateInfoManager can get this data from default.table
 def get_ideal_LCM_phi_psi_info( linkage_conformer_filename, verbose = False ):
     """
     Pulls out ideal phi/psi/omega according to linkage type from a <linkage_conformer_filename> data file
@@ -515,6 +531,7 @@ def get_ideal_LCM_phi_psi_info( linkage_conformer_filename, verbose = False ):
     nonred_to_red_data_dict = {}
  
     return "NOT DONE WITH THIS FUNCTION YET"
+'''
 
 
 
@@ -740,7 +757,7 @@ def set_glycan_to_ideal_SugarBB_phi_psi( sugar_nums, input_pose, verbose = False
             # ideal psi (could be NA for sugars whose connection is not on linkage number 2, 3, or 4
             ideal_psi = ideal_data_list[ 4 ]
             if ideal_psi != "NA":
-                set_glycosidic_torsion( psi_dihedral, pose, sugar_num, ideal_psi_major )
+                set_glycosidic_torsion( psi_dihedral, pose, sugar_num, ideal_psi )
 
             # different verbose possibilities based on statistical data available
             if verbose:

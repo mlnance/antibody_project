@@ -1411,7 +1411,6 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
     :return: Pose
     """
     # imports
-    from rosetta import Pose
     from rosetta.basic import periodic_range
     from rosetta.numeric.random import rg
     from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
@@ -1419,10 +1418,9 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
 
 
     # copy the input pose
-    pose = Pose()
-    pose.assign( in_pose )
+    pose = in_pose.clone()
 
-    # from BackboneMover.cc file for SmallMover
+    # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover
     big_angle = angle_max
     small_angle = big_angle / 2.0
 
@@ -1432,6 +1430,7 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
     old_omega = pose.omega( seqpos )
 
     # get random values for phi, psi, and omega
+    # this specific format is pulled from rosetta.protocols.simple_moves:BackboneMover::make_move ( Small and Shear )
     new_phi = periodic_range( old_phi - small_angle + rg().uniform() * big_angle, 360.0 )
     new_psi = periodic_range( old_psi - small_angle + rg().uniform() * big_angle, 360.0 )
     new_omega = periodic_range( old_omega - small_angle + rg().uniform() * big_angle, 360.0 )

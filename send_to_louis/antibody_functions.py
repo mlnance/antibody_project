@@ -647,6 +647,11 @@ def set_glycan_to_ideal_SugarBB_phi_psi( sugar_nums, input_pose, verbose = False
     :param verbose: bool( do you want to print out the phi and psi reset information for each residue? ) Default = False
     :return: Pose
     """
+    # imports
+    from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
+    from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
+
+
     # ensure that either a list of ints was passed, or a single int was passed
     # if the input argument is a list, ensure it is a list of valid ints
     if type( sugar_nums ) == list:
@@ -695,12 +700,12 @@ def set_glycan_to_ideal_SugarBB_phi_psi( sugar_nums, input_pose, verbose = False
             # reset phi and psi, if statistical data is available
             # ideal phi major (never NA, a sugar is always alpha or beta)
             ideal_phi_major = ideal_data_list[ 0 ]
-            pose.set_phi( sugar_num, ideal_phi_major )
+            set_glycosydic_torsion( phi_dihedral, pose, sugar_num, ideal_phi_major )
 
             # ideal psi (could be NA for sugars whose connection is not on linkage number 2, 3, or 4
             ideal_psi = ideal_data_list[ 4 ]
             if ideal_psi != "NA":
-                pose.set_psi( sugar_num, ideal_psi )
+                set_glycosydic_torsion( psi_dihedral, pose, sugar_num, ideal_psi_major )
 
             # different verbose possibilities based on statistical data available
             if verbose:
@@ -1409,6 +1414,9 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
     from rosetta import Pose
     from rosetta.basic import periodic_range
     from rosetta.numeric.random import rg
+    from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
+    from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
+
 
     # copy the input pose
     pose = Pose()
@@ -1430,11 +1438,11 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
 
     # set the new values
     if set_phi:
-        pose.set_phi( seqpos, new_phi )
+        set_glycosydic_torsion( phi_dihedral, pose, seqpos, new_phi )
     if set_psi:
-        pose.set_psi( seqpos, new_psi )
+        set_glycosydic_torsion( psi_dihedral, pose, seqpos, new_psi )
     if set_omega:
-        pose.set_omega( seqpos, new_omega )
+        set_glycosydic_torsion( omega_dihedral, pose, seqpos, new_omega )
 
     return pose
 

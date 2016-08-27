@@ -360,6 +360,8 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
         if set_3_D_and_F_phi_to_native is True:
             if glyc_num == 218 or glyc_num == 442:
                 pose.set_phi( glyc_num, -110.7 )
+            else:
+                pose.set_phi( glyc_num, phi_data[ glyc_num ] )
         else:
             pose.set_phi( glyc_num, phi_data[ glyc_num ] )
         pose.set_psi( glyc_num, psi_data[ glyc_num ] )

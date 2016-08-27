@@ -348,7 +348,8 @@ while not jd.job_complete:
             elif input_args.use_ideal_LCM_reset:
                 # this is hardcoded data at the moment
                 # setting residue 3 on chain D and F (the Man with the branch) to the native phi for now to see if that would help get better decoys
-                testing_pose = set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, set_3_D_and_F_phi_to_native = True )
+                testing_pose = set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = True )
+                #testing_pose = set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = True, set_3_D_and_F_phi_to_native = True )
 
                 # this option of LCM reset doesn't actually use the LCM, just ideal data from it
                 # so there is no actual call to lcm.apply()
@@ -399,27 +400,6 @@ while not jd.job_complete:
         pmm.apply( testing_pose )                                                      
         if input_args.verbose:
             print "score of light reset:", main_sf( testing_pose )
-
-
-
-    #############################
-    #### Fc GLYCAN RMSD CALC ####
-    #############################
-
-    # find out how much the reset (if any) moved the glycan
-    '''
-    pre_SSM_metrics = []
-    if input_args.LCM_reset or input_args.light_reset:
-        Fc_glycan_rmsd_after_reset = Fc_glycan_rmsd( testing_pose, testing_pose_info.native_Fc_glycan_chains, 
-                                                     native_pose, native_pose_info.native_Fc_glycan_chains, 
-                                                     cur_decoy_num, metrics_dump_dir )
-    
-        pre_SSM_metrics.append( "Fc_glycan_rmsd_after_reset:" )
-        pre_SSM_metrics.append( str( Fc_glycan_rmsd_after_reset ) )
-    
-        if input_args.verbose:
-            print "Fc glycan RMSD after reset:", Fc_glycan_rmsd_after_reset
-    '''
 
 
 
@@ -485,25 +465,6 @@ while not jd.job_complete:
         
         pmm.apply( testing_pose )
     '''
-
-
-    #############################
-    #### Fc GLYCAN RMSD CALC ####
-    #############################
-
-    # find out how much the pack/min moved the glycan
-    '''
-    Fc_glycan_rmsd_after_packmin = Fc_glycan_rmsd( testing_pose, testing_pose_info.native_Fc_glycan_chains, 
-                                                 native_pose, native_pose_info.native_Fc_glycan_chains, 
-                                                 cur_decoy_num, metrics_dump_dir )
-    
-    pre_SSM_metrics.append( "Fc_glycan_rmsd_after_packmin:" )
-    pre_SSM_metrics.append( str( Fc_glycan_rmsd_after_packmin ) )
-    
-    if input_args.verbose:
-        print "Fc glycan RMSD after pack/min rounds:", Fc_glycan_rmsd_after_packmin
-    '''
-
 
 
     #########################

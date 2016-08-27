@@ -299,12 +299,15 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
     """
     Set the Fc glycan (intended for 3ay4) to the ideal values from the LCM data found in default.table in database/chemical/carbohydrates/linkage_conformers
     If you want to use any native values (such as the Man branch), you must give a native pose as well
+    If you want to set phi/psi/omega to within +/- the ideal standard deviation using LCM data, set <use_ideal_stdev> to True
     :param input_pose: Pose
-    :param use_ideal_stdev: bool( do you want to sample within 
+    :param use_ideal_stdev: bool( do you want to sample within +/- <ideal_stdev> of the phi/psi/omega values from the LCM data? ) Default = False
     :param set_3_D_and_F_phi_to_native: bool( do you want to set residue 3 on chains D and F to the native phi value? ) Default = False
     :return: Pose
     """
     # imports
+    from rosetta.basic import periodic_range
+    from rosetta.numeric.random import rg
     from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
     from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
 
@@ -357,7 +360,7 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
                  446 : -87.2, 
                  447 : 132.2 }
 
-    phi_stdev = { 217: 15.4, 
+    psi_stdev = { 217: 15.4, 
                   218: 19.4, 
                   219: 16.8, 
                   220: 15.2, 
@@ -410,23 +413,55 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
     for glyc_num in native_Fc_glycan_nums_except_core_GlcNAc:
         # set residue 3 on chain D and F to native phi value, if desired
         if set_3_D_and_F_phi_to_native is True:
+            # chain D Man branch
             if glyc_num == 218:
                 # pulled from fa_intra_rep low E native
                 set_glycosidic_torsion( phi_dihedral, pose, glyc_num, -109.917 )
+            # chain F Man branch
             elif glyc_num == 442:
                 # pulled from fa_intra_rep low E native
                 set_glycosidic_torsion( phi_dihedral, pose, glyc_num, -122.893 )
+            # the other Fc glycan residues
             else:
-                # else pull from LCM data dict for this particular residue
-                set_glycosidic_torsion( phi_dihedral, pose, glyc_num, phi_data[ glyc_num ] )
+                # else pull from LCM phi data dict for this particular residue
+                # determine the new phi value using standard deviation from ideal or not
+                if use_ideal_stdev:
+                    # this method is pulled from core.pose.carbohydrates.util::set_dihedrals_from_linkage_conformer_data
+                    # periodic_range( mean - sd + rg().uniform() * sd * 2, 360 ) not sure what it means though
+                    new_phi = periodic_range( phi_data[ glyc_num ] - phi_stdev[ glyc_num ] + rg().uniform() * phi_stdev[ glyc_num ] * 2, 360.0 )
+                # otherwise, just use the ideal phi
+                else:
+                    new_phi = phi_data[ glyc_num ]
+                # set the new phi
+                set_glycosidic_torsion( phi_dihedral, pose, glyc_num, new_phi )
         # otherwise, use LCM phi data dict values for all residues
         else:
-            set_glycosidic_torsion( phi_dihedral, pose, glyc_num, phi_data[ glyc_num ] )
+            # determine the new phi value using standard deviation from ideal or not
+            if use_ideal_stdev:
+                # this method is pulled from core.pose.carbohydrates.util::set_dihedrals_from_linkage_conformer_data
+                # periodic_range( mean - sd + rg().uniform() * sd * 2, 360 ) not sure what it means though
+                new_phi = periodic_range( phi_data[ glyc_num ] - phi_stdev[ glyc_num ] + rg().uniform() * phi_stdev[ glyc_num ] * 2, 360.0 )
+            # otherwise, just use the ideal phi
+            else:
+                new_phi = phi_data[ glyc_num ]
+            # set the new phi
+            set_glycosidic_torsion( phi_dihedral, pose, glyc_num, new_phi )
 
         # use LCM data dict values for all residues for psi and omega
-        set_glycosidic_torsion( psi_dihedral, pose, glyc_num, psi_data[ glyc_num ] )
+        # determine the new psi and omega value using standard deviation from ideal or not
+        if use_ideal_stdev:
+            # this method is pulled from core.pose.carbohydrates.util::set_dihedrals_from_linkage_conformer_data
+            # periodic_range( mean - sd + rg().uniform() * sd * 2, 360 ) not sure what it means though
+            new_psi = periodic_range( psi_data[ glyc_num ] - psi_stdev[ glyc_num ] + rg().uniform() * psi_stdev[ glyc_num ] * 2, 360.0 )
+            new_omega = periodic_range( omega_data[ glyc_num ] - omega_stdev[ glyc_num ] + rg().uniform() * omega_stdev[ glyc_num ] * 2, 360.0 )
+        # otherwise, just use the ideal psi and omega
+        else:
+            new_psi = psi_data[ glyc_num ]
+            new_omega = omega_data[ glyc_num ]
+        # set the new phi and omega
+        set_glycosidic_torsion( psi_dihedral, pose, glyc_num, new_psi )
         # setting the omega to 0 doesn't do anything to glycans if they don't have an omega
-        set_glycosidic_torsion( omega_dihedral, pose, glyc_num, omega_data[ glyc_num ] )
+        set_glycosidic_torsion( omega_dihedral, pose, glyc_num, new_omega )
 
     return pose
 

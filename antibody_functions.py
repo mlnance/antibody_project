@@ -154,7 +154,7 @@ def initialize_rosetta( constant_seed = False, debug = False ):
     if constant_seed:
         init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
     elif debug:
-        init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
+        init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed -out:level 400" )
     else:
         init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
 
@@ -295,13 +295,20 @@ def align_sugar_virtual_atoms( in_pose ):
 
 
 
-def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose, set_3_D_and_F_phi_to_native = False ):
+def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = False ):
     """
     Set the Fc glycan (intended for 3ay4) to the ideal values from the LCM data found in default.table in database/chemical/carbohydrates/linkage_conformers
+    If you want to use any native values (such as the Man branch), you must give a native pose as well
     :param input_pose: Pose
+    :param use_ideal_stdev: bool( do you want to sample within 
     :param set_3_D_and_F_phi_to_native: bool( do you want to set residue 3 on chains D and F to the native phi value? ) Default = False
     :return: Pose
     """
+    # imports
+    from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
+    from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
+
+
     # data pulled from LCM table
     # phi
     phi_data = { 217: -75.9, 
@@ -319,14 +326,29 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
                  446: -80.1, 
                  447: -71.4 }
 
+    phi_stdev = { 217: 11.6, 
+                  218: 11.6, 
+                  219: 8.8, 
+                  220: 12.6, 
+                  221: 10.4, 
+                  222: 12.6, 
+                  223: 10.9, 
+                  441: 11.6, 
+                  442: 11.6, 
+                  443: 8.8, 
+                  444: 12.6, 
+                  445: 10.4, 
+                  446: 12.6, 
+                  447: 10.9 }
+
     # psi
-    psi_data = { 219 : -120.6, 
+    psi_data = { 217 : 119.0, 
+                 218 : 110.7, 
+                 219 : -120.6, 
                  220 : -87.2, 
-                 223 : 132.2, 
                  221 : 178.5, 
                  222 : -87.2, 
-                 217 : 119.0, 
-                 218 : 110.7, 
+                 223 : 132.2, 
                  441 : 119.0, 
                  442 : 110.7, 
                  443 : -120.6, 
@@ -335,14 +357,29 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
                  446 : -87.2, 
                  447 : 132.2 }
 
+    phi_stdev = { 217: 15.4, 
+                  218: 19.4, 
+                  219: 16.8, 
+                  220: 15.2, 
+                  221: 13.7, 
+                  222: 15.2, 
+                  223: 7.4, 
+                  441: 15.4, 
+                  442: 19.4, 
+                  443: 16.8, 
+                  444: 15.2, 
+                  445: 13.7, 
+                  446: 15.2, 
+                  447: 7.4 }
+
     # omega
-    omega_data = { 219 : 0, 
+    omega_data = { 217 : 0, 
+                   218 : 0, 
+                   219 : 0, 
                    220 : 0, 
-                   223 : 0, 
                    221 : -171.5, 
                    222 : 0, 
-                   217 : 0, 
-                   218 : 0, 
+                   223 : 0, 
                    441 : 0, 
                    442 : 0, 
                    443 : 0, 
@@ -351,22 +388,45 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
                    446 : 0, 
                    447 : 0 }
 
+    omega_stdev = { 217 : 0, 
+                    218 : 0, 
+                    219 : 0, 
+                    220 : 0, 
+                    221 : 12.3, 
+                    222 : 0, 
+                    223 : 0, 
+                    441 : 0, 
+                    442 : 0, 
+                    443 : 0, 
+                    444 : 0, 
+                    445 : 12.3, 
+                    446 : 0, 
+                    447 : 0 }
+
     # get a copy of the input_pose
     pose = input_pose.clone()
 
     # set the phi, psi, and omega to ideal data
     for glyc_num in native_Fc_glycan_nums_except_core_GlcNAc:
-        # set residue 3 on chain D and F to native value, if desired
+        # set residue 3 on chain D and F to native phi value, if desired
         if set_3_D_and_F_phi_to_native is True:
-            if glyc_num == 218 or glyc_num == 442:
-                pose.set_phi( glyc_num, -110.7 )
+            if glyc_num == 218:
+                # pulled from fa_intra_rep low E native
+                set_glycosidic_torsion( phi_dihedral, pose, glyc_num, -109.917 )
+            elif glyc_num == 442:
+                # pulled from fa_intra_rep low E native
+                set_glycosidic_torsion( phi_dihedral, pose, glyc_num, -122.893 )
             else:
-                pose.set_phi( glyc_num, phi_data[ glyc_num ] )
+                # else pull from LCM data dict for this particular residue
+                set_glycosidic_torsion( phi_dihedral, pose, glyc_num, phi_data[ glyc_num ] )
+        # otherwise, use LCM phi data dict values for all residues
         else:
-            pose.set_phi( glyc_num, phi_data[ glyc_num ] )
-        pose.set_psi( glyc_num, psi_data[ glyc_num ] )
+            set_glycosidic_torsion( phi_dihedral, pose, glyc_num, phi_data[ glyc_num ] )
+
+        # use LCM data dict values for all residues for psi and omega
+        set_glycosidic_torsion( psi_dihedral, pose, glyc_num, psi_data[ glyc_num ] )
         # setting the omega to 0 doesn't do anything to glycans if they don't have an omega
-        pose.set_omega( glyc_num, omega_data[ glyc_num ] )
+        set_glycosidic_torsion( omega_dihedral, pose, glyc_num, omega_data[ glyc_num ] )
 
     return pose
 
@@ -4430,7 +4490,7 @@ if __name__ == '__main__':
     #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
     init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
     #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
-    #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed -run:debug -out:level 500" )
+    #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed -out:level 400" )
 
 ############################
 #### INITIALIZE ROSETTA ####

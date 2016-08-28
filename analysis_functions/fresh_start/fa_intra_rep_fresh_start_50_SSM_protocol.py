@@ -88,13 +88,13 @@ def print_r_squared_data( data, r_squared_dict, name ):
 def print_other_data( data ):
     print "MC min:", min( data[ "MonteCarlo_acceptance_rate" ] ), "max:", max( data[ "MonteCarlo_acceptance_rate" ] ), "mean:", round( np.mean( data[ "MonteCarlo_acceptance_rate" ] ), 1 ), "median:", np.median( data[ "MonteCarlo_acceptance_rate" ] )
 
-    top10_total_score_data = data.sort( "total_score" ).head( 10 )
+    top10_total_score_data = data.sort_values( "total_score" ).head( 10 )
     rmsd_count = len( top10_total_score_data[ top10_total_score_data[ "Fc_glycan_rmsd" ] <= 1.5 ] )
     print "Top10 total_score count Fc_glycan_rmsd <= 1.5:", rmsd_count
     Fnat_count = len( top10_total_score_data[ top10_total_score_data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"] >= 85.0 ] )
     print "Top10 total_score count Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A >= 85%:", Fnat_count
 
-    top10_pseudo_interface_energy_data = data.sort( "pseudo_interface_energy" ).head( 10 )
+    top10_pseudo_interface_energy_data = data.sort_values( "pseudo_interface_energy" ).head( 10 )
     rmsd_count = len( top10_pseudo_interface_energy_data[ top10_pseudo_interface_energy_data[ "Fc_glycan_rmsd" ] <= 1.5 ] )
     print "Top10 pseudo_interface_energy count Fc_glycan_rmsd <= 1.5:", rmsd_count
     Fnat_count = len( top10_pseudo_interface_energy_data[ top10_pseudo_interface_energy_data["Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A"] >= 85.0 ] )
@@ -730,5 +730,5 @@ print_r_squared_data( using_native_full_glycan_50_SSM_Gal_5A_1A_tol_using_ideal_
 print_r_squared_data( using_native_full_glycan_50_SSM_Gal_5A_1A_tol_using_ideal_LCM_data_but_nat_branch_reset_no_pack_min_am3_3_mpt_using_fa_intra_rep_native_data, log10_r_squared_to_metric_dict, "log10" )
 print_r_squared_data( using_native_full_glycan_50_SSM_Gal_5A_1A_tol_using_ideal_LCM_data_but_nat_branch_reset_no_pack_min_am3_3_mpt_using_fa_intra_rep_native_data, binned_r_squared_to_metric_dict, "binned rmsd" )
 print_other_data( using_native_full_glycan_50_SSM_Gal_5A_1A_tol_using_ideal_LCM_data_but_nat_branch_reset_no_pack_min_am3_3_mpt_using_fa_intra_rep_native_data )
-print "50 25 using_ideal_LCM_data_but_nat_branch_reset_no_pack_min/am3_3_mpt_Gal_5A_1A_tol"
+print "50 33 using_ideal_LCM_data_but_nat_branch_reset_no_pack_min/am3_3_mpt_Gal_5A_1A_tol"
 print "\n\n"

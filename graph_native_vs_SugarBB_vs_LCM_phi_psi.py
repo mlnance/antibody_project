@@ -8,8 +8,11 @@ from antibody_functions import initialize_rosetta, \
     get_3ay4_ideal_LCM_phi_psi_info
 from rosetta import PyMOL_Mover
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-plt.rcParams.update( { "font.size" : 20 } )
+import matplotlib.gridspec as gridspec
+plt.rcParams.update( { "font.size" : 12 } )
+
 
 
 initialize_rosetta()
@@ -79,26 +82,47 @@ LCM_df[ "psi" ] = LCM_psi
 
 
 
-fig = plt.figure(figsize=(12,18))
-for ii in range( 1, len( keys ) + 1 ):
-    ax = fig.add_subplot( 7, 2, ii )
-    res_num = str( native.pdb_info().pose2pdb( native_df["res_num"][ ii - 1 ] ) ).strip()
-    ax.set_title( "Residue %s" %res_num )
-    #ax.set_title( "Residue %s" %native_df["res_num"][ ii - 1 ] )
 
-    sc = plt.scatter( native_df["phi"][ ii - 1 ], native_df["psi"][ ii - 1 ], marker='o', c="red", s=50 )
-    sc = plt.scatter( LCM_df["phi"][ ii - 1 ], LCM_df["psi"][ ii - 1 ], marker='o', c="green", s=50 )
+'''
+fig = plt.figure(figsize=(8,8))
+ax = [ fig.add_subplot( 4, 4, ii + 1 ) for ii in range( len(keys) ) ]
+for a in ax:
+    a.set_xticklabels([])
+    a.set_yticklabels([])
+    a.set_aspect('equal')
+fig.subplots_adjust(wspace=0, hspace=0)
+'''
+
+fig = plt.figure(figsize=(10,10))
+gs1 = gridspec.GridSpec(4, 4)
+gs1.update(wspace=0.025, hspace=0.05) # set the spacing between axes. 
+for ii in range( len( keys ) ):
+    ax = plt.subplot( gs1[ii] )
+    res_num = str( native.pdb_info().pose2pdb( native_df["res_num"][ ii ] ) ).strip()
+    ax.set_title( "Residue %s" %res_num, fontsize=10 )
+ 
+    sc1 = plt.scatter( native_df["phi"][ ii ], native_df["psi"][ ii ], marker='o', c="red", s=50 )
+    sc2 = plt.scatter( LCM_df["phi"][ ii ], LCM_df["psi"][ ii ], marker='o', c="green", s=50 )
     # some SugarBB residues (mainly the res that connects the Man branch at 6) don't have psi
-    if SugarBB_df["psi"][ ii - 1 ] != "NA":
-        sc = plt.scatter( SugarBB_df["phi"][ ii - 1 ], SugarBB_df["psi"][ ii - 1 ], marker='o', c="blue", s=50 )
+    if SugarBB_df["psi"][ ii ] != "NA":
+        sc3 = plt.scatter( SugarBB_df["phi"][ ii ], SugarBB_df["psi"][ ii ], marker='o', c="blue", s=50 )
+
+    major_ticks = np.arange(-180, 181, 100)
+    minor_ticks = np.arange(-180, 181, 20)
+    ax.set_xticks(major_ticks)                                                       
+    ax.set_xticks(minor_ticks, minor=True)                                           
+    ax.set_yticks(major_ticks)                                                       
+    ax.set_yticks(minor_ticks, minor=True)                                           
+
     plt.xlim( [ -190, 190 ] )
     plt.xlabel( "phi" )
     plt.ylim( [ -190, 190 ] )
     plt.ylabel( "psi" )
 
-plt.tight_layout()
+#plt.tight_layout()
+fig.legend( (sc1, sc2, sc3), ("Native", "LCM", "SugarBB"), loc="lower right" )
 plot_title = "Native vs SugarBB vs ideal LCM phi and psi"
-plt.suptitle( plot_title, fontsize = 28 )
+plt.suptitle( plot_title, fontsize = 20 )
 plt.subplots_adjust(top=0.93)
 plt.savefig( plot_title, dpi=120, transparent=True )
 plt.close()

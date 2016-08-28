@@ -81,7 +81,7 @@ LCM_df[ "psi" ] = LCM_psi
 fig = plt.figure(figsize=(12,12))
 for ii in range( 1, len( keys ) + 1 ):
     ax = fig.add_subplot( 7, 2, ii )
-    res_num = native.pdb_info().pose2pdb( str( native_df["res_num"][ ii - 1 ] ).strip() )
+    res_num = str( native.pdb_info().pose2pdb( native_df["res_num"][ ii - 1 ] ) ).strip()
     ax.set_title( "Residue %s" %res_num )
     #ax.set_title( "Residue %s" %native_df["res_num"][ ii - 1 ] )
 

@@ -1482,7 +1482,7 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
     old_omega = pose.omega( seqpos )
 
     # get random values for phi, psi, and omega
-    # this specific format is pulled from rosetta.protocols.simple_moves:BackboneMover::make_move ( Small and Shear )
+    # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
     new_phi = periodic_range( old_phi - small_angle + rg().uniform() * big_angle, 360.0 )
     new_psi = periodic_range( old_psi - small_angle + rg().uniform() * big_angle, 360.0 )
     new_omega = periodic_range( old_omega - small_angle + rg().uniform() * big_angle, 360.0 )
@@ -1494,6 +1494,93 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
         set_glycosidic_torsion( psi_dihedral, pose, seqpos, new_psi )
     if set_omega:
         set_glycosidic_torsion( omega_dihedral, pose, seqpos, new_omega )
+
+    return pose
+
+
+
+def SugarShearMover( seqpos, in_pose, angle_max, set_omega = True ):
+    """
+    
+    Emulates the ShearMover but with the additional omega mover
+    :param seqpos: int( the pose number for the residue )
+    :param in_pose: Pose
+    :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
+    :param set_omega: bool( do you want to change the omega angle? ) Default = True
+    :return: Pose
+    """
+    # imports
+    from rosetta.basic import periodic_range
+    from rosetta.numeric.random import rg
+    from rosetta.core.pose.carbohydrates import find_seqpos_of_saccharides_parent_residue
+    from rosetta.core.pose.carbohydrates import get_reference_atoms
+    from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
+    from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
+
+
+    # copy the input pose
+    pose = in_pose.clone()
+
+    # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover
+    big_angle = angle_max
+    small_angle = big_angle / 2.0
+
+    # get current phi, psi, and omega
+    old_phi = pose.phi( seqpos )
+    old_psi = pose.psi( seqpos )
+    old_omega = pose.omega( seqpos )
+
+    # create the new phi, psi, and omega torsions
+    # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
+    #shear_delta = small_angle - rg().uniform() * big_angle
+    shear_delta = 10
+    new_phi = periodic_range( old_phi - shear_delta, 360.0 )
+    new_psi = periodic_range( old_psi - shear_delta, 360.0 )
+    new_omega = periodic_range( old_omega + shear_delta, 360.0 )
+
+    # check if this residue is a branch point
+    residue = pose.residue( seqpos )
+    if residue.is_branch_point():
+        # if this is a branch point residue, then you need to change the psi of its parent residue (instead of its child)
+        parent_seqpos = find_seqpos_of_saccharides_parent_residue( residue )
+        parent = pose.residue( parent_seqpos )
+
+        # technically, I should be checking for omega, but since I'm just working with 3ay4 right now, I will ignore that part...
+        # change phi of the residue and psi of the parent
+        # residue
+        set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
+        # parent
+        set_glycosidic_torsion( psi_dihedral, pose, parent_seqpos, new_psi )
+
+    # otherwise, it's not a branch point, so the residue's phi changes and the next residue's psi changes by the inverse amount
+    else:
+        # check to see if it has an omega torsion
+        # if the list of reference atoms for the omega_dihedral is not empty; ie. it has an omega
+        if len( get_reference_atoms( omega_dihedral, pose, seqpos ) ) != 0:
+            # omega exception case: if a residue has an omega, then the residue's phi changes and the same residue's omega changes by the inverse amount
+            # change phi and omega of the same residue
+            # residue
+            set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
+            set_glycosidic_torsion( omega_dihedral, pose, seqpos, new_omega )
+        # if this residue doesn't have an omega, then change this residue's phi and the following residue's (n+1) psi, if it exists
+        else:
+            # get the residue properties
+            residue_properties = pose.residue_type( seqpos ).properties()
+
+            # get the string versions of the VariantType(s) of this residue ( this is a Vector1 list, so index starts at 1 )
+            variant_types = residue_properties.get_list_of_variants()
+
+            # check to see if this is a UPPER_TERMINUS_VARIANT, ie. a tail residue
+            if "UPPER_TERMINUS_VARIANT" in variant_types:
+                # this is a tail residue, so just change its phi torsion ( there is no following residue, so no psi to change )
+                # residue
+                set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
+            # otherwise, this is not a tail residue, so change the phi of the residue and the psi of the following residue
+            else:
+                # residue
+                set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
+                # following
+                set_glycosidic_torsion( psi_dihedral, pose, seqpos + 1 , new_psi )
 
     return pose
 

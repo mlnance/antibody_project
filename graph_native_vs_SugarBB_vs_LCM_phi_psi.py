@@ -9,6 +9,7 @@ from antibody_functions import initialize_rosetta, \
 from rosetta import PyMOL_Mover
 import pandas as pd
 import matplotlib.pyplot as plt
+plt.rcParams.update( { "font.size" : 20 } )
 
 
 initialize_rosetta()
@@ -78,7 +79,7 @@ LCM_df[ "psi" ] = LCM_psi
 
 
 
-fig = plt.figure(figsize=(12,12))
+fig = plt.figure(figsize=(12,18))
 for ii in range( 1, len( keys ) + 1 ):
     ax = fig.add_subplot( 7, 2, ii )
     res_num = str( native.pdb_info().pose2pdb( native_df["res_num"][ ii - 1 ] ) ).strip()

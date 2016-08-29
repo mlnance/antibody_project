@@ -1499,88 +1499,225 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
 
 
 
-def SugarShearMover( seqpos, in_pose, angle_max, set_omega = True ):
-    """
-    
-    Emulates the ShearMover but with the additional omega mover
+def SugarShearMover( seqpos, in_pose, angle_max ):
+    """    
+    Emulates the ShearMover but with an additional omega consideration
     :param seqpos: int( the pose number for the residue )
     :param in_pose: Pose
     :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
-    :param set_omega: bool( do you want to change the omega angle? ) Default = True
     :return: Pose
     """
     # imports
     from rosetta.basic import periodic_range
-    from rosetta.numeric.random import rg
-    from rosetta.core.pose.carbohydrates import find_seqpos_of_saccharides_parent_residue
-    from rosetta.core.pose.carbohydrates import get_reference_atoms
-    from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
-    from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
+    from rosetta.numeric.random import rg, random_range
+    from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral, \
+        omega2_dihedral, MainchainTorsionType
+    from rosetta.core.pose.carbohydrates import find_seqpos_of_saccharides_parent_residue, \
+        get_reference_atoms, get_glycosidic_torsion, set_glycosidic_torsion
 
 
-    # copy the input pose
+    # copy the input pose and get the residue object of interest
     pose = in_pose.clone()
+    residue = pose.residue( seqpos )
 
     # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover
     big_angle = angle_max
     small_angle = big_angle / 2.0
 
-    # get current phi, psi, and omega
-    old_phi = pose.phi( seqpos )
-    old_psi = pose.psi( seqpos )
-    old_omega = pose.omega( seqpos )
+    # get current phi, psi, omega, and omega2
+    old_phi = get_glycosidic_torsion( phi_dihedral, pose, seqpos )
+    old_psi = get_glycosidic_torsion( psi_dihedral, pose, seqpos )
+    old_omega = get_glycosidic_torsion( omega_dihedral, pose, seqpos )
+    old_omega2 = get_glycosidic_torsion( omega2_dihedral, pose, seqpos )
 
-    # create the new phi, psi, and omega torsions
+    # create the shear_delta to be used
     # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
-    #shear_delta = small_angle - rg().uniform() * big_angle
-    shear_delta = 10
-    new_phi = periodic_range( old_phi - shear_delta, 360.0 )
-    new_psi = periodic_range( old_psi - shear_delta, 360.0 )
-    new_omega = periodic_range( old_omega + shear_delta, 360.0 )
+    shear_delta = small_angle - rg().uniform() * big_angle
+    #shear_delta = 10
 
-    # check if this residue is a branch point
-    residue = pose.residue( seqpos )
-    if residue.is_branch_point():
-        # if this is a branch point residue, then you need to change the psi of its parent residue (instead of its child)
-        parent_seqpos = find_seqpos_of_saccharides_parent_residue( residue )
-        parent = pose.residue( parent_seqpos )
+    # determine which torsions are available for sampling
+    # to ensure generality, this takes the long way and stores each torsion this residue has by checking the reference atoms for that torsion
+    torsions_available = []
+    # for each torsion name possible ( phi, psi, omega 1, 2, and 3 ), check to see if this residue has atoms that define that torsion
+    for torsion_name in MainchainTorsionType.names.keys():
+        # skipping omega3 because it seems to not be implemented in Rosetta yet ( makes get_reference_atoms crash )
+        if torsion_name != "omega3_dihedral":
+            # get the corresponding TorsionType object
+            torsion_type = MainchainTorsionType.names[ torsion_name ]
+            # determine if there are any atoms that define this torsion
+            # should always be either 4 atoms ( True, has torsion ) or 0 atoms ( False, does not have torsion ), therefore, can use bool( len )
+            if bool( len( get_reference_atoms( torsion_type, pose, seqpos ) ) ):
+                torsions_available.append( torsion_type )
 
-        # technically, I should be checking for omega, but since I'm just working with 3ay4 right now, I will ignore that part...
-        # change phi of the residue and psi of the parent
-        # residue
-        set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
-        # parent
-        set_glycosidic_torsion( psi_dihedral, pose, parent_seqpos, new_psi )
+    # get the parent of this residue
+    parent_seqpos = find_seqpos_of_saccharides_parent_residue( residue )
+    parent = pose.residue( parent_seqpos )
 
-    # otherwise, it's not a branch point, so the residue's phi changes and the next residue's psi changes by the inverse amount
-    else:
-        # check to see if it has an omega torsion
-        # if the list of reference atoms for the omega_dihedral is not empty; ie. it has an omega
-        if len( get_reference_atoms( omega_dihedral, pose, seqpos ) ) != 0:
-            # omega exception case: if a residue has an omega, then the residue's phi changes and the same residue's omega changes by the inverse amount
-            # change phi and omega of the same residue
-            # residue
+    # determine which torsions are available in the parent residue
+    # to ensure generality, this takes the long way and stores each torsion this residue has by checking the reference atoms for that torsion
+    parent_torsions_available = []
+    # for each torsion name possible ( phi, psi, omega 1, 2, and 3 ), check to see if this residue has atoms that define that torsion
+    for torsion_name in MainchainTorsionType.names.keys():
+        # skipping omega3 because it seems to not be implemented in Rosetta yet ( makes get_reference_atoms crash )
+        if torsion_name != "omega3_dihedral":
+            # get the corresponding TorsionType object
+            torsion_type = MainchainTorsionType.names[ torsion_name ]
+            # determine if there are any atoms that define this torsion
+            # should always be either 4 atoms ( True, has torsion ) or 0 atoms ( False, does not have torsion ), therefore, can use bool( len )
+            if bool( len( get_reference_atoms( torsion_type, pose, parent_seqpos ) ) ):
+                parent_torsions_available.append( torsion_type )
+
+    # randomly pick the torsion that will get sampled for this residue
+    # using a Rosetta random module for consistency; random_range includes the ending value, so need to do -1
+    torsion = torsions_available[ random_range( 0, len( torsions_available ) - 1 ) ]
+
+    # check to see if the residue has an omega2 torsion, such as a core GlcNAc connected to a peptide
+    if omega2_dihedral in torsions_available:
+        # if the residue's phi torsion is changing, then change its own omega torsion by the inverse amount
+        # or similarly, if the residue's omega is changing, then change its own phi torsion by the inverse amount
+        if torsion == phi_dihedral or torsion == omega_dihedral:
+            # make and set the new phi value of the residue
+            new_phi = periodic_range( old_phi - shear_delta, 360.0 )
             set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
+            # make and set the new omega negating value of the same residue
+            new_omega = periodic_range( old_omega + shear_delta, 360.0 )
             set_glycosidic_torsion( omega_dihedral, pose, seqpos, new_omega )
-        # if this residue doesn't have an omega, then change this residue's phi and the following residue's (n+1) psi, if it exists
+        # if the residue's psi torsion is changing, then change its own omega2 torsion by the inverse amount
+        # or similarly, if the residue's omega2 is changing, then change its own psi torsion by the inverse amount
+        elif torsion == psi_dihedral or torsion == omega2_dihedral:
+            # make and set the new psi value of the residue
+            new_psi = periodic_range( old_psi - shear_delta, 360.0 )
+            set_glycosidic_torsion( psi_dihedral, pose, seqpos, new_psi )
+            # make and set the new omega2 negating value of the same residue
+            new_omega2 = periodic_range( old_omega2 + shear_delta, 360.0 )
+            set_glycosidic_torsion( omega2_dihedral, pose, seqpos, new_omega2 )
+        # otherwise, I don't know about this exception case yet, so exit
         else:
-            # get the residue properties
-            residue_properties = pose.residue_type( seqpos ).properties()
+            print "\nThis residue pair presents me with an exception case! There's something I didn't think about... Exiting on case 1."
+            sys.exit()
+            
+    # check to see if the residue has an omega torsion, such as a residue with an exocyclic connection to a branch residue
+    elif omega_dihedral in torsions_available:
+        # if the residue's phi torsion is changing, then change its own omega torsion by the inverse amount
+        # or similarly, if the residue's omega is changing, then change its own phi torsion by the inverse amount
+        if torsion == phi_dihedral or torsion == omega_dihedral:
+            # make and set the new phi value of the residue
+            new_phi = periodic_range( old_phi - shear_delta, 360.0 )
+            set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
+            # make and set the new omega negating value of the same residue
+            new_omega = periodic_range( old_omega + shear_delta, 360.0 )
+            set_glycosidic_torsion( omega_dihedral, pose, seqpos, new_omega )
+        # if the residue's psi is changing, then change the following residues psi torsion by the inverse amount
+        elif torsion == psi_dihedral:
+            # make and set the new psi value of the residue
+            new_psi = periodic_range( old_psi - shear_delta, 360.0 )
+            set_glycosidic_torsion( psi_dihedral, pose, seqpos, new_psi )
+            # make and set the new psi negating value of the following residue
+            new_psi = periodic_range( old_psi + shear_delta, 360.0 )
+            set_glycosidic_torsion( psi_dihedral, pose, seqpos + 1, new_psi )
+        # otherwise, I don't know about this exception case yet, so exit
+        else:
+            print "\nThis residue pair presents me with an exception case! There's something I didn't think about... Exiting on case 2."
+            sys.exit()
+                
+    # if this residue doesn't have an omega, then change this residue's phi and the following residue's ( n+1 ) psi
+    # if no residue exists upstream of this residue ( ie. this residue is a tail residue ), then no negating change is needed
+    else:
+        # get the residue properties
+        residue_properties = pose.residue_type( seqpos ).properties()
 
-            # get the string versions of the VariantType(s) of this residue ( this is a Vector1 list, so index starts at 1 )
-            variant_types = residue_properties.get_list_of_variants()
+        # get the string versions of the VariantType(s) of this residue ( this is a Vector1 list, so index starts at 1 )
+        variant_types = residue_properties.get_list_of_variants()
 
-            # check to see if this is a UPPER_TERMINUS_VARIANT, ie. a tail residue
-            if "UPPER_TERMINUS_VARIANT" in variant_types:
-                # this is a tail residue, so just change its phi torsion ( there is no following residue, so no psi to change )
-                # residue
+        # check to see if this is a UPPER_TERMINUS_VARIANT, ie. a tail residue
+        if "UPPER_TERMINUS_VARIANT" in variant_types:
+            # this is a tail residue, so just change its phi, psi, or omega torsion ( there is no following residue, so no negating change )
+            if torsion == phi_dihedral:
+                # make and set the new phi value
+                new_phi = periodic_range( old_phi - shear_delta, 360.0 )
                 set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
-            # otherwise, this is not a tail residue, so change the phi of the residue and the psi of the following residue
+            elif torsion == psi_dihedral:
+                # make and set the new psi value
+                new_psi = periodic_range( old_psi - shear_delta, 360.0 )
+                set_glycosidic_torsion( psi_dihedral, pose, seqpos, new_psi )
+            elif torsion == omega_dihedral:
+                # make and set the new omega value
+                new_omega = periodic_range( old_omega - shear_delta, 360.0 )
+                set_glycosidic_torsion( omega_dihedral, pose, seqpos, new_omega )
+            elif torsion == omega2_dihedral:
+                # make and set the new omega2 value
+                new_omega2 = periodic_range( old_omega2 - shear_delta, 360.0 )
+                set_glycosidic_torsion( omega2_dihedral, pose, seqpos, new_omega2 )
+            # otherwise, I don't know about this exception case yet, so exit
             else:
-                # residue
-                set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
-                # following
-                set_glycosidic_torsion( psi_dihedral, pose, seqpos + 1 , new_psi )
+                print "\nThis residue pair presents me with an exception case! Likely it has an omega3 I didn't think about. Exiting on case 3."
+                sys.exit()
+                    
+        # otherwise, this is not a tail residue, so change the torsion of the residue and the negating torsion of the following residue
+        # or, if this residue is a branch point, change the torsion of the residue and the negating torsion of the PARENT residue
+        else:
+            # if this residue is a branch point
+            if residue.is_branch_point():
+                # check to see if the PARENT residue has an omega torsion, such as a residue with an exocyclic connection
+                if omega_dihedral in parent_torsions_available:
+                    # if we're changing phi, change omega of the PARENT residue by the opposite amount
+                    if torsion == phi_dihedral:
+                        # make and set the new phi value of the residue
+                        new_phi = periodic_range( old_phi - shear_delta, 360.0 )
+                        set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
+                        # make and set the new omega negating value of the PARENT residue
+                        new_omega = periodic_range( old_omega + shear_delta, 360.0 )
+                        set_glycosidic_torsion( omega_dihedral, pose, parent_seqpos, new_omega )
+                    # if we're changing psi, change the psi of the PARENT residue by the opposite amount
+                    elif torsion == psi_dihedral:
+                        # make and set the new psi value of the residue
+                        new_psi = periodic_range( old_psi - shear_delta, 360.0 )
+                        set_glycosidic_torsion( psi_dihedral, pose, seqpos, new_psi )
+                        # make and set the new psi negating value of the PARENT residue
+                        new_psi = periodic_range( old_psi + shear_delta, 360.0 )
+                        set_glycosidic_torsion( psi_dihedral, pose, parent_seqpos, new_psi )
+                    # otherwise, I don't know about this exception case yet, so exit
+                    else:
+                        print "\nThis residue pair presents me with an exception case! There's something I didn't think about... Exiting on case 4."
+                        sys.exit()
+                # otherwise, there is no omega torsion, so change one the phi/psi of the residue and the psi/phi of the parent residue by the opposite amount
+                else:
+                    # if we're changing phi, change psi of the PARENT residue by the opposite amount
+                    # similaryly, if we're changing psi, change phi of the PARENT residue by the opposite amount
+                    if torsion == phi_dihedral or torsion == psi_dihedral:
+                        # make and set the new phi value of the residue
+                        new_phi = periodic_range( old_phi - shear_delta, 360.0 )
+                        set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
+                        # make and set the new psi negating value of the PARENT residue
+                        new_psi = periodic_range( old_psi + shear_delta, 360.0 )
+                        set_glycosidic_torsion( psi_dihedral, pose, parent_seqpos, new_psi )
+                    # otherwise, I don't know about this exception case yet, so exit
+                    else:
+                        print "\nThis residue pair presents me with an exception case! There's something I didn't think about... Exiting on case 5."
+                        sys.exit()
+
+            # otherwise, if this residue is not a branch point
+            else:
+                # if we're changing phi, change psi of the following residue by the opposite amount
+                if torsion == phi_dihedral or torsion == psi_dihedral:
+                    # make and set the new phi value of the residue
+                    new_phi = periodic_range( old_phi - shear_delta, 360.0 )
+                    set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
+                    # make and set the new psi negating value of the following residue
+                    new_psi = periodic_range( old_psi + shear_delta, 360.0 )
+                    set_glycosidic_torsion( psi_dihedral, pose, seqpos + 1 , new_psi )
+                # if we're changing psi, change phi of the following residue by the opposite amount
+                elif torsion == psi_dihedral:
+                    # make and set the new psi of the residue
+                    new_psi = periodic_range( old_psi - shear_delta, 360.0 )
+                    set_glycosidic_torsion( psi_dihedral, pose, seqpos, new_psi )
+                    # make and set the new phi negating value of the following residue
+                    new_phi = periodic_range( old_phi + shear_delta, 360.0 )
+                    set_glycosidic_torsion( phi_dihedral, pose, seqpos + 1 , new_phi )
+                # otherwise, I don't know about this exception case yet, so exit
+                else:
+                    print "\nThis residue pair presents me with an exception case! Likely it has an omega I didn't think about. Exiting on case 6."
+                    sys.exit()
 
     return pose
 

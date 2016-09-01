@@ -31,7 +31,7 @@ parser.add_argument("structure_dir", type=str, help="where do you want to dump t
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_sugar_shear_move_trials", type=int, help="how many SugarShearMoves do you want to make within the Fc glycan?")
 parser.add_argument("num_moves_per_trial", type=int, help="how many SugarShearMoves do you want to make within one trial?")
-#parser.add_argument("--just_chain_A", action="store_true", help="do you want the SugarShearMover (and any reset) to act on the chain A glycan only?")
+parser.add_argument("--use_sections", action="store_true", help="do you want the SugarShearMover to act on the core glycan first, then the two branching tails? This would split your argument for <num_sugar_shear_move_trials> in half (half for the core, half for the tails).")
 parser.add_argument("--LCM_reset", action="store_true", help="do you want a LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--use_population_ideal_LCM_reset", action="store_true", help="do you want the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan to ideal values (stdev of 0) using population weights? (Excluding core GlcNAc)")
 parser.add_argument("--use_ideal_LCM_reset", action="store_true", help="do you want the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan to ideal values (stdev of 0) of only the highest population weight? (Excluding core GlcNAc)")
@@ -162,7 +162,7 @@ from toolbox import get_hbonds
 from antibody_functions import initialize_rosetta, \
     get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
     load_pose, ramp_score_weight, make_fa_scorefxn_from_file, \
-    SugarShearMover, hold_chain_and_res_designations_3ay4, \
+    SugarShearMover_3ay4, hold_chain_and_res_designations_3ay4, \
     set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega, \
     get_res_nums_within_radius_of_residue_list
 
@@ -250,7 +250,7 @@ info_file_details.append( "Sugar filename:\t\t\t\t%s\n" %input_args.glyco_file.s
 info_file_details.append( "Creating this many decoys:\t\t%s\n" %str( input_args.nstruct ) )
 info_file_details.append( "Number of SugarShearMove trials:\t%s\n" %str( input_args.num_sugar_shear_move_trials ) )
 info_file_details.append( "Number of SugarShearMoves per trial:\t%s\n" %str( input_args.num_moves_per_trial ) )
-#info_file_details.append( "Just move (and reset) chain A?:\t%s\n" %str( input_args.just_chain_A ) )
+info_file_details.append( "Splitting the glycan in two sections?:\t%s\n" %str( input_args.use_sections ) )
 info_file_details.append( "LCM reset of Fc glycan?:\t\t%s\n" %str( input_args.LCM_reset ) )
 info_file_details.append( "Use main ideal in LCM reset?:\t\t%s\n" %str( input_args.use_ideal_LCM_reset ) )
 info_file_details.append( "Use population ideals in LCM reset?:\t%s\n" %str( input_args.use_population_ideal_LCM_reset ) )
@@ -408,6 +408,7 @@ while not jd.job_complete:
     #################################
 
     '''
+    # not using this now because the protein side of 3ay4 shouldn't be moving since that is the known correct answer
     # make backbone and chi MoveMap for the Fc sugars
     min_mm = MoveMap()
     for res_num in testing_pose_info.native_Fc_glycan_nums: 
@@ -426,9 +427,15 @@ while not jd.job_complete:
                                                     use_pack_radius = True, 
                                                     pack_radius = 20 )
     '''
-    # make a MoveMap
+
+    # define an appropriate packing and minimization range
+    '''
     residue_range = get_res_nums_within_radius_of_residue_list( testing_pose_info.native_Fc_glycan_nums, testing_pose, 10, 
                                                                 include_res_nums = False )
+    '''
+    residue_range = testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc
+
+    # make a MoveMap
     min_mm = MoveMap()
     for res_num in residue_range:
         min_mm.set_bb( res_num, True )
@@ -443,15 +450,21 @@ while not jd.job_complete:
                                     tolerance_in = 0.01, 
                                     use_nb_list_in = True )
 
-    # pack around the Fc sugars within 25 Angstroms
+    # make a pack_rotamers_mover for the Fc sugars except core GlcNAc
     pack_rotamers_mover = make_pack_rotamers_mover( main_sf, testing_pose, 
                                                     apply_sf_sugar_constraints = False,
                                                     pack_branch_points = True, 
                                                     residue_range = residue_range )
 
+    # apply the pack_rotamers_mover
+    pack_rotamers_mover.apply( testing_pose )
+    if input_args.verbose:
+        print "score of pre-pack:", main_sf( testing_pose )
+    pmm.apply( testing_pose )
+
+    '''
     # do 2 pack/mins to try to get to a low-energy structure of and around the Fc glycan
     # Poses that don't get to a negative score here will likely be outliers
-    '''
     for ii in range( 1, 2 + 1 ):
         # pack
         pack_rotamers_mover.apply( testing_pose )
@@ -537,13 +550,18 @@ while not jd.job_complete:
             res_num = random.choice( testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc )
 
             # apply the SugarShearMover
-            testing_pose.assign( SugarShearMover( res_num, testing_pose, angle_max ) )
+            testing_pose.assign( SugarShearMover_3ay4( res_num, testing_pose, angle_max ) )
         if input_args.verbose:
-            print "score after SugarShearMover:", main_sf( testing_pose )
+            print "score after SugarShearMover_3ay4:", main_sf( testing_pose )
 
+        # pack the Fc sugars except core GlcNac using the previously-made pack_rotamers_mover
+        pack_rotamers_mover.apply( testing_pose )
+        if input_args.verbose:
+            print "score after pack:", main_sf( testing_pose )
+
+        '''
         # pack the Fc sugars and around them within 20 Angstroms every other trial
         # trials run 1 through num_trials + 1, so pack on every odd trial
-        '''
         if ii % 2 != 0:
             # use previously-made pack_rotamers_mover
             pack_rotamers_mover.apply( testing_pose )

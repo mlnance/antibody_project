@@ -134,6 +134,7 @@ FoldTree.new_loops = _new_loops
 
 
 
+
 ##########################
 #### WORKER FUNCTIONS ####
 ##########################
@@ -250,17 +251,17 @@ class hold_chain_and_res_designations_3ay4:
 
 
 
-def align_sugar_virtual_atoms( in_pose ):
+def align_sugar_virtual_atoms( input_pose ):
     """
     Set the xyz coordinates of each sugar virtual atom to the corresponding atom it is shadowing
-    :param in_pose: Pose
+    :param input_pose: Pose
     :return: Pose
     """
     from rosetta import AtomID
 
 
     # copy the input pose
-    pose = in_pose.clone()
+    pose = input_pose.clone()
 
     # for each residue in the pose
     for res in pose:
@@ -281,6 +282,7 @@ def align_sugar_virtual_atoms( in_pose ):
                         pose.set_xyz( atom_id, res.atom( atom_being_shadowed ).xyz() )
 
                         # update the residue conformation in a hacky way
+                        # calling it this way just makes Pose conformation update itself
                         pose.conformation().residue( res.seqpos() )
     '''
     # check that it worked
@@ -297,13 +299,116 @@ def align_sugar_virtual_atoms( in_pose ):
 
 
 
-
-
-def get_3ay4_ideal_LCM_phi_psi_info():
+def stepwise_3ay4_torsion_sampler_using_LCM_ideals( sf, residues, input_pose, num_cycles = 3, num_stdev = 1 ):
     """
+    TODO: make this randomly choose which torsion to sample based on how many it has ( this will determine the order. Phi then psi? Or vice versa?
+    TODO: add a pack after each torsion change? Of just that single residue?
+    TODO: make this check the current torsion and find the nearest ideal LCM population cluster
+    TODO: make this work by just checking what kind of linkage pair is being sampled
+    Iterate through <residues> one-by-one and adjust the phi, psi, and (if any) omega within +/- the standard devation of the the main LCM ideal population cluster
+    Uses get_3ay4_ideal_LCM_phi_psi_omega_info to get the needed phi, psi, omega data
+    :param sf: ScoreFunction
+    :param residues: list( residue Pose positions )
+    :param input_pose: Pose
+    :param num_cycles: int( how many cycles of the torsion sampler do you want to have done? ) Default = 3
+    :param num_stdev: int( how many standard deviations do you want to sample around the torsion value? ) Default = 1
+    :return: Pose
+    """
+    # imports
+    from rosetta.core.pose.carbohydrates import get_reference_atoms_for_1st_omega
+    from random import choice
+
+
+    # copy the <input_pose>
+    pose = input_pose.clone()
+
+    # score the Pose to gain access to its .energies() object
+    sf( pose )
+
+    # get the needed ideal LCM data
+    phi_ideal_dict, phi_stdev_dict, psi_ideal_dict, psi_stdev_dict, omega_ideal_dict, omega_stdev_dict = get_3ay4_ideal_LCM_phi_psi_omega_info()
+
+    # num cycles
+    for ii in range( 1, num_cycles + 1 ):
+        for res_num in residues:
+            # for each residue in the <residues> list given
+            for jj in range( 1, num_cycles + 1 ):
+                # get integer version of the current torsions
+                start_phi = int( pose.phi( res_num ) )
+
+                # get the starting residue total energy
+                start_res_tot_E = pose.energies().residue_total_energy( res_num )
+
+                # get the integer version of the ideal LCM standard deviations associated with this residue
+                phi_stdev = int( phi_stdev_dict[ res_num ] )
+
+                # sample each integer torsion value within +/- the ideal standard devation while keeping residue_total_energy data
+                phi_to_res_tot_E = {}
+
+                # store a bool to use to see if this residue has an omega torsion
+                # 0 = False = no omega, 4 = True = has omega
+                res_has_omega = bool( len( get_reference_atoms_for_1st_omega( pose, res_num ) ) )
+
+                # set the new torsion, score the Pose to gain access to its updated .energies() object, and store the new residue total energy
+                # phi torsion
+                if jj == 1:
+                    phi_range = range( start_phi - phi_stdev, start_phi + phi_stdev + 1 )
+                elif jj == 2:
+                    # an integer-valued torsion has been found ( or we're back at the starting torsion )
+                    phi_range = [ start_phi ]
+                    # go over and below the starting phi in steps of 0.1 up until 0.9 above and below
+                    phi_range.extend( [ round( start_phi - ( x / 10.0 ), 1 ) for x in range( 1, 10 + 1 ) ] )
+                    phi_range.extend( [ round( start_phi + ( x / 10.0 ), 1 ) for x in range( 1, 10 + 1 ) ] )
+                else:
+                    phi_range = [ start_phi ]
+                    # go over and below the starting phi in steps of ?
+                    phi_range.extend( [ round( start_phi - ( x / 100.0 ), 2 ) for x in range( 1, 10 + 1 ) ] )
+                    phi_range.extend( [ round( start_phi + ( x / 100.0 ), 2 ) for x in range( 1, 10 + 1 ) ] )
+                print phi_range
+
+                # find the best torsion in the given range
+                for torsion in phi_range:
+                    pose.set_phi( res_num, torsion )
+                    sf( pose )
+                    # phi_to_res_tot_E[ torsion ] = pose.energies().residue_total_energy( res_num )
+                    phi_to_res_tot_E[ torsion ] = sf( pose )
+                print phi_to_res_tot_E, "\n"
+                
+                # determine which torsions resulted in the lowest energy for each residue
+                # if more than one torsion (somehow) resulted in the same lowest energy, randomly choose one of the torsions to continue with
+                # first, get the minimum(s) value(s) from each torsion-to-energy dict
+                phi_min = min( phi_to_res_tot_E.values() )
+
+                # get the torsion(s) associated with each minimum value(s)
+                # instantiate the lists
+                best_phi_torsion_list = []
+
+                # use the minimum torsions to find the corresponding torsion key
+                # phi
+                for torsion in phi_to_res_tot_E.keys():
+                    if phi_to_res_tot_E[ torsion ] == phi_min:
+                        best_phi_torsion_list.append( torsion )
+
+                # choose the best torsion from the lists
+                best_phi_torsion = choice( best_phi_torsion_list )
+
+                # or keep the current torsion if that was a better total energy
+                if phi_to_res_tot_E[ best_phi_torsion ] > start_res_tot_E:
+                    best_phi_torsion = start_phi
+
+                # set the Pose to the best torsions
+                pose.set_phi( res_num, best_phi_torsion )
+
+    return pose
+
+
+
+def get_3ay4_ideal_LCM_phi_psi_omega_info():
+    """
+    TODO: make this work by just checking what kind of linkage pair is being checked
     Data is pulled from the highest population cluster from default.table in database/chemical/carbohydrates/linkage_conformers
     Returns data for native_Fc_glycan_nums_except_core_GlcNAc
-    :return: dict( phi_ideal ), dict( phi_stdev ), dict( psi_ideal ), dict( psi_stdev ), dict( omega_data ), dict( omega_stdev )
+    :return: dict( phi_ideal ), dict( phi_stdev ), dict( psi_ideal ), dict( psi_stdev ), dict( omega_ideal ), dict( omega_stdev )
     """
     # data pulled from LCM table
     # phi
@@ -422,7 +527,7 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
 
     # data pulled from LCM table
     # returned as phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev
-    phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev = get_3ay4_ideal_LCM_phi_psi_info()
+    phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev = get_3ay4_ideal_LCM_phi_psi_omega_info()
 
     # get a copy of the input_pose
     pose = input_pose.clone()
@@ -1452,12 +1557,12 @@ def create_random_AtomPair_cst_file( residues_to_be_constrained, residues_to_be_
         
 
 
-def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True, set_omega = True ):
+def SugarSmallMover( seqpos, input_pose, angle_max, set_phi = True, set_psi = True, set_omega = True ):
     """
     Randomly resets the phi, psi, and omega values of the sugar residue <seqpos> in <pose> to old_value +/- angle_max/2
     Emulates the SmallMover but with the additional omega mover
     :param seqpos: int( the pose number for the residue )
-    :param in_pose: Pose
+    :param input_pose: Pose
     :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
     :param set_phi: bool( do you want to change the phi angle? ) Default = True
     :param set_psi: bool( do you want to change the psi angle? ) Default = True
@@ -1472,7 +1577,7 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
 
 
     # copy the input pose
-    pose = in_pose.clone()
+    pose = input_pose.clone()
 
     # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover
     big_angle = angle_max
@@ -1501,12 +1606,12 @@ def SugarSmallMover( seqpos, in_pose, angle_max, set_phi = True, set_psi = True,
 
 
 
-def SugarShearMover_3ay4( seqpos, in_pose, angle_max ):
+def SugarShearMover_3ay4( seqpos, input_pose, angle_max ):
     """
     HARD-CODED TO WORK WITH 3AY4
     Emulates the ShearMover but with an additional omega consideration
     :param seqpos: int( the pose number for the residue )
-    :param in_pose: Pose
+    :param input_pose: Pose
     :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
     :return: Pose
     """
@@ -1520,7 +1625,7 @@ def SugarShearMover_3ay4( seqpos, in_pose, angle_max ):
 
 
     # copy the input pose and get the residue object of interest
-    pose = in_pose.clone()
+    pose = input_pose.clone()
     residue = pose.residue( seqpos )
 
     # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover
@@ -1630,11 +1735,11 @@ def SugarShearMover_3ay4( seqpos, in_pose, angle_max ):
 
 
 
-def SugarShearMover( seqpos, in_pose, angle_max ):
+def SugarShearMover( seqpos, input_pose, angle_max ):
     """    
     Emulates the ShearMover but with an additional omega consideration
     :param seqpos: int( the pose number for the residue )
-    :param in_pose: Pose
+    :param input_pose: Pose
     :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
     :return: Pose
     """
@@ -1648,7 +1753,7 @@ def SugarShearMover( seqpos, in_pose, angle_max ):
 
 
     # copy the input pose and get the residue object of interest
-    pose = in_pose.clone()
+    pose = input_pose.clone()
     residue = pose.residue( seqpos )
 
     # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover

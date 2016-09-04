@@ -1952,7 +1952,7 @@ def get_atom_nums_within_radius( seq_pos, atom_num, input_pose, radius ):
 
 
 
-def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
+def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = False, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
     """
     Returns a standard pack_rotamers_mover restricted to repacking and allows for sampling of current residue conformations for the <pose>
     IMPORTANT: DON'T USE for a Pose you JUST mutated  --  it's not setup to handle mutations
@@ -1960,9 +1960,9 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True,
     If you have one or more residues of interest where you want to pack within a radius around each residue, set <use_pack_radius> to True, give a <pack_radius> (or use default), and set <residue_range> to the residue sequence positions of interest
     :param sf: ScoreFunction
     :param input_pose: Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
+    :param apply_sf_sugar_constraints: bool( add sugar bond angle and distance constraints to the sf? ). Default = False
     :param pack_branch_points: bool( allow packing at branch points? ). Default = True
-    :param residue_range: list( of int( valid residue sequence positions ) )
+    :param residue_range: list( of int( valid residue sequence positions ) ) or a single int()
     :param use_pack_radius: bool( Do you want to pack residues within a certain <pack_radius> around residues specified in <residue_range>? ). Default = False
     :param pack_radius: int( or float( the radius around which you want to pack additional residues around the residues from <residue_range>. MUST have <set use_pack_radius> to True to do this ). Default = PACK_RADIUS = 20.0 Angstroms
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
@@ -1972,9 +1972,6 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True,
     from rosetta import Pose, standard_packer_task, RotamerTrialsMover
 
 
-    if verbose:
-        print "Making a pack rotamers mover"
-        
     # copy a fresh pose
     pose = Pose()
     pose.assign( input_pose )
@@ -1985,16 +1982,32 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True,
             # quick check to make sure the numbers are valid residue sequence positions
             for res_num in residue_range:
                 if not 0 < res_num <= pose.n_residue():
-                    print
-                    print "It seems that", res_num, "is not a valid sequence position for the Pose you gave me. Exiting"
+                    print "\nIt seems that", res_num, "is not a valid sequence position in the Pose you gave me. Exiting"
                     sys.exit()
+        # if they gave a single residue for <residue_range>, then that's okay as long as it is a valid residue sequence position
+        elif isinstance( residue_range, int ):
+            # if this isn't a valid residue number, print message and exit
+            if residue_range not in range( 1, pose.n_residue() + 1 ):
+                print "\nYou gave me a single residue number, but it is not a valid sequence position in the Pose you gave me. Check if", residue_range, "is what you intended to give me. Exiting"
+                sys.exit()
+            # otherwise, put the integer into a list by itself
+            residue_range = [ residue_range ]
         else:
             # not sure what type of thing they gave me, print an error and exit
-            print
-            print "I'm not sure what you gave me. <residue_range> is of type", type( residue_range ), "and I needed a list. Even if it's just one residue (sorry). Exiting"
+            print "\nI'm not sure what you gave me. <residue_range> is of type", type( residue_range ), "and I needed a list of integers or at least a single integer. Exiting"
             sys.exit()
 
-    # make the packer task
+    # ensure that <residue_range> is not empty if <use_pack_radius> is set to True
+    if residue_range is None and use_pack_radius is True:
+        print "\nYou want me to use a pack radius, but you didn't give me a residue range! Be sure to give me at least one residue if you intended to set <use_pack_radius> to True. Exiting"
+        sys.exit()
+
+
+    # argument checks passed, now speak to the user
+    if verbose:
+        print "Making a pack rotamers mover"
+        
+    # make the beginning packer task
     task = standard_packer_task( pose )
     task.or_include_current( True )
     task.restrict_to_repacking()
@@ -2003,69 +2016,63 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = True,
     if pack_branch_points is False:
         if verbose:
             print "  Turning off packing for branch points"
+        # prevent repacking for each residue that is a branch point
         for res_num in range( 1, pose.n_residue() + 1 ):
             if pose.residue( res_num ).is_branch_point():
                 task.nonconst_residue_task( res_num ).prevent_repacking()
                 
     # if <use_pack_radius> is True
     if use_pack_radius:
-        # container for the centers of each residue from <residue_range>
-        centers_of_res_from_residue_range = []
+        # get all residues within the <pack_radius> including the residues within the list
+        res_nums_inside_pack_radius = get_res_nums_within_radius_of_residue_list( residue_range, pose, pack_radius, include_res_nums = True )
 
-        # fill up the centers container
-        for res_num in residue_range:
-            # add all the centers of the residues from <residue_range> into the center container  --  used to find residues that should not be repacked
-            center = pose.residue( res_num ).nbr_atom_xyz()
-            centers_of_res_from_residue_range.append( center )
+        # get all residues outside the <pack_radius> using a set difference
+        all_residues_set = set( range( 1, pose.n_residue() + 1 ) )
+        res_nums_outside_pack_radius = list( all_residues_set - set( res_nums_inside_pack_radius ) )
 
-        # container for residues outside the <pack_radius> range  --  to be prevented from repacking
-        res_nums_outside_pack_radius = []
-
-        # make a counter to print out the number of residues that will be packed  --  if user turned verbose to True
-        counter = 0
-
-        # find all residues outside <pack_radius> of each residue from <residue_range>  --  they will be prevented from repacking
-        for res_num in range( 1, pose.n_residue() + 1 ):
-            # don't need to do this for the residues from <residue_range> since they should be packed
-            if res_num not in residue_range:
-                # get the center of the residue
-                center = pose.residue( res_num ).nbr_atom_xyz()
-
-                # boolean used to ensure that the residue is outside the <pack_radius> for every residue from <residue_range>
-                outside_pack_radius = True
-
-                # loop over each center of the residues from <residue_range>
-                for center_res_range in centers_of_res_from_residue_range:
-                    if center.distance( center_res_range ) <= pack_radius:
-                        # if its within the distance, change outside_pack_radius to False and break from this loop
-                        outside_pack_radius = False
-                        break
-
-                # if the center of the residue in question is outside the <pack_radius> from all of the residues from <residue_range>, add it to the residue container to have its repacking be prevented
-                if outside_pack_radius:
-                    res_nums_outside_pack_radius.append( res_num )
-
-                    # up the counter
-                    counter += 1
-
+        # update user
         if verbose:
-            print "  Preventing", counter, "residues from repacking in this packer task"
+            print "  Preventing", len( res_nums_outside_pack_radius ), "residues from repacking in this packer task"
+            print "  Allowing", len( res_nums_inside_pack_radius ), "residues to be packed"
 
         # turn off repacking for the residues not in the <pack_radius>
         for res_num in res_nums_outside_pack_radius:
             task.nonconst_residue_task( res_num ).prevent_repacking()
             
     # else, if no <pack_radius> given, but a <residue_range> was given, prevent repacking for the other residues
+    elif use_pack_radius is False and residue_range is not None:
+        # prevent repacking for every residue NOT given by the user through <residue_range>
+        counter = 0
+        # for each residue in the Pose
+        for res_num in range( 1, pose.n_residue() + 1 ):
+            # if the residue is not in the <residue_range>
+            if res_num not in residue_range:
+                # prevent it from being packed
+                task.nonconst_residue_task( res_num ).prevent_repacking()
+                # keep count of residues to not be packed as well
+                counter += 1
+
+        # update user
+        if verbose:
+            print "  Preventing", counter, "residues from repacking in this packer task"
+            print "  Allowing", len( residue_range ), "residues to be packed"
+
+    # otherwise, a <residue_range> was not given, then by default all residues will be packed
     else:
-        if residue_range is not None:
-            # prevent repacking for every residue NOT given by the user through <residue_range>
-            for res_num in range( 1, pose.n_residue() + 1 ):
-                if res_num not in residue_range:
-                    task.nonconst_residue_task( res_num ).prevent_repacking()
+        # update user
+        if verbose:
+            # task.being_packed returns True if that residue is being packed in the task
+            num_packed = [ task.being_packed( res_num ) for res_num in range( 1, pose.n_residue() + 1 ) ].count( True )
+            num_not_packed = pose.n_residue() - num_packed
+            print "  Preventing", num_not_packed, "residues from repacking in this packer task"
+            print "  Allowing", num_packed, "residues to be packed"
 
     # apply sugar branch point constraints to sf, if desired
     if apply_sf_sugar_constraints:
         apply_sugar_constraints_to_sf( sf, pose )
+        # update user
+        if verbose:
+            print "  Applying sugar constraints to the ScoreFunction"
 
     # make the pack rotamers mover and return it
     pack_rotamers_mover = RotamerTrialsMover( sf, task )

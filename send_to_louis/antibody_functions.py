@@ -2008,9 +2008,33 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = False
         print "Making a pack rotamers mover"
         
     # make the beginning packer task
+    # this results in a packer task where each residue is allowed to be packed ( except for the first and last resiudes? )
     task = standard_packer_task( pose )
     task.or_include_current( True )
     task.restrict_to_repacking()
+
+    # if <use_pack_radius> is True and a <residue_range> was given
+    if use_pack_radius is True and residue_range is not None:
+        # get all residues within the <pack_radius> including the residues within the list
+        res_nums_inside_pack_radius = get_res_nums_within_radius_of_residue_list( residue_range, pose, pack_radius, include_res_nums = True )
+
+        # get all residues outside the <pack_radius> using a set difference
+        all_residues_set = set( range( 1, pose.n_residue() + 1 ) )
+        res_nums_outside_pack_radius = list( all_residues_set - set( res_nums_inside_pack_radius ) )
+
+        # turn off repacking for the residues not in the <pack_radius>
+        for res_num in res_nums_outside_pack_radius:
+            task.nonconst_residue_task( res_num ).prevent_repacking()
+            
+    # alternatively, if no <pack_radius> given, but a <residue_range> was given, prevent repacking for the other residues
+    if use_pack_radius is False and residue_range is not None:
+        # prevent repacking for every residue NOT given by the user through <residue_range>
+        # for each residue in the Pose
+        for res_num in range( 1, pose.n_residue() + 1 ):
+            # if the residue is not in the <residue_range>
+            if res_num not in residue_range:
+                # prevent it from being packed
+                task.nonconst_residue_task( res_num ).prevent_repacking()
 
     # if specified, turn off packing for each branch point residue
     if pack_branch_points is False:
@@ -2021,58 +2045,20 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = False
             if pose.residue( res_num ).is_branch_point():
                 task.nonconst_residue_task( res_num ).prevent_repacking()
                 
-    # if <use_pack_radius> is True
-    if use_pack_radius:
-        # get all residues within the <pack_radius> including the residues within the list
-        res_nums_inside_pack_radius = get_res_nums_within_radius_of_residue_list( residue_range, pose, pack_radius, include_res_nums = True )
-
-        # get all residues outside the <pack_radius> using a set difference
-        all_residues_set = set( range( 1, pose.n_residue() + 1 ) )
-        res_nums_outside_pack_radius = list( all_residues_set - set( res_nums_inside_pack_radius ) )
-
-        # update user
-        if verbose:
-            print "  Preventing", len( res_nums_outside_pack_radius ), "residues from repacking in this packer task"
-            print "  Allowing", len( res_nums_inside_pack_radius ), "residues to be packed"
-
-        # turn off repacking for the residues not in the <pack_radius>
-        for res_num in res_nums_outside_pack_radius:
-            task.nonconst_residue_task( res_num ).prevent_repacking()
-            
-    # else, if no <pack_radius> given, but a <residue_range> was given, prevent repacking for the other residues
-    elif use_pack_radius is False and residue_range is not None:
-        # prevent repacking for every residue NOT given by the user through <residue_range>
-        counter = 0
-        # for each residue in the Pose
-        for res_num in range( 1, pose.n_residue() + 1 ):
-            # if the residue is not in the <residue_range>
-            if res_num not in residue_range:
-                # prevent it from being packed
-                task.nonconst_residue_task( res_num ).prevent_repacking()
-                # keep count of residues to not be packed as well
-                counter += 1
-
-        # update user
-        if verbose:
-            print "  Preventing", counter, "residues from repacking in this packer task"
-            print "  Allowing", len( residue_range ), "residues to be packed"
-
-    # otherwise, a <residue_range> was not given, then by default all residues will be packed
-    else:
-        # update user
-        if verbose:
-            # task.being_packed returns True if that residue is being packed in the task
-            num_packed = [ task.being_packed( res_num ) for res_num in range( 1, pose.n_residue() + 1 ) ].count( True )
-            num_not_packed = pose.n_residue() - num_packed
-            print "  Preventing", num_not_packed, "residues from repacking in this packer task"
-            print "  Allowing", num_packed, "residues to be packed"
-
     # apply sugar branch point constraints to sf, if desired
     if apply_sf_sugar_constraints:
         apply_sugar_constraints_to_sf( sf, pose )
         # update user
         if verbose:
             print "  Applying sugar constraints to the ScoreFunction"
+
+    # update the user on the status of the task
+    if verbose:
+        # task.being_packed returns True if that residue is being packed in the task
+        num_packed = [ task.being_packed( res_num ) for res_num in range( 1, pose.n_residue() + 1 ) ].count( True )
+        num_not_packed = pose.n_residue() - num_packed
+        print "  Preventing", num_not_packed, "residues from repacking in this packer task"
+        print "  Allowing", num_packed, "residues to be packed"
 
     # make the pack rotamers mover and return it
     pack_rotamers_mover = RotamerTrialsMover( sf, task )

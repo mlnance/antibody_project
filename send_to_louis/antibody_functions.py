@@ -266,22 +266,23 @@ def align_sugar_virtual_atoms( in_pose ):
     for res in pose:
         # if it is a sugar
         if res.is_carbohydrate():
-            # if this sugar resiude has shadow atoms (they all should)
+            # if this sugar resiude has shadow atoms ( they all should )
             if res.type().has_shadow_atoms():
                 # for each atom in the sugar
-                for atom_num in range(1, res.natoms()+1 ):
+                for atom_num in range( 1, res.natoms()+1 ):
                     # get the corresponding real atom it is following
                     atom_being_shadowed = res.type().atom_being_shadowed( atom_num )
                     # if this atom is being shadowed
+                    # atom_being_shadowed returns 0 if the atom_num of interest isn't shadowing anyone
                     if atom_being_shadowed != 0:
-                        # get the AtomID object for the virtual atom
+                        # get the AtomID object for this virtual atom
                         atom_id = AtomID( atom_num, res.seqpos() )
                         # set the xyz of the virtual atom to that of the real atom being shadowed
                         pose.set_xyz( atom_id, res.atom( atom_being_shadowed ).xyz() )
 
                         # update the residue conformation in a hacky way
                         pose.conformation().residue( res.seqpos() )
-
+    '''
     # check that it worked
     for res in pose:
         if res.is_carbohydrate():
@@ -290,6 +291,7 @@ def align_sugar_virtual_atoms( in_pose ):
                     atom_being_shadowed = res.type().atom_being_shadowed( atom_num )
                     if atom_being_shadowed != 0:
                         print list(res.atom(atom_num).xyz()) == list(res.atom(atom_being_shadowed).xyz()), atom_num, atom_being_shadowed, res.seqpos()
+    '''
 
     return pose
 
@@ -1559,8 +1561,7 @@ def SugarShearMover_3ay4( seqpos, in_pose, angle_max ):
 
     # create the shear_delta to be used
     # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
-    #shear_delta = small_angle - rg().uniform() * big_angle
-    shear_delta = 10
+    shear_delta = small_angle - rg().uniform() * big_angle
 
     # hard coding based on sequence position for 3ay4
     # D and F 2 and 4, E and G 2

@@ -104,6 +104,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_Fc_glycan_data.Fc_glycan_sasa_contributed ) )
     metric_data.append( "delta_Fc_glycan_sasa_contributed:" )
     metric_data.append( str( delta_Fc_glycan_sasa_contributed ) )
+    '''
 
 
     # average ring atom distances (not rmsd as there is no alignment) of decoy to native
@@ -368,6 +369,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     #metric_data.append( str( working_intf_data_holder.contact_distance_min ) )
     #metric_data.append( "delta_intf_contact_distance_min_%sA:" %( str( intf_CUTOFF ) ) )
     #metric_data.append( str( delta_intf_contact_distance_min ) )
+    '''
         
 
     # delta interface sasa

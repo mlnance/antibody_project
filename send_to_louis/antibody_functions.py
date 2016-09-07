@@ -44,11 +44,15 @@ kT = 0.8  # used in MonteCarlo and small and shear movers
 ## Pose numbering information ONLY relevant to PDB 3ay4
 # native
 native_Fc_chain_A_nums = range( 1, 215 + 1 )
-native_Fc_glycan_A_nums = range( 216, 223 + 1 )
-native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
+#native_Fc_glycan_A_nums = range( 216, 223 + 1 )
+#native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
+native_Fc_glycan_A_nums = range( 216, 217 + 1 )
+native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 217 + 1 )
 native_Fc_chain_B_nums = range( 224, 439 + 1 )
-native_Fc_glycan_B_nums = range( 440, 447 + 1 )
-native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
+#native_Fc_glycan_B_nums = range( 440, 447 + 1 )
+#native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
+native_Fc_glycan_B_nums = range( 440 - 6, 441 - 6 + 1 )
+native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441 - 6, 441 - 6 + 1 )
 native_FcR_protein_nums = range( 448, 607 + 1 )
 native_FcR_main_glycan_nums = range( 608, 615 + 1 )
 native_FcR_three_mer_nums = range( 616, 618 + 1 )
@@ -68,9 +72,12 @@ native_Fc_glycan_nums_except_core_GlcNAc.extend( native_Fc_glycan_B_nums_except_
 native_order_nums = range( 1, 618 + 1 )
 native_Fc_protein_chains = [ 'A', 'B' ]
 native_FcR_protein_chains = [ 'C' ]
-native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
-native_Fc_glycan_A_chains = [ 'D', 'E' ]
-native_Fc_glycan_B_chains = [ 'F', 'G' ]
+#native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
+#native_Fc_glycan_A_chains = [ 'D', 'E' ]
+#native_Fc_glycan_B_chains = [ 'F', 'G' ]
+native_Fc_glycan_chains = [ 'D', 'F', ]
+native_Fc_glycan_A_chains = [ 'D' ]
+native_Fc_glycan_B_chains = [ 'F' ]
 native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 
 # glycosylated decoy
@@ -329,18 +336,44 @@ def stepwise_3ay4_torsion_sampler_using_LCM_ideals( sf, residues, input_pose, nu
     phi_ideal_dict, phi_stdev_dict, psi_ideal_dict, psi_stdev_dict, omega_ideal_dict, omega_stdev_dict = get_3ay4_ideal_LCM_phi_psi_omega_info()
 
     # num cycles
-    for ii in range( 1, num_cycles + 1 ):
+    for ii in range( 1 ):
         for res_num in residues:
             # for each residue in the <residues> list given
             for jj in range( 1, num_cycles + 1 ):
-                # get integer version of the current torsions
-                start_phi = int( pose.phi( res_num ) )
+                # depending on which iteration we're on, get the starting torsion value up to a certain number of sigfigs
+                # first iteration == finding an integer
+                if jj == 1:
+                    # get integer version of the current torsions for the first iteration
+                    # since we're doing a range above and below the start, the start will already be included in the range
+                    start_phi = int( pose.phi( res_num ) )
+
+                    # get the integer version of the ideal LCM standard deviations associated with this residue
+                    phi_stdev = int( phi_stdev_dict[ res_num ] )
+                    phi_range = range( start_phi - phi_stdev, start_phi + phi_stdev + 1 )
+
+                # second iteration == finding tenths place
+                elif jj == 2:
+                    # an integer-valued torsion has been found ( or we're back at the starting torsion if that was the best )
+                    # reaffirm we have an integer torsion, or, if we went back to the original, get the integer value of that torsion
+                    start_phi = int( pose.phi( res_num ) )
+                    phi_range = [ start_phi ]
+
+                    # go over and below the starting phi in steps of 0.1 up until 0.9 above and below
+                    phi_range.extend( [ round( start_phi - ( x / 10.0 ), 1 ) for x in range( 1, 10 ) ] )
+                    phi_range.extend( [ round( start_phi + ( x / 10.0 ), 1 ) for x in range( 1, 10 ) ] )
+
+                # third iteration == finding hundreths place
+                else:
+                    # a torsion up to the tenths place has been found ( or we're back at the starting torsion if that was the best )
+                    start_phi = round( pose.phi( res_num ), 1 )
+                    phi_range = [ start_phi ]
+
+                    # go over and below the starting phi in steps of 0.01 from 0.01 to 0.99 above and below
+                    phi_range.extend( [ round( start_phi - ( x / 100.0 ), 2 ) for x in range( 1, 100 ) ] )
+                    phi_range.extend( [ round( start_phi + ( x / 100.0 ), 2 ) for x in range( 1, 100 ) ] )
 
                 # get the starting residue total energy
                 start_res_tot_E = pose.energies().residue_total_energy( res_num )
-
-                # get the integer version of the ideal LCM standard deviations associated with this residue
-                phi_stdev = int( phi_stdev_dict[ res_num ] )
 
                 # sample each integer torsion value within +/- the ideal standard devation while keeping residue_total_energy data
                 phi_to_res_tot_E = {}
@@ -350,29 +383,12 @@ def stepwise_3ay4_torsion_sampler_using_LCM_ideals( sf, residues, input_pose, nu
                 res_has_omega = bool( len( get_reference_atoms_for_1st_omega( pose, res_num ) ) )
 
                 # set the new torsion, score the Pose to gain access to its updated .energies() object, and store the new residue total energy
-                # phi torsion
-                if jj == 1:
-                    phi_range = range( start_phi - phi_stdev, start_phi + phi_stdev + 1 )
-                elif jj == 2:
-                    # an integer-valued torsion has been found ( or we're back at the starting torsion )
-                    phi_range = [ start_phi ]
-                    # go over and below the starting phi in steps of 0.1 up until 0.9 above and below
-                    phi_range.extend( [ round( start_phi - ( x / 10.0 ), 1 ) for x in range( 1, 10 + 1 ) ] )
-                    phi_range.extend( [ round( start_phi + ( x / 10.0 ), 1 ) for x in range( 1, 10 + 1 ) ] )
-                else:
-                    phi_range = [ start_phi ]
-                    # go over and below the starting phi in steps of ?
-                    phi_range.extend( [ round( start_phi - ( x / 100.0 ), 2 ) for x in range( 1, 10 + 1 ) ] )
-                    phi_range.extend( [ round( start_phi + ( x / 100.0 ), 2 ) for x in range( 1, 10 + 1 ) ] )
-                print phi_range
-
                 # find the best torsion in the given range
                 for torsion in phi_range:
                     pose.set_phi( res_num, torsion )
-                    sf( pose )
+                    #sf( pose )
                     # phi_to_res_tot_E[ torsion ] = pose.energies().residue_total_energy( res_num )
                     phi_to_res_tot_E[ torsion ] = sf( pose )
-                print phi_to_res_tot_E, "\n"
                 
                 # determine which torsions resulted in the lowest energy for each residue
                 # if more than one torsion (somehow) resulted in the same lowest energy, randomly choose one of the torsions to continue with
@@ -389,7 +405,7 @@ def stepwise_3ay4_torsion_sampler_using_LCM_ideals( sf, residues, input_pose, nu
                     if phi_to_res_tot_E[ torsion ] == phi_min:
                         best_phi_torsion_list.append( torsion )
 
-                # choose the best torsion from the lists
+                # choose the best torsion from the lists. Again, doing this in case two or more torsions resulted in the same low E
                 best_phi_torsion = choice( best_phi_torsion_list )
 
                 # or keep the current torsion if that was a better total energy
@@ -398,6 +414,7 @@ def stepwise_3ay4_torsion_sampler_using_LCM_ideals( sf, residues, input_pose, nu
 
                 # set the Pose to the best torsions
                 pose.set_phi( res_num, best_phi_torsion )
+                print best_phi_torsion, sf( pose ), jj
 
     return pose
 
@@ -419,7 +436,8 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                  221: 64.7, 
                  222: -80.1, 
                  223: -71.4, 
-                 441: -75.9, 
+                 #441: -75.9, 
+                 435: -75.9, 
                  442: -86.5, 
                  443: 71.5, 
                  444: -80.1, 
@@ -434,7 +452,8 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                   221: 10.4, 
                   222: 12.6, 
                   223: 10.9, 
-                  441: 11.6, 
+                  #441: 11.6, 
+                  435: 11.6, 
                   442: 11.6, 
                   443: 8.8, 
                   444: 12.6, 
@@ -450,7 +469,8 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                  221 : 178.5, 
                  222 : -87.2, 
                  223 : 132.2, 
-                 441 : 119.0, 
+                 #441 : 119.0, 
+                 435 : 119.0, 
                  442 : 110.7, 
                  443 : -120.6, 
                  444 : -87.2, 
@@ -465,7 +485,8 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                   221: 13.7, 
                   222: 15.2, 
                   223: 7.4, 
-                  441: 15.4, 
+                  #441: 15.4, 
+                  435: 15.4, 
                   442: 19.4, 
                   443: 16.8, 
                   444: 15.2, 
@@ -481,7 +502,8 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                    221 : -171.5, 
                    222 : 0, 
                    223 : 0, 
-                   441 : 0, 
+                   #441 : 0, 
+                   435 : 0, 
                    442 : 0, 
                    443 : 0, 
                    444 : 0, 
@@ -496,7 +518,8 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                     221 : 12.3, 
                     222 : 0, 
                     223 : 0, 
-                    441 : 0, 
+                    #441 : 0, 
+                    435 : 0, 
                     442 : 0, 
                     443 : 0, 
                     444 : 0, 

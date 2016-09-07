@@ -31,7 +31,6 @@ parser.add_argument("structure_dir", type=str, help="where do you want to dump t
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 parser.add_argument("num_sugar_small_move_trials", type=int, help="how many SugarSmallMoves do you want to make within the Fc glycan?")
 parser.add_argument("num_moves_per_trial", type=int, help="how many SugarSmallMoves do you want to make within one trial?")
-#parser.add_argument("--just_chain_A", action="store_true", help="do you want the SugarSmallMover (and any reset) to act on the chain A glycan only?")
 parser.add_argument("--LCM_reset", action="store_true", help="do you want a LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--use_population_ideal_LCM_reset", action="store_true", help="do you want the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan to ideal values (stdev of 0) using population weights? (Excluding core GlcNAc)")
 parser.add_argument("--use_ideal_LCM_reset", action="store_true", help="do you want the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan to ideal values (stdev of 0) of only the highest population weight? (Excluding core GlcNAc)")
@@ -165,6 +164,7 @@ from antibody_functions import initialize_rosetta, \
     SugarSmallMover, hold_chain_and_res_designations_3ay4, \
     set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega, \
     get_res_nums_within_radius_of_residue_list
+from antibody_functions import show_score_breakdown_by_res
 
 # utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
@@ -221,9 +221,11 @@ main_sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
 
 # set up constraints from the passed constraint file
 if input_args.native_constraint_file is not None:
-    # add an appropriate weight to the main_sf if atom_pair_constraint is 0
+    # add an appropriate weight to the main_sf if atom_pair_constraint and dihedral_constraint are 0
     if main_sf.get_weight( score_type_from_name( "atom_pair_constraint" ) ) == 0:
         main_sf.set_weight( score_type_from_name( "atom_pair_constraint" ), 1.0 )
+    if main_sf.get_weight( score_type_from_name( "dihedral_constraint" ) ) == 0:
+        main_sf.set_weight( score_type_from_name( "dihedral_constraint" ), 1.0 )
 
     if input_args.verbose:
         print "Setting up a ConstraintSetMover"
@@ -250,7 +252,6 @@ info_file_details.append( "Sugar filename:\t\t\t\t%s\n" %input_args.glyco_file.s
 info_file_details.append( "Creating this many decoys:\t\t%s\n" %str( input_args.nstruct ) )
 info_file_details.append( "Number of SugarSmallMove trials:\t%s\n" %str( input_args.num_sugar_small_move_trials ) )
 info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %str( input_args.num_moves_per_trial ) )
-#info_file_details.append( "Just move (and reset) chain A?:\t%s\n" %str( input_args.just_chain_A ) )
 info_file_details.append( "LCM reset of Fc glycan?:\t\t%s\n" %str( input_args.LCM_reset ) )
 info_file_details.append( "Use main ideal in LCM reset?:\t\t%s\n" %str( input_args.use_ideal_LCM_reset ) )
 info_file_details.append( "Use population ideals in LCM reset?:\t%s\n" %str( input_args.use_population_ideal_LCM_reset ) )
@@ -402,33 +403,15 @@ while not jd.job_complete:
             print "score of light reset:", main_sf( testing_pose )
 
 
+    ########################
+    #### Fc GLYCAN PACK ####
+    ########################
 
-    #################################
-    #### Fc GLYCAN AREA PACK/MIN ####
-    #################################
+    # define an appropriate packing and minimization range
+    # we are working with the known native answer, so the protein itself should not be altered
+    residue_range = testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc
 
-    '''
-    # make backbone and chi MoveMap for the Fc sugars
-    min_mm = MoveMap()
-    for res_num in testing_pose_info.native_Fc_glycan_nums: 
-        min_mm.set_bb( res_num, True )
-        min_mm.set_chi( res_num, True )
-
-    # add in the Fc glycan branch points discluding the ASN connection
-    for branch_point in testing_pose_info.native_Fc_glycan_branch_point_nums:
-        min_mm.set_branches( branch_point, True )
-
-    # pack the Fc sugars and around them within 20 Angstroms
-    pack_rotamers_mover = make_pack_rotamers_mover( main_sf, testing_pose, 
-                                                    apply_sf_sugar_constraints = False,
-                                                    pack_branch_points = True, 
-                                                    residue_range = testing_pose_info.native_Fc_glycan_nums, 
-                                                    use_pack_radius = True, 
-                                                    pack_radius = 20 )
-    '''
     # make a MoveMap
-    residue_range = get_res_nums_within_radius_of_residue_list( testing_pose_info.native_Fc_glycan_nums, testing_pose, 10, 
-                                                                include_res_nums = False )
     min_mm = MoveMap()
     for res_num in residue_range:
         min_mm.set_bb( res_num, True )
@@ -443,28 +426,18 @@ while not jd.job_complete:
                                     tolerance_in = 0.01, 
                                     use_nb_list_in = True )
 
-    # pack around the Fc sugars within 25 Angstroms
+    # make a pack_rotamers_mover for the Fc sugars except core GlcNAc
     pack_rotamers_mover = make_pack_rotamers_mover( main_sf, testing_pose, 
                                                     apply_sf_sugar_constraints = False,
                                                     pack_branch_points = True, 
                                                     residue_range = residue_range )
 
-    # do 2 pack/mins to try to get to a low-energy structure of and around the Fc glycan
-    # Poses that don't get to a negative score here will likely be outliers
-    '''
-    for ii in range( 1, 2 + 1 ):
-        # pack
-        pack_rotamers_mover.apply( testing_pose )
-        if input_args.verbose:
-            print "score of pre-pack:", ii, main_sf( testing_pose )
+    # apply the pack_rotamers_mover
+    pack_rotamers_mover.apply( testing_pose )
+    if input_args.verbose:
+        print "score of pre-pack:", main_sf( testing_pose )
+    pmm.apply( testing_pose )
 
-        # minimize
-        Fc_glycan_min_mover.apply( testing_pose )
-        if input_args.verbose:
-            print "score of pre-min:", ii, main_sf( testing_pose )
-        
-        pmm.apply( testing_pose )
-    '''
 
 
     #########################
@@ -490,8 +463,8 @@ while not jd.job_complete:
     mc = MonteCarlo( testing_pose, main_sf, kT )
 
     # make a SmallMover as to get the angle_max value
-    sm = SmallMover()
-    angle_max = sm.get_angle_max( 'L' ) * input_args.angle_multiplier
+    sh = SmallMover()
+    angle_max = sh.get_angle_max( 'L' ) * input_args.angle_multiplier
 
     # raise the fa_atr term and lower the fa_rep term in the ScoreFunction for ramping, if desired
     if input_args.ramp_sf:
@@ -508,7 +481,7 @@ while not jd.job_complete:
         main_sf.set_weight( score_type_from_name( "fa_rep" ), FA_REP_NEW )
 
     # run the SugarSmallMover a range of times using a MonteCarlo object to accept or reject the move
-    num_ssm_accept = 0
+    num_ssh_accept = 0
     num_mc_checks = 0
     mc_acceptance = None
     for ii in range( 1, input_args.num_sugar_small_move_trials + 1 ):
@@ -536,41 +509,28 @@ while not jd.job_complete:
             # pick a random Fc glycan residue except the core GlcNAc
             res_num = random.choice( testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc )
 
-            # apply the SugarSmallMover and change phi, psi, and omega
-            testing_pose.assign( SugarSmallMover( res_num, testing_pose, angle_max, 
-                                                  set_phi = True, 
-                                                  set_psi = True, 
-                                                  set_omega = True ) )
+            # apply the SugarSmallMover
+            testing_pose.assign( SugarSmallMover( res_num, testing_pose, angle_max ) )
         if input_args.verbose:
             print "score after SugarSmallMover:", main_sf( testing_pose )
 
-        # pack the Fc sugars and around them within 20 Angstroms every other trial
-        # trials run 1 through num_trials + 1, so pack on every odd trial
-        '''
-        if ii % 2 != 0:
-            # use previously-made pack_rotamers_mover
-            pack_rotamers_mover.apply( testing_pose )
-            if input_args.verbose:
-                print "score after pack:", main_sf( testing_pose )
-
-        # minizmize the sugars using the previously-made Fc_glycan_min_mover
-        Fc_glycan_min_mover.apply( testing_pose )
+        # pack the Fc sugars except core GlcNac using the previously-made pack_rotamers_mover
+        pack_rotamers_mover.apply( testing_pose )
         if input_args.verbose:
-            print "score after min:", main_sf( testing_pose )
-        '''
+            print "score after pack:", main_sf( testing_pose )
 
         # accept or reject the total move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):
-            num_ssm_accept += 1
+            num_ssh_accept += 1
             pmm.apply( testing_pose )
         num_mc_checks += 1
 
         # print out the MC acceptance rate every 3 trials and on the last trial
-        mc_acceptance = round( ( float( num_ssm_accept ) / float( num_mc_checks ) * 100 ), 2 )
+        mc_acceptance = round( ( float( num_ssh_accept ) / float( num_mc_checks ) * 100 ), 2 )
         if ii % 3 == 0 or ii == input_args.num_sugar_small_move_trials:
             if input_args.verbose:
                 print "Moves made so far:", num_mc_checks, 
-                print "  Moves accepted:", num_ssm_accept, 
+                print "  Moves accepted:", num_ssh_accept, 
                 print "  Acceptance rate:", mc_acceptance
 
     # collect additional metric data
@@ -591,8 +551,8 @@ while not jd.job_complete:
         pass
 
     # add the pre-metric calculations to the metrics data
-    #pre_SSM_metrics = ' '.join( pre_SSM_metrics )
-    #metrics += " %s" %pre_SSM_metrics
+    #pre_SSH_metrics = ' '.join( pre_SSH_metrics )
+    #metrics += " %s" %pre_SSH_metrics
 
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics

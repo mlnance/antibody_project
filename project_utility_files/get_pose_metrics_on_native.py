@@ -392,18 +392,18 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
         metric_data.append( str( MC_acceptance_rate ) )
 
     if res_of_torsional_interest1 is not None:
-        metric_data.append( "Phi of res %s:" %( str( res_of_torsional_interest1 ) ) )
+        metric_data.append( "APhi" )
         metric_data.append( str( working.phi( res_of_torsional_interest1 ) ) )
-        metric_data.append( "Psi of res %s:" %( str( res_of_torsional_interest1 ) ) )
+        metric_data.append( "APsi" )
         metric_data.append( str( working.psi( res_of_torsional_interest1 ) ) )
-        metric_data.append( "Omega of res %s:" %( str( res_of_torsional_interest1 ) ) )
+        metric_data.append( "AOmega" )
         metric_data.append( str( working.omega( res_of_torsional_interest1 ) ) )
     if res_of_torsional_interest2 is not None:
-        metric_data.append( "Phi of res %s:" %( str( res_of_torsional_interest2 ) ) )
+        metric_data.append( "BPhi" )
         metric_data.append( str( working.phi( res_of_torsional_interest2 ) ) )
-        metric_data.append( "Psi of res %s:" %( str( res_of_torsional_interest2 ) ) )
+        metric_data.append( "BPsi" )
         metric_data.append( str( working.psi( res_of_torsional_interest2 ) ) )
-        metric_data.append( "Omega of res %s:" %( str( res_of_torsional_interest2 ) ) )
+        metric_data.append( "Omega" )
         metric_data.append( str( working.omega( res_of_torsional_interest2 ) ) )
 
     # create metrics string

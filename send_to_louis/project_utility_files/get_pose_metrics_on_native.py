@@ -3,7 +3,7 @@ __author__ = "morganlnance"
 
 
 
-def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, decoy_num, dump_dir, util_dir, MC_acceptance_rate = None, native_constraint_file = None ):
+def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, decoy_num, dump_dir, util_dir, MC_acceptance_rate = None, native_constraint_file = None, res_of_torsional_interest1 = None, res_of_torsional_interest2 = None ):
     """
     Return a space-delimited string containing various pose metrics.
     :param in_working: decoy Pose()
@@ -17,6 +17,8 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     :param util_dir: str( /path/to/utilities directory
     :param MC_acceptance_rate: float( the MonteCarlo acceptance rate of your protocol, if relevant ). Default = None
     :param native_constraint_file: str( /path/to/constraint file used to be used on native to get accurate delta_total_score )
+    :param res_of_torsional_interest1: int( which residue do you want to get the phi, psi, and omega of? ) Default = None
+    :param res_of_torsional_interest2: int( which residue do you want to get the phi, psi, and omega of? ) Default = None
     :return: str( pose metrics )
     """
     #################
@@ -148,6 +150,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( working_residue_score_data.biggest_delta_score ) )
     metric_data.append( "decoy_res_num:" )
     metric_data.append( str( ''.join( working.pdb_info().pose2pdb( working_residue_score_data.decoy_num ).strip().split( ' ' ) ) ) )
+    '''
     
 
     # delta standard interaction energy ( across an interface defined by a JUMP number )
@@ -160,6 +163,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( delta_interaction_energy ) )
     
 
+    '''
     # check if the GlcNAc above the Gal residue contacts the Phe residue within 5 Angstroms ( 4.68 contact distance in native )
     GlcNAc_to_Phe_cutoff = 5
     working_GlcNAc_to_Phe_contacts = check_GlcNAc_to_Phe_contacts( working, GlcNAc_to_Phe_cutoff, native = True )
@@ -386,6 +390,21 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     if MC_acceptance_rate is not None:
         metric_data.append( "MonteCarlo_acceptance_rate:" )
         metric_data.append( str( MC_acceptance_rate ) )
+
+    if res_of_torsional_interest1 is not None:
+        metric_data.append( "Phi of res %s:" %( str( res_of_torsional_interest1 ) ) )
+        metric_data.append( str( working.phi( res_of_torsional_interest1 ) ) )
+        metric_data.append( "Psi of res %s:" %( str( res_of_torsional_interest1 ) ) )
+        metric_data.append( str( working.psi( res_of_torsional_interest1 ) ) )
+        metric_data.append( "Omega of res %s:" %( str( res_of_torsional_interest1 ) ) )
+        metric_data.append( str( working.omega( res_of_torsional_interest1 ) ) )
+    if res_of_torsional_interest2 is not None:
+        metric_data.append( "Phi of res %s:" %( str( res_of_torsional_interest2 ) ) )
+        metric_data.append( str( working.phi( res_of_torsional_interest2 ) ) )
+        metric_data.append( "Psi of res %s:" %( str( res_of_torsional_interest2 ) ) )
+        metric_data.append( str( working.psi( res_of_torsional_interest2 ) ) )
+        metric_data.append( "Omega of res %s:" %( str( res_of_torsional_interest2 ) ) )
+        metric_data.append( str( working.omega( res_of_torsional_interest2 ) ) )
 
     # create metrics string
     metrics = ' '.join( metric_data )    

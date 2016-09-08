@@ -545,7 +545,9 @@ while not jd.job_complete:
                                               metrics_dump_dir, 
                                               input_args.utility_dir, 
                                               MC_acceptance_rate = mc_acceptance, 
-                                              native_constraint_file = input_args.native_constraint_file )
+                                              native_constraint_file = input_args.native_constraint_file, 
+                                              res_of_torsional_interest1 = 217, 
+                                              res_of_torsional_interest2 = 441 - 6 )
     except:
         metrics = ''
         pass

@@ -73,10 +73,10 @@ native_order_nums = range( 1, 618 + 1 )
 native_Fc_protein_chains = [ 'A', 'B' ]
 native_FcR_protein_chains = [ 'C' ]
 #native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
-#native_Fc_glycan_A_chains = [ 'D', 'E' ]
-#native_Fc_glycan_B_chains = [ 'F', 'G' ]
 native_Fc_glycan_chains = [ 'D', 'F', ]
+#native_Fc_glycan_A_chains = [ 'D', 'E' ]
 native_Fc_glycan_A_chains = [ 'D' ]
+#native_Fc_glycan_B_chains = [ 'F', 'G' ]
 native_Fc_glycan_B_chains = [ 'F' ]
 native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 

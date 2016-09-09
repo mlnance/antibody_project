@@ -46,13 +46,13 @@ kT = 0.8  # used in MonteCarlo and small and shear movers
 native_Fc_chain_A_nums = range( 1, 215 + 1 )
 #native_Fc_glycan_A_nums = range( 216, 223 + 1 )
 #native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
-native_Fc_glycan_A_nums = range( 216, 217 + 1 )
-native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 217 + 1 )
+native_Fc_glycan_A_nums = range( 216, 218 + 1 )
+native_Fc_glycan_A_nums_except_core_GlcNAc = range( 218, 218 + 1 )
 native_Fc_chain_B_nums = range( 224, 439 + 1 )
 #native_Fc_glycan_B_nums = range( 440, 447 + 1 )
 #native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
-native_Fc_glycan_B_nums = range( 440 - 6, 441 - 6 + 1 )
-native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441 - 6, 441 - 6 + 1 )
+native_Fc_glycan_B_nums = range( 440 - 5, 442 - 5 + 1 )
+native_Fc_glycan_B_nums_except_core_GlcNAc = range( 442 - 5, 442 - 5 + 1 )
 native_FcR_protein_nums = range( 448, 607 + 1 )
 native_FcR_main_glycan_nums = range( 608, 615 + 1 )
 native_FcR_three_mer_nums = range( 616, 618 + 1 )
@@ -417,6 +417,31 @@ def stepwise_3ay4_torsion_sampler_using_LCM_ideals( sf, residues, input_pose, nu
                 print best_phi_torsion, sf( pose ), jj
 
     return pose
+
+
+
+def get_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega_info():
+    """
+    Stepwise means focusing on just one residue at a time where all upper residues are deleted ( this was done manually )
+    LCM reset means resetting the target residue using the LCM reset data where all populations were sampled ( using population weights ) within 1 stdev
+    Protocol used SugarSmallMover with am2 and 2mpt
+    Each lower residue was set to the "ideal" value found by the protocol
+    The data is collected from the .fasc file and printed out from the plotter script found in metrics/stepwise_by_removal
+    :return: dict( phi_ideal ), dict( phi_stdev ), dict( psi_ideal ), dict( psi_stdev ), dict( omega_ideal ), dict( omega_stdev )
+    """
+    phi_data = { 217: -81.7946306335 }
+
+    phi_stdev = { 217: 8.02969709033 }
+
+    psi_data = { 217: 87.113986145 }
+
+    psi_stdev = { 217: 6.21243150763 }
+
+    omega_data = { 217: 0.0 }
+
+    omega_stdev = { 217: 0.0 }
+
+    return phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev
 
 
 

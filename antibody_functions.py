@@ -46,13 +46,13 @@ kT = 0.8  # used in MonteCarlo and small and shear movers
 native_Fc_chain_A_nums = range( 1, 215 + 1 )
 #native_Fc_glycan_A_nums = range( 216, 223 + 1 )
 #native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
-native_Fc_glycan_A_nums = range( 216, 219 + 1 )
-native_Fc_glycan_A_nums_except_core_GlcNAc = range( 219, 219 + 1 )
+native_Fc_glycan_A_nums = range( 216, 218 + 1 )
+native_Fc_glycan_A_nums_except_core_GlcNAc = range( 218, 218 + 1 )
 native_Fc_chain_B_nums = range( 224, 439 + 1 )
 #native_Fc_glycan_B_nums = range( 440, 447 + 1 )
 #native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
-native_Fc_glycan_B_nums = range( 440 - 4, 443 - 4 + 1 )
-native_Fc_glycan_B_nums_except_core_GlcNAc = range( 443 - 4, 443 - 4 + 1 )
+native_Fc_glycan_B_nums = range( 440 - 5, 442 - 5 + 1 )
+native_Fc_glycan_B_nums_except_core_GlcNAc = range( 442 - 5, 442 - 5 + 1 )
 native_FcR_protein_nums = range( 448, 607 + 1 )
 native_FcR_main_glycan_nums = range( 608, 615 + 1 )
 native_FcR_three_mer_nums = range( 616, 618 + 1 )
@@ -420,28 +420,86 @@ def stepwise_3ay4_torsion_sampler_using_LCM_ideals( sf, residues, input_pose, nu
 
 
 
-def get_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega_info():
+def get_3ay4_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega_info( Bsubtractor = 0 ):
     """
     Stepwise means focusing on just one residue at a time where all upper residues are deleted ( this was done manually )
     LCM reset means resetting the target residue using the LCM reset data where all populations were sampled ( using population weights ) within 1 stdev
     Protocol used SugarSmallMover with am2 and 2mpt
     Each lower residue was set to the "ideal" value found by the protocol
     The data is collected from the .fasc file and printed out from the plotter script found in metrics/stepwise_by_removal
+    :param Bsubtractor: this is terribly hacky, but please give me the number to subtract from the standard Pose number for the side B glycan
     :return: dict( phi_ideal ), dict( phi_stdev ), dict( psi_ideal ), dict( psi_stdev ), dict( omega_ideal ), dict( omega_stdev )
     """
-    phi_data = { 217: -81.7946306335 }
+    phi_data = { 217: -81.7946306335, 
+                 441 - Bsubtractor: -79.3869827081 }
 
-    phi_stdev = { 217: 8.02969709033 }
+    phi_stdev = { 217: 8.02969709033, 
+                  441 - Bsubtractor: 9.48701851985 }
 
-    psi_data = { 217: 87.113986145 }
+    psi_data = { 217: 87.113986145, 
+                 441 - Bsubtractor: 102.86554493 }
 
-    psi_stdev = { 217: 6.21243150763 }
+    psi_stdev = { 217: 6.21243150763, 
+                  441 - Bsubtractor: 6.85640117404 }
 
-    omega_data = { 217: 0.0 }
+    omega_data = { 217: 0.0, 
+                   441 - Bsubtractor: 0.0 }
 
-    omega_stdev = { 217: 0.0 }
+    omega_stdev = { 217: 0.0, 
+                    441 - Bsubtractor: 0.0 }
 
     return phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev
+
+
+
+def set_3ay4_Fc_glycan_except_core_GlcNAc_to_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega( input_pose, use_stdev = False, Bsubtractor = 0 ):
+    """
+    Set the Fc glycan (intended for 3ay4) to the values collected from the stepwise SugarSmallMover with LCM reset protocol
+    If you want to set phi/psi/omega to within +/- the standard deviation, set <use_stdev> to True
+    :param input_pose: Pose
+    :param use_stdev: bool( do you want to sample within +/- standard deviation of the phi/psi/omega values from the stepwise LCM reset  data? ) Default = False
+    :param Bsubtractor: this is terribly hacky, but please give me the number to subtract from the standard Pose number for the side B glycan
+    :return: Pose
+    """
+    # imports
+    from rosetta.basic import periodic_range
+    from rosetta.numeric.random import rg
+
+
+    # make a copy of the <input_pose>
+    pose = input_pose.clone()
+
+    # get the phi, psi, and omega data from the getter function
+    phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev = get_3ay4_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega_info( Bsubtractor = Bsubtractor )
+
+    # for each residue in phi_data, psi_data, and omega_data, set the appropriate torsions
+    # sample within the standard deviation too, if desired
+    for res in phi_data.keys():
+        if use_stdev:
+            # this method is pulled from core.pose.carbohydrates.util::set_dihedrals_from_linkage_conformer_data
+            # periodic_range( mean - sd + rg().uniform() * sd * 2, 360 ) not sure what it means though
+            new_phi = periodic_range( phi_data[ res ] - phi_stdev[ res ] + rg().uniform() * phi_stdev[ res ] * 2, 360.0 )
+            pose.set_phi( res, new_phi )
+        else:
+            pose.set_phi( res, phi_data[ res ] )
+    for res in psi_data.keys():
+        if use_stdev:
+            # this method is pulled from core.pose.carbohydrates.util::set_dihedrals_from_linkage_conformer_data
+            # periodic_range( mean - sd + rg().uniform() * sd * 2, 360 ) not sure what it means though
+            new_psi = periodic_range( psi_data[ res ] - psi_stdev[ res ] + rg().uniform() * psi_stdev[ res ] * 2, 360.0 )
+            pose.set_psi( res, new_psi )
+        else:
+            pose.set_psi( res, psi_data[ res ] )
+    for res in omega_data.keys():
+        if use_stdev:
+            # this method is pulled from core.pose.carbohydrates.util::set_dihedrals_from_linkage_conformer_data
+            # periodic_range( mean - sd + rg().uniform() * sd * 2, 360 ) not sure what it means though
+            new_omega = periodic_range( omega_data[ res ] - omega_stdev[ res ] + rg().uniform() * omega_stdev[ res ] * 2, 360.0 )
+            pose.set_omega( res, new_omega )
+        else:
+            pose.set_omega( res, omega_data[ res ] )
+
+    return pose
 
 
 
@@ -461,8 +519,7 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                  221: 64.7, 
                  222: -80.1, 
                  223: -71.4, 
-                 #441: -75.9, 
-                 435: -75.9, 
+                 441: -75.9, 
                  442: -86.5, 
                  443: 71.5, 
                  444: -80.1, 
@@ -477,8 +534,7 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                   221: 10.4, 
                   222: 12.6, 
                   223: 10.9, 
-                  #441: 11.6, 
-                  435: 11.6, 
+                  441: 11.6, 
                   442: 11.6, 
                   443: 8.8, 
                   444: 12.6, 
@@ -494,8 +550,7 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                  221 : 178.5, 
                  222 : -87.2, 
                  223 : 132.2, 
-                 #441 : 119.0, 
-                 435 : 119.0, 
+                 441 : 119.0, 
                  442 : 110.7, 
                  443 : -120.6, 
                  444 : -87.2, 
@@ -510,8 +565,7 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                   221: 13.7, 
                   222: 15.2, 
                   223: 7.4, 
-                  #441: 15.4, 
-                  435: 15.4, 
+                  441: 15.4, 
                   442: 19.4, 
                   443: 16.8, 
                   444: 15.2, 
@@ -527,8 +581,7 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                    221 : -171.5, 
                    222 : 0, 
                    223 : 0, 
-                   #441 : 0, 
-                   435 : 0, 
+                   441 : 0, 
                    442 : 0, 
                    443 : 0, 
                    444 : 0, 
@@ -543,8 +596,7 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
                     221 : 12.3, 
                     222 : 0, 
                     223 : 0, 
-                    #441 : 0, 
-                    435 : 0, 
+                    441 : 0, 
                     442 : 0, 
                     443 : 0, 
                     444 : 0, 

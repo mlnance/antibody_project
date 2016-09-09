@@ -165,6 +165,7 @@ from antibody_functions import initialize_rosetta, \
     set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega, \
     get_res_nums_within_radius_of_residue_list
 from antibody_functions import show_score_breakdown_by_res
+from antibody_functions import set_3ay4_Fc_glycan_except_core_GlcNAc_to_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega
 
 # utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
@@ -403,6 +404,16 @@ while not jd.job_complete:
             print "score of light reset:", main_sf( testing_pose )
 
 
+
+    ########################################################
+    #### RESET LOWER RESIDUES TO TORSIONS FROM PROTOCOL ####
+    ########################################################
+
+    testing_pose = set_3ay4_Fc_glycan_except_core_GlcNAc_to_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega( testing_pose, use_stdev = False, Bsubtractor = 5 )
+    pmm.apply( testing_pose )
+
+
+
     ########################
     #### Fc GLYCAN PACK ####
     ########################
@@ -546,8 +557,8 @@ while not jd.job_complete:
                                               input_args.utility_dir, 
                                               MC_acceptance_rate = mc_acceptance, 
                                               native_constraint_file = input_args.native_constraint_file, 
-                                              res_of_torsional_interest1 = 219, 
-                                              res_of_torsional_interest2 = 443 - 4 )
+                                              res_of_torsional_interest1 = 218, 
+                                              res_of_torsional_interest2 = 442 - 5 )
     except:
         metrics = ''
         pass

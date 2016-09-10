@@ -46,13 +46,13 @@ kT = 0.8  # used in MonteCarlo and small and shear movers
 native_Fc_chain_A_nums = range( 1, 215 + 1 )
 #native_Fc_glycan_A_nums = range( 216, 223 + 1 )
 #native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
-native_Fc_glycan_A_nums = range( 216, 218 + 1 )
-native_Fc_glycan_A_nums_except_core_GlcNAc = range( 218, 218 + 1 )
+native_Fc_glycan_A_nums = range( 216, 219 + 1 )
+native_Fc_glycan_A_nums_except_core_GlcNAc = range( 219, 219 + 1 )
 native_Fc_chain_B_nums = range( 224, 439 + 1 )
 #native_Fc_glycan_B_nums = range( 440, 447 + 1 )
 #native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
-native_Fc_glycan_B_nums = range( 440 - 5, 442 - 5 + 1 )
-native_Fc_glycan_B_nums_except_core_GlcNAc = range( 442 - 5, 442 - 5 + 1 )
+native_Fc_glycan_B_nums = range( 440 - 4, 443 - 4 + 1 )
+native_Fc_glycan_B_nums_except_core_GlcNAc = range( 443 - 4, 443 - 4 + 1 )
 native_FcR_protein_nums = range( 448, 607 + 1 )
 native_FcR_main_glycan_nums = range( 608, 615 + 1 )
 native_FcR_three_mer_nums = range( 616, 618 + 1 )
@@ -431,22 +431,34 @@ def get_3ay4_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega_info( Bsubtractor 
     :return: dict( phi_ideal ), dict( phi_stdev ), dict( psi_ideal ), dict( psi_stdev ), dict( omega_ideal ), dict( omega_stdev )
     """
     phi_data = { 217: -81.7946306335, 
-                 441 - Bsubtractor: -79.3869827081 }
+                 218: -98.0859420888, 
+                 441 - Bsubtractor: -79.3869827081, 
+                 442 - Bsubtractor: -122.979289015 }
 
     phi_stdev = { 217: 8.02969709033, 
-                  441 - Bsubtractor: 9.48701851985 }
+                  218: 6.60818707069, 
+                  441 - Bsubtractor: 9.48701851985, 
+                  442 - Bsubtractor: 11.2109158286 }
 
     psi_data = { 217: 87.113986145, 
-                 441 - Bsubtractor: 102.86554493 }
+                 218: 89.2904142081, 
+                 441 - Bsubtractor: 102.86554493, 
+                 442 - Bsubtractor: 87.8167745987 }
 
     psi_stdev = { 217: 6.21243150763, 
-                  441 - Bsubtractor: 6.85640117404 }
+                  218: 7.97750106414, 
+                  441 - Bsubtractor: 6.85640117404, 
+                  442 - Bsubtractor: 16.6282496517 }
 
     omega_data = { 217: 0.0, 
-                   441 - Bsubtractor: 0.0 }
+                   218: 0.0, 
+                   441 - Bsubtractor: 0.0, 
+                   442 - Bsubtractor: 0.0 }
 
     omega_stdev = { 217: 0.0, 
-                    441 - Bsubtractor: 0.0 }
+                    218: 0.0, 
+                    441 - Bsubtractor: 0.0, 
+                    442 - Bsubtractor: 0.0 }
 
     return phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev
 

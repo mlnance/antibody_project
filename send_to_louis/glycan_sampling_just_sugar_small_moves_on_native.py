@@ -409,7 +409,7 @@ while not jd.job_complete:
     #### RESET LOWER RESIDUES TO TORSIONS FROM PROTOCOL ####
     ########################################################
 
-    testing_pose = set_3ay4_Fc_glycan_except_core_GlcNAc_to_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega( testing_pose, use_stdev = False, Bsubtractor = 4 )
+    testing_pose = set_3ay4_Fc_glycan_except_core_GlcNAc_to_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega( testing_pose, use_stdev = False, Bsubtractor = 3 )
     pmm.apply( testing_pose )
 
 
@@ -557,8 +557,8 @@ while not jd.job_complete:
                                               input_args.utility_dir, 
                                               MC_acceptance_rate = mc_acceptance, 
                                               native_constraint_file = input_args.native_constraint_file, 
-                                              res_of_torsional_interest1 = 219, 
-                                              res_of_torsional_interest2 = 443 - 4 )
+                                              res_of_torsional_interest1 = 220, 
+                                              res_of_torsional_interest2 = 444 - 3 )
     except:
         metrics = ''
         pass

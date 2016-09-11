@@ -46,13 +46,13 @@ kT = 0.8  # used in MonteCarlo and small and shear movers
 native_Fc_chain_A_nums = range( 1, 215 + 1 )
 #native_Fc_glycan_A_nums = range( 216, 223 + 1 )
 #native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
-native_Fc_glycan_A_nums = range( 216, 221 + 1 )
-native_Fc_glycan_A_nums_except_core_GlcNAc = range( 221, 221 + 1 )
+native_Fc_glycan_A_nums = range( 216, 222 + 1 )
+native_Fc_glycan_A_nums_except_core_GlcNAc = range( 222, 222 + 1 )
 native_Fc_chain_B_nums = range( 224, 439 + 1 )
 #native_Fc_glycan_B_nums = range( 440, 447 + 1 )
 #native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
-native_Fc_glycan_B_nums = range( 440 - 2, 445 - 2 + 1 )
-native_Fc_glycan_B_nums_except_core_GlcNAc = range( 445 - 2, 445 - 2 + 1 )
+native_Fc_glycan_B_nums = range( 440 - 1, 446 - 1 + 1 )
+native_Fc_glycan_B_nums_except_core_GlcNAc = range( 446 - 1, 446 - 1 + 1 )
 native_FcR_protein_nums = range( 448, 607 + 1 )
 native_FcR_main_glycan_nums = range( 608, 615 + 1 )
 native_FcR_three_mer_nums = range( 616, 618 + 1 )
@@ -434,56 +434,68 @@ def get_3ay4_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega_info( Bsubtractor 
                  218: -98.0859420888, 
                  219: 72.4906160885, 
                  220: -69.2819693849, 
+                 221: 70.2338462561, 
                  441 - Bsubtractor: -79.3869827081, 
                  442 - Bsubtractor: -122.979289015, 
                  443 - Bsubtractor: 78.8230022219, 
-                 444 - Bsubtractor: -97.7081094911 }
+                 444 - Bsubtractor: -97.7081094911, 
+                 445 - Bsubtractor: 75.9149018719 }
 
     phi_stdev = { 217: 8.02969709033, 
                   218: 6.60818707069, 
                   219: 9.10612718064, 
                   220: 46.5191149619, 
+                  221: 12.8199926237, 
                   441 - Bsubtractor: 9.48701851985, 
                   442 - Bsubtractor: 11.2109158286, 
                   443 - Bsubtractor: 7.96196655884, 
-                  444 - Bsubtractor: 51.203299921 }
+                  444 - Bsubtractor: 51.203299921, 
+                  445 - Bsubtractor: 13.5208014489 }
 
 
     psi_data = { 217: 87.113986145, 
                  218: 89.2904142081, 
                  219: -134.691402013, 
                  220: -90.5627178154, 
+                 221: 168.404809533, 
                  441 - Bsubtractor: 102.86554493, 
                  442 - Bsubtractor: 87.8167745987, 
                  443 - Bsubtractor: -116.599767556, 
-                 444 - Bsubtractor: -91.2041858112 }
+                 444 - Bsubtractor: -91.2041858112, 
+                 445 - Bsubtractor: 157.966096193 }
 
     psi_stdev = { 217: 6.21243150763, 
                   218: 7.97750106414, 
                   219: 18.3655776045, 
                   220: 16.8077078643, 
+                  221: 150.990946995, 
                   441 - Bsubtractor: 6.85640117404, 
                   442 - Bsubtractor: 16.6282496517, 
                   443 - Bsubtractor: 17.6863856501, 
-                  444 - Bsubtractor: 16.7236056227 }
+                  444 - Bsubtractor: 16.7236056227, 
+                  445 - Bsubtractor: 155.39189028 }
 
     omega_data = { 217: 0.0, 
                    218: 0.0, 
                    219: 0.0, 
                    220: 0.0, 
+                   221: 66.0738407506, 
                    441 - Bsubtractor: 0.0, 
                    442 - Bsubtractor: 0.0, 
                    443 - Bsubtractor: 0.0,
-                   444 - Bsubtractor: 0.0 }
+                   444 - Bsubtractor: 0.0, 
+                   445 - Bsubtractor: 169.819545766 }
 
     omega_stdev = { 217: 0.0, 
                     218: 0.0, 
                     219: 0.0, 
                     220: 0.0, 
+                    221: 111.972066698, 
                     441 - Bsubtractor: 0.0, 
                     442 - Bsubtractor: 0.0, 
                     443 - Bsubtractor: 0.0, 
-                    444 - Bsubtractor: 0.0 }
+                    444 - Bsubtractor: 0.0, 
+                    445 - Bsubtractor: 121.68743512 }
 
     return phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev
 

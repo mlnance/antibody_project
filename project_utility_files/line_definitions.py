@@ -64,10 +64,10 @@ class HETNAM_line:
             if piece != '':
                 pieces.append( piece )
                 
-        self.res_name = pieces[ 1 ]
-        self.res_chain = pieces[ 2 ]
-        self.res_num = pieces[ 3 ]
-        self.res_connection = pieces[ 4 ]
+        self.res_name = str( pieces[ 1 ].replace( ' ', '' ) )
+        self.res_chain = str( pieces[ 2 ].replace( ' ', '' ) )
+        self.res_num = int( pieces[ 3 ].replace( ' ', '' ) )
+        self.res_connection = str( pieces[ 4 ].replace( ' ', '' ) )
         
 
 
@@ -82,13 +82,13 @@ class SSBOND_line:
             if piece != '':
                 pieces.append( piece )
         
-        self.res1_name = pieces[1]
-        self.res1_chain = pieces[2]
-        self.res1_num = pieces[3]
-        self.res2_name = pieces[4]
-        self.res2_chain = pieces[5]
-        self.res2_num = pieces[6]
-        self.value = pieces[7]
+        self.res1_name = str( pieces[ 1 ].replace( ' ', '' ) )
+        self.res1_chain = str( pieces[ 2 ].replace( ' ', '' ) )
+        self.res1_num = int( pieces[ 3 ].replace( ' ', '' ) )
+        self.res2_name = str( pieces[ 4 ].replace( ' ', '' ) )
+        self.res2_chain = str( pieces[ 5 ].replace( ' ', '' ) )
+        self.res2_num = int( pieces[ 6 ].replace( ' ', '' ) )
+        self.value = float( pieces[ 7 ].replace( ' ', '' ) )
         
 
 
@@ -99,19 +99,19 @@ class LINK_line:
         # ftp://ftp.wwpdb.org/pub/pdb/doc/format_descriptions/Format_v33_Letter.pdf
         # page 173
         self.line = line.rstrip( '/n' )
-        self.atom_name1 = line = str( self.line[ 12:16 ] )
-        self.alt_loc1 = str( self.line[ 16:17] )
-        self.res1_name = str( self.line[17:20] )
-        self.res1_chain = str( self.line[21:22] )
-        self.res1_seq = int( self.line[22:26] )
-        self.i_code1 = str( self.line[26:27] )
-        self.atom_name2 = str( self.line[42:46] )
-        self.alt_loc2 = str( self.line[46:47] )
-        self.res2_name = str( self.line[47:50] )
-        self.res2_chain = str( self.line[51:52] )
-        self.res2_seq = int( self.line[52:56] )
-        self.i_code2 = str( self.line[56:57] )
-        self.link_dist = float( self.line[73:78] )
+        self.atom_name1 = line = str( self.line[ 12:16 ].replace( ' ', '' ) )
+        self.alt_loc1 = str( self.line[ 16:17].replace( ' ', '' ) )
+        self.res1_name = str( self.line[17:20].replace( ' ', '' ) )
+        self.res1_chain = str( self.line[21:22].replace( ' ', '' ) )
+        self.res1_seq = int( self.line[22:26].replace( ' ', '' ) )
+        self.i_code1 = str( self.line[26:27].replace( ' ', '' ) )
+        self.atom_name2 = str( self.line[42:46].replace( ' ', '' ) )
+        self.alt_loc2 = str( self.line[46:47].replace( ' ', '' ) )
+        self.res2_name = str( self.line[47:50].replace( ' ', '' ) )
+        self.res2_chain = str( self.line[51:52].replace( ' ', '' ) )
+        self.res2_seq = int( self.line[52:56].replace( ' ', '' ) )
+        self.i_code2 = str( self.line[56:57].replace( ' ', '' ) )
+        self.link_dist = float( self.line[73:78].replace( ' ', '' ) )
 
 
 
@@ -123,17 +123,13 @@ class MODRES_line:
         # page 157
         self.line = line.rstrip( '/n' )
         self.id_code = str( self.line[7:11].replace( ' ', '' ) )
-        
         # the residue name used in the PDB file (post-modification)
         self.res_name = str( self.line[12:15].replace( ' ', '' ) )
-        
         self.res_chain = str( self.line[16:17] )
         self.res_num = int( self.line[18:22].replace( ' ', '' ) )
         self.i_code = str( self.line[22:23] )
-
         # what the standard residue name is (pre-modification)
-        self.std_res_name = str( self.line[24:27].replace( ' ', '' ) )
-        
+        self.std_res_name = str( self.line[24:27].replace( ' ', '' ) )        
         self.comment = str( self.line[29:70] )
 
 

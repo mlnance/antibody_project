@@ -64,9 +64,10 @@ class HETNAM_line:
             if piece != '':
                 pieces.append( piece )
                 
-        self.res_name = pieces[1]
-        self.res_chain = pieces[2]
-        self.res_connection = pieces[3]
+        self.res_name = pieces[ 1 ]
+        self.res_chain = pieces[ 2 ]
+        self.res_num = pieces[ 3 ]
+        self.res_connection = pieces[ 4 ]
         
 
 

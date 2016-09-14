@@ -44,15 +44,15 @@ kT = 0.8  # used in MonteCarlo and small and shear movers
 ## Pose numbering information ONLY relevant to PDB 3ay4
 # native
 native_Fc_chain_A_nums = range( 1, 215 + 1 )
-#native_Fc_glycan_A_nums = range( 216, 223 + 1 )
-#native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
 native_Fc_glycan_A_nums = range( 216, 223 + 1 )
-native_Fc_glycan_A_nums_except_core_GlcNAc = range( 223, 223 + 1 )
+native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
+#native_Fc_glycan_A_nums = range( 216, 223 + 1 )
+#native_Fc_glycan_A_nums_except_core_GlcNAc = range( 223, 223 + 1 )
 native_Fc_chain_B_nums = range( 224, 439 + 1 )
-#native_Fc_glycan_B_nums = range( 440, 447 + 1 )
-#native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
-native_Fc_glycan_B_nums = range( 440 - 0, 447 - 0 + 1 )
-native_Fc_glycan_B_nums_except_core_GlcNAc = range( 447 - 0, 447 - 0 + 1 )
+native_Fc_glycan_B_nums = range( 440, 447 + 1 )
+native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
+#native_Fc_glycan_B_nums = range( 440 - 0, 447 - 0 + 1 )
+#native_Fc_glycan_B_nums_except_core_GlcNAc = range( 447 - 0, 447 - 0 + 1 )
 native_FcR_protein_nums = range( 448, 607 + 1 )
 native_FcR_main_glycan_nums = range( 608, 615 + 1 )
 native_FcR_three_mer_nums = range( 616, 618 + 1 )
@@ -751,7 +751,7 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
 
 '''
 # TODO: finish this function! There is a function that must do this buried in Rosetta as CarbohydrateInfoManager can get this data from default.table
-def get_ideal_LCM_phi_psi_info( linkage_conformer_filename, verbose = False ):
+def get_ideal_LCM_phi_psi_omega_info( linkage_conformer_filename, verbose = False ):
     """
     Pulls out ideal phi/psi/omega according to linkage type from a <linkage_conformer_filename> data file
     This file should be column/tab delimited

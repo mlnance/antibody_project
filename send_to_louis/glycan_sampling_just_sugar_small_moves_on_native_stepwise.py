@@ -165,10 +165,11 @@ from antibody_functions import initialize_rosetta, \
     set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega, \
     get_res_nums_within_radius_of_residue_list
 from antibody_functions import show_score_breakdown_by_res
+from antibody_functions import set_3ay4_Fc_glycan_except_core_GlcNAc_to_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega
 
 # utility functions
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
-from get_pose_metrics_on_native import main as get_pose_metrics_on_native
+from get_pose_metrics_on_native_stepwise import main as get_pose_metrics_on_native
 from pose_metrics_util import Fc_glycan_rmsd
 
 
@@ -349,11 +350,7 @@ while not jd.job_complete:
             elif input_args.use_ideal_LCM_reset:
                 # this is hardcoded data at the moment
                 # setting residue 3 on chain D and F (the Man with the branch) to the native phi for now to see if that would help get better decoys
-                # this one uses the highest population ideals including the one for omega (which is very off from the native, but so it goes)
-                #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = False ) )
-                # this one uses the highest population ideals but sets the omega to the value found in the native
                 testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = True ) )
-                # this one starts from the highest population ideals and goes +/- within their stdev, except for omega, which goes to its native value
                 #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = True, set_3_D_and_F_phi_to_native = True ) )
 
                 # this option of LCM reset doesn't actually use the LCM, just ideal data from it
@@ -405,6 +402,15 @@ while not jd.job_complete:
         pmm.apply( testing_pose )                                                      
         if input_args.verbose:
             print "score of light reset:", main_sf( testing_pose )
+
+
+
+    ########################################################
+    #### RESET LOWER RESIDUES TO TORSIONS FROM PROTOCOL ####
+    ########################################################
+
+    testing_pose = set_3ay4_Fc_glycan_except_core_GlcNAc_to_stepwise_SugarSmallMover_LCM_reset_phi_psi_omega( testing_pose, use_stdev = False, Bsubtractor = 0 )
+    pmm.apply( testing_pose )
 
 
 
@@ -550,7 +556,9 @@ while not jd.job_complete:
                                               metrics_dump_dir, 
                                               input_args.utility_dir, 
                                               MC_acceptance_rate = mc_acceptance, 
-                                              native_constraint_file = input_args.native_constraint_file )
+                                              native_constraint_file = input_args.native_constraint_file, 
+                                              res_of_torsional_interest1 = 223, 
+                                              res_of_torsional_interest2 = 447 - 0 )
     except:
         metrics = ''
         pass

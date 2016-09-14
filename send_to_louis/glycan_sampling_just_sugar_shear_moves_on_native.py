@@ -161,7 +161,7 @@ from toolbox import get_hbonds
 from antibody_functions import initialize_rosetta, \
     get_fa_scorefxn_with_given_weights, make_pack_rotamers_mover, \
     load_pose, ramp_score_weight, make_fa_scorefxn_from_file, \
-    SugarShearMover_3ay4, hold_chain_and_res_designations_3ay4, \
+    SugarShearMover, hold_chain_and_res_designations_3ay4, \
     set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega, \
     get_res_nums_within_radius_of_residue_list
 from antibody_functions import show_score_breakdown_by_res
@@ -349,7 +349,11 @@ while not jd.job_complete:
             elif input_args.use_ideal_LCM_reset:
                 # this is hardcoded data at the moment
                 # setting residue 3 on chain D and F (the Man with the branch) to the native phi for now to see if that would help get better decoys
+                # this one uses the highest population ideals including the one for omega (which is very off from the native, but so it goes)
+                #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = False ) )
+                # this one uses the highest population ideals but sets the omega to the value found in the native
                 testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = True ) )
+                # this one starts from the highest population ideals and goes +/- within their stdev, except for omega, which goes to its native value
                 #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = True, set_3_D_and_F_phi_to_native = True ) )
 
                 # this option of LCM reset doesn't actually use the LCM, just ideal data from it
@@ -511,9 +515,9 @@ while not jd.job_complete:
             res_num = random.choice( testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc )
 
             # apply the SugarShearMover
-            testing_pose.assign( SugarShearMover_3ay4( res_num, testing_pose, angle_max ) )
+            testing_pose.assign( SugarShearMover( res_num, testing_pose, angle_max ) )
         if input_args.verbose:
-            print "score after SugarShearMover_3ay4:", main_sf( testing_pose )
+            print "score after SugarShearMover:", main_sf( testing_pose )
 
         # pack the Fc sugars except core GlcNac using the previously-made pack_rotamers_mover
         pack_rotamers_mover.apply( testing_pose )

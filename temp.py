@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+"""
+Notes 9/15/16: find the glycans that are together and need to be sampled (that basically is working). Now need to figure out how to delete them in an approprite manner. Currently assuming that the glycans are found in order. Perhaps should check which glycan numbering bunch is lower (order each glycan from 1, 2, 3 etc. 1 deleted first, 2 deleted second and numbers adjusted by how many were delete in 1, 3 adjusted by num deleted in 1 and 2, etc). Keep relevant lines, delete HETNAM, ATOM, and LINK lines when needed
+"""
+
 from antibody_functions import initialize_rosetta, load_pose
 from rosetta import get_fa_scorefxn, PyMOL_Mover
 from rosetta.core.chemical.carbohydrates import CarbohydrateInfo

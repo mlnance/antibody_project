@@ -84,17 +84,47 @@ for edge in chem_edges:
             glycans_on_chain[ native.pdb_info().chain( edge.start() ) ] = glycan_residues
 
 
-keep_lines = []
+# dict{ chain: lines keep } then do the set of the lines to keep and keep the ones that are common between both chains
 keys = glycans_on_chain.keys()
 keys.sort()
-for chain in keys:
+keep_lines = {}
+second_chain = False
+#for chain in keys:
+'''
+This doesn't work because it's not keeping the residues upper from the test residue. Have to address that somehow
+'''
+for chain in [ 'A' ]:
+    # glycan on this chain
     glycan_residues = glycans_on_chain[ chain ]
+
     for index in range( len( glycan_residues ) ):
+        # residues in this glycan
         test_res = glycan_residues[ index ]
+        # uniq name = resnum_reschain
+        test_res_uniq_name = '_'.join( native.pdb_info().pose2pdb( test_res ).split() )
         del_res = glycan_residues[ index + 1 : ]
-        print "test_res", test_res, "del_res", del_res
+        nres_del = len( del_res )
+        keep_these_lines = []
 
         for line in pdb_lines:
-            if line.has_two_residues and not line.line.startswith( "SSBOND" ):
+            keep_line = True
+            if line.line.startswith( "HETNAM" ):
+                if '_'.join( [ str( line.res_num ), line.res_chain ] ) != test_res_uniq_name:
+                    keep_line = False
+            elif line.line.startswith( "LINK" ):
+                if '_'.join( [ str( line.res1_num ), line.res1_chain ] ) != test_res_uniq_name:
+                    if '_'.join( [ str( line.res2_num ), line.res2_chain ] ) != test_res_uniq_name:
+                        # this is in a LINK record, so check if the residue is the upper or lower branch (keep if res is a BRANCH_LOWER_TERMINUS_VARIANT)
+                        if not "BRANCH_LOWER_TERMINUS_VARIANT" in native.residue_type( test_res ).variant_types():
+                            keep_line = False
+            elif line.line.startswith( "ATOM" ):
+                if '_'.join( [ str( line.res_num ), line.res_chain ] ) != test_res_uniq_name:
+                    keep_line = False
+            else:
+                # TER line
                 pass
 
+            if keep_line:
+                keep_these_lines.append( line.line )
+
+        keep_lines[ nres_del ] = keep_these_lines

@@ -17,18 +17,18 @@ class PDB_line:
         page 192 for TER
         page 194 for HETATM
         '''
-        # found in ATOM, HETATM, TER, and ANISOU records
         self.line = line
-        self.atom_num = int( self.line[6:11].replace( ' ', '' ) )
-        self.atom_name = str( self.line[12:16].replace( ' ', '' ) )
-        self.alt_loc = str( self.line[16:17].replace( ' ', '' ) )
-        self.res_name = str( self.line[17:20].replace( ' ', '' ) )
-        self.res_chain = str( self.line[21:22] )
-        self.res_num = int( self.line[22:26].replace( ' ', '' ) )
-        self.i_code = str( self.line[26:27] )
+        self.has_two_residues = False
 
         # found in ATOM, HETATM, and ANISOU records
         if not line.startswith( "TER" ):
+            self.atom_num = int( self.line[6:11].replace( ' ', '' ) )
+            self.atom_name = str( self.line[12:16].replace( ' ', '' ) )
+            self.alt_loc = str( self.line[16:17].replace( ' ', '' ) )
+            self.res_name = str( self.line[17:20].replace( ' ', '' ) )
+            self.res_chain = str( self.line[21:22] )
+            self.res_num = int( self.line[22:26].replace( ' ', '' ) )
+            self.i_code = str( self.line[26:27] )
             self.element = str( self.line[76:78].replace( ' ', '' ) )
             self.charge = str( self.line[78:80].replace( ' ', '' ) )
             
@@ -58,16 +58,12 @@ class HETNAM_line:
         self.line = line
         
         # rough work-around for Jason's HETNAM structure
-        line_on_split = line.split( ' ' )
-        pieces = []
-        for piece in line_on_split:
-            if piece != '':
-                pieces.append( piece )
-                
-        self.res_name = str( pieces[ 1 ].replace( ' ', '' ) )
-        self.res_chain = str( pieces[ 2 ].replace( ' ', '' ) )
-        self.res_num = int( pieces[ 3 ].replace( ' ', '' ) )
-        self.res_connection = str( pieces[ 4 ].replace( ' ', '' ) )
+        split_line = line.split()
+        self.res_name = str( split_line[ 1 ].replace( ' ', '' ) )
+        self.res_chain = str( split_line[ 2 ].replace( ' ', '' ) )
+        self.res_num = int( split_line[ 3 ].replace( ' ', '' ) )
+        self.res_connection = str( split_line[ 4 ].replace( ' ', '' ) )
+        self.has_two_residues = False
         
 
 
@@ -76,19 +72,15 @@ class SSBOND_line:
         self.line = line
         
         # rough work-around for SSBOND lines
-        line_on_split = line.split( ' ' )
-        pieces = []
-        for piece in line_on_split:
-            if piece != '':
-                pieces.append( piece )
-        
-        self.res1_name = str( pieces[ 1 ].replace( ' ', '' ) )
-        self.res1_chain = str( pieces[ 2 ].replace( ' ', '' ) )
-        self.res1_num = int( pieces[ 3 ].replace( ' ', '' ) )
-        self.res2_name = str( pieces[ 4 ].replace( ' ', '' ) )
-        self.res2_chain = str( pieces[ 5 ].replace( ' ', '' ) )
-        self.res2_num = int( pieces[ 6 ].replace( ' ', '' ) )
-        self.value = float( pieces[ 7 ].replace( ' ', '' ) )
+        split_line = line.split()
+        self.res1_name = str( split_line[ 1 ].replace( ' ', '' ) )
+        self.res1_chain = str( split_line[ 2 ].replace( ' ', '' ) )
+        self.res1_num = int( split_line[ 3 ].replace( ' ', '' ) )
+        self.res2_name = str( split_line[ 4 ].replace( ' ', '' ) )
+        self.res2_chain = str( split_line[ 5 ].replace( ' ', '' ) )
+        self.res2_num = int( split_line[ 6 ].replace( ' ', '' ) )
+        self.value = float( split_line[ 7 ].replace( ' ', '' ) )
+        self.has_two_residues = True
         
 
 
@@ -103,15 +95,16 @@ class LINK_line:
         self.alt_loc1 = str( self.line[ 16:17].replace( ' ', '' ) )
         self.res1_name = str( self.line[17:20].replace( ' ', '' ) )
         self.res1_chain = str( self.line[21:22].replace( ' ', '' ) )
-        self.res1_seq = int( self.line[22:26].replace( ' ', '' ) )
+        self.res1_num = int( self.line[22:26].replace( ' ', '' ) )
         self.i_code1 = str( self.line[26:27].replace( ' ', '' ) )
         self.atom_name2 = str( self.line[42:46].replace( ' ', '' ) )
         self.alt_loc2 = str( self.line[46:47].replace( ' ', '' ) )
         self.res2_name = str( self.line[47:50].replace( ' ', '' ) )
         self.res2_chain = str( self.line[51:52].replace( ' ', '' ) )
-        self.res2_seq = int( self.line[52:56].replace( ' ', '' ) )
+        self.res2_num = int( self.line[52:56].replace( ' ', '' ) )
         self.i_code2 = str( self.line[56:57].replace( ' ', '' ) )
         self.link_dist = float( self.line[73:78].replace( ' ', '' ) )
+        self.has_two_residues = True
 
 
 
@@ -131,6 +124,7 @@ class MODRES_line:
         # what the standard residue name is (pre-modification)
         self.std_res_name = str( self.line[24:27].replace( ' ', '' ) )        
         self.comment = str( self.line[29:70] )
+        self.has_two_residues = False
 
 
 

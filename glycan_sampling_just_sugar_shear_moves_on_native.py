@@ -489,6 +489,9 @@ while not jd.job_complete:
     num_ssh_accept = 0
     num_mc_checks = 0
     mc_acceptance = None
+
+    copy_sf = main_sf.clone()
+
     for ii in range( 1, input_args.num_sugar_shear_move_trials + 1 ):
         # if score ramping is desired
         if input_args.ramp_sf:
@@ -528,6 +531,7 @@ while not jd.job_complete:
         if mc.boltzmann( testing_pose ):
             num_ssh_accept += 1
             pmm.apply( testing_pose )
+            print "Am I converging?:", copy_sf( testing_pose ), ii
         num_mc_checks += 1
 
         # print out the MC acceptance rate every 3 trials and on the last trial
@@ -569,4 +573,4 @@ while not jd.job_complete:
 
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 fasc_filename = working_pose_decoy_name + ".fasc"
-lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 5 )
+lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 10 )

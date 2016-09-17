@@ -350,9 +350,9 @@ while not jd.job_complete:
                 # this is hardcoded data at the moment
                 # setting residue 3 on chain D and F (the Man with the branch) to the native phi for now to see if that would help get better decoys
                 # this one uses the highest population ideals including the one for omega (which is very off from the native, but so it goes)
-                #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = False ) )
+                testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = False ) )
                 # this one uses the highest population ideals but sets the omega to the value found in the native
-                testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = True ) )
+                #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = True ) )
                 # this one starts from the highest population ideals and goes +/- within their stdev, except for omega, which goes to its native value
                 #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = True, set_3_D_and_F_phi_to_native = True ) )
 
@@ -569,4 +569,4 @@ while not jd.job_complete:
 
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 fasc_filename = working_pose_decoy_name + ".fasc"
-lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 5 )
+lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 10 )

@@ -2903,7 +2903,58 @@ def get_res_nums_within_radius_of_residue_list( residues, input_pose, radius, in
 
 
 
-def compare_pose_energy_per_residue( sf, pose1, pose2, diff_cutoff = 1.0, detailed_analysis = False, compare_using_this_scoretype = None, weight = 1.0, verbose = False ):
+def compare_single_residue_energies_between_poses( sf, res_num, pose1, pose2 ):
+    """
+    Shows the breakdown of the <pose1>'s score by printing the score for the <res_num> of each nonzero weighted ScoreType in <sf> in <pose1> and <pose2>
+    :param sf: ScoreFunction
+    :param res_num: int( Pose residue number )
+    :param pose1: Pose
+    :param pose2: Pose
+    """
+    # imports
+    from rosetta import score_type_from_name
+
+
+    # get the string version of the residue's energies from Pose
+    # pose1
+    sf( pose1 )
+    res_energies_obj1 = pose1.energies().residue_total_energies( res_num )
+    res_energies1 = res_energies_obj1.show_nonzero().strip().split()
+    score_terms_in_pose1 = []
+    for term in res_energies1:
+        try:
+            # if this can't be converted into a float, it is a string. Therefore it is a score term
+            float( term )
+        except ValueError:
+            score_terms_in_pose1.append( term.replace( ':', '' ) )
+
+    # pose2
+    sf( pose2 )
+    res_energies_obj2 = pose2.energies().residue_total_energies( res_num )
+    res_energies2 = res_energies_obj2.show_nonzero().strip().split()
+    score_terms_in_pose2 = []
+    for term in res_energies2:
+        try:
+            float( term )
+        except ValueError:
+            score_terms_in_pose2.append( term.replace( ':', '' ) )
+
+    # get the score terms that are in common between the two poses
+    score_terms = list( set( score_terms_in_pose1 ) & set( score_terms_in_pose2 ) )
+
+    # print out each score of the residue from pose1 vs pose2
+    print "{0:<13} {1:^7} {2:^7} {3:>7}".format( "ScoreType", "Pose1", "Pose2", "Delta" )
+    for score_term in score_terms:
+        e1 = res_energies_obj1.get( score_type_from_name( score_term ) )
+        e2 = res_energies_obj2.get( score_type_from_name( score_term ) )
+        if score_term == "total_score":
+            print "{0:13} {1:^7.3f} {2:7.3f} {3:7.3f}*".format( score_term, e1, e2, e2 - e1 )
+        else:
+            print "{0:13} {1:^7.3f} {2:7.3f} {3:7.3f}".format( score_term, e1, e2, e2 - e1 )
+
+
+
+def compare_residue_energies_between_poses_with_cutoff( sf, pose1, pose2, diff_cutoff = 1.0, detailed_analysis = False, compare_using_this_scoretype = None, weight = 1.0, verbose = False ):
     """
     Uses the ScoreFunction <sf> to compare the individual energy per residue of <pose1> and returns the count of residues that have a difference of greater than +/- 1 of <diff_cutoff> compared to the corresponding residue in <pose2>
     If you are collecting this information for use in a detailed analysis, consider setting <detailed_analysis> to True and this function will return the residue objects of <pose2> that satisfied the energy <diff_cutoff>

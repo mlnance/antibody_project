@@ -34,6 +34,7 @@ parser.add_argument("num_moves_per_trial", type=int, help="how many SugarSmallMo
 parser.add_argument("--LCM_reset", action="store_true", help="do you want a LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--use_population_ideal_LCM_reset", action="store_true", help="do you want the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan to ideal values (stdev of 0) using population weights? (Excluding core GlcNAc)")
 parser.add_argument("--use_ideal_LCM_reset", action="store_true", help="do you want the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan to ideal values (stdev of 0) of only the highest population weight? (Excluding core GlcNAc)")
+parser.add_argument("--set_native_omega", action="store_true", help="do you want to set the omega torsion (res 221 and 445) of the branch residue back to its native value? Default is False")
 parser.add_argument("--light_reset", action="store_true", help="do you want the random reset to be light? +/- 10-15 degrees discluding 0")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
 parser.add_argument("--native_constraint_file", default=None, type=str, help="/path/to/the .cst constraint file you want to use for the protocol")
@@ -255,6 +256,7 @@ info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %str( inp
 info_file_details.append( "LCM reset of Fc glycan?:\t\t%s\n" %str( input_args.LCM_reset ) )
 info_file_details.append( "Use main ideal in LCM reset?:\t\t%s\n" %str( input_args.use_ideal_LCM_reset ) )
 info_file_details.append( "Use population ideals in LCM reset?:\t%s\n" %str( input_args.use_population_ideal_LCM_reset ) )
+info_file_details.append( "Reset omega torsion back to native?:\t%s\n" %str( input_args.set_native_omega ) )
 info_file_details.append( "Light reset of Fc glycan?:\t\t%s\n" %str( input_args.light_reset ) )
 info_file_details.append( "Using score ramping?:\t\t\t%s\n" %str( input_args.ramp_sf ) )
 info_file_details.append( "Native constraint file used?:\t\t%s\n" %str( input_args.native_constraint_file ).split( '/' )[-1] )
@@ -350,9 +352,9 @@ while not jd.job_complete:
                 # this is hardcoded data at the moment
                 # setting residue 3 on chain D and F (the Man with the branch) to the native phi for now to see if that would help get better decoys
                 # this one uses the highest population ideals including the one for omega (which is very off from the native, but so it goes)
-                testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = False ) )
+                #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = False ) )
                 # this one uses the highest population ideals but sets the omega to the value found in the native
-                #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = True ) )
+                testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = True ) )
                 # this one starts from the highest population ideals and goes +/- within their stdev, except for omega, which goes to its native value
                 #testing_pose.assign( set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( testing_pose, use_ideal_stdev = True, set_3_D_and_F_phi_to_native = True ) )
 
@@ -367,6 +369,11 @@ while not jd.job_complete:
 
                 # apply the LCM
                 lcm.apply( testing_pose )
+
+        # set the omega torsion in the glycan at the branched residue back to native, if desired
+        if input_args.set_native_omega:
+            testing_pose.set_omega( 221, native_pose.omega( 221 ) )
+            testing_pose.set_omega( 445, native_pose.omega( 445 ) )
 
         pmm.apply( testing_pose )
         if input_args.verbose:
@@ -420,8 +427,10 @@ while not jd.job_complete:
     min_mm = MoveMap()
     for res_num in residue_range:
         min_mm.set_bb( res_num, True )
-        min_mm.set_chi( res_num, True )
+        min_mm.set_chi( res_num, False )
+        #min_mm.set_chi( res_num, True )
     for branch_point in testing_pose_info.native_Fc_glycan_branch_point_nums:
+        #min_mm.set_branches( branch_point, True )
         min_mm.set_branches( branch_point, False )
 
     # make the MinMover
@@ -438,10 +447,10 @@ while not jd.job_complete:
                                                     residue_range = residue_range )
 
     # apply the pack_rotamers_mover
-    pack_rotamers_mover.apply( testing_pose )
-    if input_args.verbose:
-        print "score of pre-pack:", main_sf( testing_pose )
-    pmm.apply( testing_pose )
+    #pack_rotamers_mover.apply( testing_pose )
+    #if input_args.verbose:
+    #    print "score of pre-pack:", main_sf( testing_pose )
+    #pmm.apply( testing_pose )
 
 
 
@@ -520,9 +529,14 @@ while not jd.job_complete:
             print "score after SugarSmallMover:", main_sf( testing_pose )
 
         # pack the Fc sugars except core GlcNac using the previously-made pack_rotamers_mover
-        pack_rotamers_mover.apply( testing_pose )
+        #pack_rotamers_mover.apply( testing_pose )
+        #if input_args.verbose:
+        #    print "score after pack:", main_sf( testing_pose )
+
+        # minimize the backbone of the Fc sugars
+        Fc_glycan_min_mover.apply( testing_pose )
         if input_args.verbose:
-            print "score after pack:", main_sf( testing_pose )
+            print "score after min:", main_sf( testing_pose )
 
         # accept or reject the total move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):

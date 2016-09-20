@@ -418,9 +418,9 @@ while not jd.job_complete:
 
 
 
-    ########################
-    #### Fc GLYCAN PACK ####
-    ########################
+    ##########################################
+    #### CREATE Fc GLYCAN PACK MIN MOVERS ####
+    ##########################################
 
     # define an appropriate packing and minimization range
     # we are working with the known native answer, so the protein itself should not be altered
@@ -433,8 +433,8 @@ while not jd.job_complete:
         min_mm.set_chi( res_num, False )
         #min_mm.set_chi( res_num, True )
     for branch_point in testing_pose_info.native_Fc_glycan_branch_point_nums:
-        #min_mm.set_branches( branch_point, True )
         min_mm.set_branches( branch_point, False )
+        #min_mm.set_branches( branch_point, True )
 
     # make the MinMover
     Fc_glycan_min_mover = MinMover( movemap_in = min_mm, 
@@ -448,12 +448,6 @@ while not jd.job_complete:
                                                     apply_sf_sugar_constraints = False,
                                                     pack_branch_points = True, 
                                                     residue_range = residue_range )
-
-    # apply the pack_rotamers_mover
-    #pack_rotamers_mover.apply( testing_pose )
-    #if input_args.verbose:
-    #    print "score of pre-pack:", main_sf( testing_pose )
-    #pmm.apply( testing_pose )
 
 
 
@@ -540,6 +534,11 @@ while not jd.job_complete:
         #if input_args.verbose:
         #    print "score after pack:", main_sf( testing_pose )
 
+        # minimize the backbone of the Fc sugars
+        #Fc_glycan_min_mover.apply( testing_pose )
+        #if input_args.verbose:
+        #    print "score after min:", main_sf( testing_pose )
+
         # accept or reject the total move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):
             # up the counters and send to pymol
@@ -559,12 +558,15 @@ while not jd.job_complete:
                 print "  Moves accepted:", num_ssh_accept, 
                 print "  Acceptance rate:", mc_acceptance
 
-    # minimize the backbone of the Fc sugars
+    # minimize the backbone of the Fc sugars before dumping the final pose
+    before_final_min_pose = testing_pose.clone()
     if input_args.verbose:
         print "score before final min:", main_sf( testing_pose )
     Fc_glycan_min_mover.apply( testing_pose )
     if input_args.verbose:
         print "score after final min:", main_sf( testing_pose )
+    after_final_min_pose = testing_pose.clone()
+    pmm.apply( testing_pose )
 
     # collect additional metric data
     try:

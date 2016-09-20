@@ -41,6 +41,7 @@ parser.add_argument("--native_constraint_file", default=None, type=str, help="/p
 parser.add_argument("--scorefxn_file", default=None, type=str, help="/path/to/the .sf scorefxn space-delimited file that tells me which scoring weights beyond the norm you want to use")
 parser.add_argument("--angle_multiplier", type=float, default=1.0, help="by how much do you want to increase the angle_max for the SugarSmallMover? Default is 1.0 (standard value)" )
 parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
+parser.add_argument("--watch_for_convergence", "-c", action="store_true", default=False, help="do you want the program to print out pose scores using a non-ramping sf during the protocol? So you can watch if you are converging")
 input_args = parser.parse_args()
 
 
@@ -218,7 +219,6 @@ else:
 
 # fa_intra_rep should always be 0.440 since that's what I've been using
 main_sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
-
 
 # set up constraints from the passed constraint file
 if input_args.native_constraint_file is not None:
@@ -413,6 +413,9 @@ while not jd.job_complete:
         if input_args.verbose:
             print "score of light reset:", main_sf( testing_pose )
 
+    # store a copy of the reset pose to manually look at later
+    reset_pose = testing_pose.clone()
+
 
 
     ########################
@@ -480,6 +483,10 @@ while not jd.job_complete:
     sh = SmallMover()
     angle_max = sh.get_angle_max( 'L' ) * input_args.angle_multiplier
 
+    # make a copy of the sf before ramping begins (if desired) to use to watch for convergence, if desired
+    if input_args.watch_for_convergence:
+        convergence_sf = main_sf.clone()
+
     # raise the fa_atr term and lower the fa_rep term in the ScoreFunction for ramping, if desired
     if input_args.ramp_sf:
         # store the original fa_atr, fa_rep, and fa_elec weights
@@ -533,15 +540,15 @@ while not jd.job_complete:
         #if input_args.verbose:
         #    print "score after pack:", main_sf( testing_pose )
 
-        # minimize the backbone of the Fc sugars
-        Fc_glycan_min_mover.apply( testing_pose )
-        if input_args.verbose:
-            print "score after min:", main_sf( testing_pose )
-
         # accept or reject the total move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):
+            # up the counters and send to pymol
             num_ssh_accept += 1
             pmm.apply( testing_pose )
+
+            # print out a non-ramped sf to watch for convergence, if desired
+            if input_args.watch_for_convergence:
+                print "***Am I converging?:", convergence_sf( testing_pose )
         num_mc_checks += 1
 
         # print out the MC acceptance rate every 3 trials and on the last trial
@@ -551,6 +558,13 @@ while not jd.job_complete:
                 print "Moves made so far:", num_mc_checks, 
                 print "  Moves accepted:", num_ssh_accept, 
                 print "  Acceptance rate:", mc_acceptance
+
+    # minimize the backbone of the Fc sugars
+    if input_args.verbose:
+        print "score before final min:", main_sf( testing_pose )
+    Fc_glycan_min_mover.apply( testing_pose )
+    if input_args.verbose:
+        print "score after final min:", main_sf( testing_pose )
 
     # collect additional metric data
     try:

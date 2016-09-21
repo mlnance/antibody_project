@@ -306,6 +306,7 @@ def align_sugar_virtual_atoms( input_pose ):
 
 
 
+'''
 def stepwise_3ay4_torsion_sampler_using_LCM_ideals( sf, residues, input_pose, num_cycles = 3, num_stdev = 1 ):
     """
     TODO: make this randomly choose which torsion to sample based on how many it has ( this will determine the order. Phi then psi? Or vice versa?
@@ -569,104 +570,44 @@ def get_3ay4_ideal_LCM_phi_psi_omega_info():
     TODO: make this work by just checking what kind of linkage pair is being checked
     Data is pulled from the highest population cluster from default.table in database/chemical/carbohydrates/linkage_conformers
     Returns data for native_Fc_glycan_nums_except_core_GlcNAc
-    :return: dict( phi_ideal ), dict( phi_stdev ), dict( psi_ideal ), dict( psi_stdev ), dict( omega_ideal ), dict( omega_stdev )
+    :return: dict( residue: [ phi, psi, omega ] ), dict( residue: [ phi stdev, psi stdev, omega stdev ] )
     """
-    # data pulled from LCM table
-    # phi
-    phi_data = { 217: -75.9, 
-                 218: -86.5, 
-                 219: 71.5, 
-                 220: -80.1, 
-                 221: 64.7, 
-                 222: -80.1, 
-                 223: -71.4, 
-                 441: -75.9, 
-                 442: -86.5, 
-                 443: 71.5, 
-                 444: -80.1, 
-                 445: 64.7, 
-                 446: -80.1, 
-                 447: -71.4 }
+    # data pulled from LCM table default.table
+    # key: residue num, value: [ phi, psi, omega ]
+    ideal_LCM_phi_psi_omega = { 217: [ -75.9, 119.0, 0.0 ], 
+                                218: [ -86.5, 110.7, 0.0 ], 
+                                219: [ 71.5, -120.6, 0.0 ], 
+                                220: [ -80.1, -97.6, 0.0 ], 
+                                221: [ 67.0, 178.5, 186 ], # actually the second-most ideal, but the omega is better
+                                222: [ -80.1, -97.6, 0.0 ], 
+                                223: [ -71.4, 132.2, 0.0 ], 
+                                441: [ -75.9, 119.0, 0.0 ], 
+                                442: [ -86.5, 110.7, 0.0 ], 
+                                443: [ 71.5, -120.6, 0.0 ], 
+                                444: [ -80.1, -97.6, 0.0 ], 
+                                445: [ 67.0, 178.5, 186 ], # actually the second-most ideal, but the omega is better
+                                446: [ -80.1, -97.6, 0.0 ], 
+                                447: [ -71.4, 132.2, 0.0 ], 
+                                }
 
-    phi_stdev = { 217: 11.6, 
-                  218: 11.6, 
-                  219: 8.8, 
-                  220: 12.6, 
-                  221: 10.4, 
-                  222: 12.6, 
-                  223: 10.9, 
-                  441: 11.6, 
-                  442: 11.6, 
-                  443: 8.8, 
-                  444: 12.6, 
-                  445: 10.4, 
-                  446: 12.6, 
-                  447: 10.9 }
+    ideal_LCM_phi_psi_omega_stdev = { 217: [ 11.6, 15.4, 0.0 ], 
+                                      218: [ 11.6, 19.4, 0.0 ], 
+                                      219: [ 8.8, 16.8, 0.0 ], 
+                                      220: [ 12.6, 22.3, 0.0 ], 
+                                      221: [ 10.5, 13.7, 12.8 ], 
+                                      222: [ 12.6, 22.3, 0.0 ], 
+                                      223: [ 10.9, 7.4, 0.0 ], 
+                                      441: [ 11.6, 15.4, 0.0 ], 
+                                      442: [ 11.6, 19.4, 0.0 ], 
+                                      443: [ 8.8, 16.8, 0.0 ], 
+                                      444: [ 12.6, 22.3, 0.0 ], 
+                                      445: [ 10.5, 13.7, 12.8 ], 
+                                      446: [ 12.6, 22.3, 0.0 ], 
+                                      447: [ 10.9, 7.4, 0.0 ], 
+                                      }
 
-    # psi
-    psi_data = { 217 : 119.0, 
-                 218 : 110.7, 
-                 219 : -120.6, 
-                 220 : -87.2, 
-                 221 : 178.5, 
-                 222 : -87.2, 
-                 223 : 132.2, 
-                 441 : 119.0, 
-                 442 : 110.7, 
-                 443 : -120.6, 
-                 444 : -87.2, 
-                 445 : 178.5, 
-                 446 : -87.2, 
-                 447 : 132.2 }
-
-    psi_stdev = { 217: 15.4, 
-                  218: 19.4, 
-                  219: 16.8, 
-                  220: 15.2, 
-                  221: 13.7, 
-                  222: 15.2, 
-                  223: 7.4, 
-                  441: 15.4, 
-                  442: 19.4, 
-                  443: 16.8, 
-                  444: 15.2, 
-                  445: 13.7, 
-                  446: 15.2, 
-                  447: 7.4 }
-
-    # omega
-    omega_data = { 217 : 0, 
-                   218 : 0, 
-                   219 : 0, 
-                   220 : 0, 
-                   221 : -171.5, 
-                   222 : 0, 
-                   223 : 0, 
-                   441 : 0, 
-                   442 : 0, 
-                   443 : 0, 
-                   444 : 0, 
-                   445 : -171.5, 
-                   446 : 0, 
-                   447 : 0 }
-
-    omega_stdev = { 217 : 0, 
-                    218 : 0, 
-                    219 : 0, 
-                    220 : 0, 
-                    221 : 12.3, 
-                    222 : 0, 
-                    223 : 0, 
-                    441 : 0, 
-                    442 : 0, 
-                    443 : 0, 
-                    444 : 0, 
-                    445 : 12.3, 
-                    446 : 0, 
-                    447 : 0 }
-
-    return phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev
-
+    return ideal_LCM_phi_psi_omega, ideal_LCM_phi_psi_omega_stdev
+'''
 
 
 def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose, use_ideal_stdev = False, set_3_D_and_F_phi_to_native = False ):
@@ -687,8 +628,8 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
 
 
     # data pulled from LCM table
-    # returned as phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev
-    phi_data, phi_stdev, psi_data, psi_stdev, omega_data, omega_stdev = get_3ay4_ideal_LCM_phi_psi_omega_info()
+    # returned as residue: phi, psi, omega and residue: phi, psi, omega stdevs
+    ideal_LCM_phi_psi_omega, ideal_LCM_phi_psi_omega_stdev = get_3ay4_ideal_LCM_phi_psi_omega_info()
 
     # get a copy of the input_pose
     pose = input_pose.clone()
@@ -712,10 +653,10 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
                 if use_ideal_stdev:
                     # this method is pulled from core.pose.carbohydrates.util::set_dihedrals_from_linkage_conformer_data
                     # periodic_range( mean - sd + rg().uniform() * sd * 2, 360 ) not sure what it means though
-                    new_phi = periodic_range( phi_data[ glyc_num ] - phi_stdev[ glyc_num ] + rg().uniform() * phi_stdev[ glyc_num ] * 2, 360.0 )
+                    new_phi = periodic_range( ideal_LCM_phi_psi_omega[ glyc_num ][0] - ideal_LCM_phi_psi_omega_stdev[ glyc_num ][0] + rg().uniform() * ideal_LCM_phi_psi_omega_stdev[ glyc_num ][0] * 2, 360.0 )
                 # otherwise, just use the ideal phi
                 else:
-                    new_phi = phi_data[ glyc_num ]
+                    new_phi = ideal_LCM_phi_psi_omega[ glyc_num ][0]
                 # set the new phi
                 set_glycosidic_torsion( phi_dihedral, pose, glyc_num, new_phi )
         # otherwise, use LCM phi data dict values for all residues
@@ -724,10 +665,10 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
             if use_ideal_stdev:
                 # this method is pulled from core.pose.carbohydrates.util::set_dihedrals_from_linkage_conformer_data
                 # periodic_range( mean - sd + rg().uniform() * sd * 2, 360 ) not sure what it means though
-                new_phi = periodic_range( phi_data[ glyc_num ] - phi_stdev[ glyc_num ] + rg().uniform() * phi_stdev[ glyc_num ] * 2, 360.0 )
+                new_phi = periodic_range( ideal_LCM_phi_psi_omega[ glyc_num ][0] - ideal_LCM_phi_psi_omega[ glyc_num ][0] + rg().uniform() * ideal_LCM_phi_psi_omega_stdev[ glyc_num ][0] * 2, 360.0 )
             # otherwise, just use the ideal phi
             else:
-                new_phi = phi_data[ glyc_num ]
+                new_phi = ideal_LCM_phi_psi_omega[ glyc_num ][0]
             # set the new phi
             set_glycosidic_torsion( phi_dihedral, pose, glyc_num, new_phi )
 
@@ -736,12 +677,12 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
         if use_ideal_stdev:
             # this method is pulled from core.pose.carbohydrates.util::set_dihedrals_from_linkage_conformer_data
             # periodic_range( mean - sd + rg().uniform() * sd * 2, 360 ) not sure what it means though
-            new_psi = periodic_range( psi_data[ glyc_num ] - psi_stdev[ glyc_num ] + rg().uniform() * psi_stdev[ glyc_num ] * 2, 360.0 )
-            new_omega = periodic_range( omega_data[ glyc_num ] - omega_stdev[ glyc_num ] + rg().uniform() * omega_stdev[ glyc_num ] * 2, 360.0 )
+            new_psi = periodic_range( ideal_LCM_phi_psi_omega[ glyc_num ][1] - ideal_LCM_phi_psi_omega_stdev[ glyc_num ][1] + rg().uniform() * ideal_LCM_phi_psi_omega_stdev[ glyc_num ][1] * 2, 360.0 )
+            new_omega = periodic_range( ideal_LCM_phi_psi_omega[ glyc_num ][2] - ideal_LCM_phi_psi_omega_stdev[ glyc_num ][2] + rg().uniform() * ideal_LCM_phi_psi_omega_stdev[ glyc_num ][2] * 2, 360.0 )
         # otherwise, just use the ideal psi and omega
         else:
-            new_psi = psi_data[ glyc_num ]
-            new_omega = omega_data[ glyc_num ]
+            new_psi = ideal_LCM_phi_psi_omega[ glyc_num ][1]
+            new_omega = ideal_LCM_phi_psi_omega[ glyc_num ][2]
         # set the new phi and omega
         set_glycosidic_torsion( psi_dihedral, pose, glyc_num, new_psi )
         # setting the omega to 0 doesn't do anything to glycans if they don't have an omega

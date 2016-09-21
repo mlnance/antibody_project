@@ -535,9 +535,9 @@ while not jd.job_complete:
         #    print "score after pack:", main_sf( testing_pose )
 
         # minimize the backbone of the Fc sugars
-        #Fc_glycan_min_mover.apply( testing_pose )
-        #if input_args.verbose:
-        #    print "score after min:", main_sf( testing_pose )
+        Fc_glycan_min_mover.apply( testing_pose )
+        if input_args.verbose:
+            print "score after min:", main_sf( testing_pose )
 
         # accept or reject the total move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):

@@ -34,6 +34,7 @@ parser.add_argument("num_moves_per_trial", type=int, help="how many SugarSmallMo
 parser.add_argument("--LCM_reset", action="store_true", help="do you want a LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan? (Excluding core GlcNAc)")
 parser.add_argument("--use_population_ideal_LCM_reset", action="store_true", help="do you want the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan to ideal values (stdev of 0) using population weights? (Excluding core GlcNAc)")
 parser.add_argument("--use_ideal_LCM_reset", action="store_true", help="do you want the LinkageConformerMover to reset the phi, psi, and omega values of the Fc glycan to ideal values (stdev of 0) of only the highest population weight? (Excluding core GlcNAc)")
+parser.add_argument("--sample_LCM_reset_first", action="store_true", help="if using regular --LCM_reset, do you want to sample 20 different resets and begin the protocol on the lowest scoring structure?")
 parser.add_argument("--set_native_omega", action="store_true", help="do you want to set the omega torsion (res 221 and 445) of the branch residue back to its native value? Default is False")
 parser.add_argument("--light_reset", action="store_true", help="do you want the random reset to be light? +/- 10-15 degrees discluding 0")
 parser.add_argument("--ramp_sf", action="store_true", help="do you want to ramp up the fa_atr term and ramp down the fa_rep term?")
@@ -104,10 +105,13 @@ if input_args.use_ideal_LCM_reset is True and input_args.use_population_ideal_LC
     print "\nYou asked for both an ideal LCM reset and an ideal LCM reset using population weights. Please only specify one type of LCM reset option. Exiting"
     sys.exit()
 if input_args.use_ideal_LCM_reset is True and input_args.LCM_reset is not True:
-    print "You asked for a specific type of LCM reset ( use_ideal_LCM_reset ), but did not tell me you actually want an LCM reset. Please specify the --LCM_reset option. Exiting for safety."
+    print "\nYou asked for a specific type of LCM reset ( use_ideal_LCM_reset ), but did not tell me you actually want an LCM reset. Please specify the --LCM_reset option. Exiting for safety."
     sys.exit()
 if input_args.use_population_ideal_LCM_reset is True and input_args.LCM_reset is not True:
-    print "You asked for a specific type of LCM reset ( use_population_ideal_LCM_reset ), but did not tell me you actually want an LCM reset. Please specify the --LCM_reset option. Exiting for safety."
+    print "\nYou asked for a specific type of LCM reset ( use_population_ideal_LCM_reset ), but did not tell me you actually want an LCM reset. Please specify the --LCM_reset option. Exiting for safety."
+    sys.exit()
+if input_args.LCM_reset is True and input_args.sample_LCM_reset_first is True:
+    print "\nYou asked for me to do two different resets: LCM reset resets the structure once and continues the protocol. sample_LCM_reset_first uses LCM reset but makes multiple structures and starts the protocol with the lowest-scoring random reset. Please just choose one reset type. Exiting."
     sys.exit()
 
 # check that num_sugar_small_move_trials is 10 or more if ramp_sf is set to True
@@ -256,6 +260,7 @@ info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %str( inp
 info_file_details.append( "LCM reset of Fc glycan?:\t\t%s\n" %str( input_args.LCM_reset ) )
 info_file_details.append( "Use main ideal in LCM reset?:\t\t%s\n" %str( input_args.use_ideal_LCM_reset ) )
 info_file_details.append( "Use population ideals in LCM reset?:\t%s\n" %str( input_args.use_population_ideal_LCM_reset ) )
+info_file_details.append( "Sample 20 LCM reset structures first?:\t%s\n" %str( input_args.sample_LCM_reset_first ) )
 info_file_details.append( "Reset omega torsion back to native?:\t%s\n" %str( input_args.set_native_omega ) )
 info_file_details.append( "Light reset of Fc glycan?:\t\t%s\n" %str( input_args.light_reset ) )
 info_file_details.append( "Using score ramping?:\t\t\t%s\n" %str( input_args.ramp_sf ) )
@@ -300,10 +305,13 @@ cur_decoy_num = 1
 print "Running SugarSmallMover PyJobDistributor..."
 
 
+# for use when you are looking at the starting structure ensembles
 phi_psi_omegas_seen = []
 reset_poses = {}
 
 
+num_mc_rejects_in_a_row = 0
+max_num_mc_rejects_in_a_row = 0
 while not jd.job_complete:
     # get a fresh copy of the working pose to be used in this protocol
     testing_pose = Pose()
@@ -328,7 +336,7 @@ while not jd.job_complete:
     #### Fc GLYCAN RESET ####
     #########################
 
-    # if user wants an LCM reset
+    # if user wants a single LCM reset
     if input_args.LCM_reset:
         # for each residue except core GlcNAc
         for res_num in testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc:
@@ -375,14 +383,52 @@ while not jd.job_complete:
                 # apply the LCM
                 lcm.apply( testing_pose )
 
-        # set the omega torsion in the glycan at the branched residue back to native, if desired
-        if input_args.set_native_omega:
-            testing_pose.set_omega( 221, native_pose.omega( 221 ) )
-            testing_pose.set_omega( 445, native_pose.omega( 445 ) )
-
-        #pmm.apply( testing_pose )
+        pmm.apply( testing_pose )
         if input_args.verbose:
             print "score of LCM reset:", main_sf( testing_pose )
+
+    # if user wants multiple rounds of LCM reset to start protocol on the lower E of the reset structures
+    if input_args.sample_LCM_reset_first:
+        rounds = 20
+        min_score = None
+        min_pose = None
+
+        for ii in range( rounds ):
+            # for each residue except core GlcNAc
+            for res_num in testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc:
+                # make a MoveMap for this single residue
+                res_mm = MoveMap()
+
+                # set bb to True ( phi, psi, omega )
+                res_mm.set_bb( res_num, True )
+
+                # make an appropriate LinkageConformerMover
+                lcm = LinkageConformerMover()
+                lcm.set_movemap( res_mm )
+
+                # setting these options for clarity
+                lcm.set_use_conformer_population_stats( True )
+                lcm.set_x_standard_deviations( 1 )
+
+                # apply the LCM
+                lcm.apply( testing_pose )
+
+            # update the lowest E reset structure
+            if min_score is None:
+                min_pose = testing_pose.clone()
+                min_score = main_sf( testing_pose )
+            elif main_sf( testing_pose ) < min_score:
+                min_pose = testing_pose.clone()
+                min_score = main_sf( testing_pose )
+        testing_pose.assign( min_pose )
+        pmm.apply( testing_pose )
+        if input_args.verbose:
+            print "score of LCM reset after %s rounds:" %rounds, main_sf( testing_pose )
+
+    # set the omega torsion in the glycan at the branched residue back to native, if desired
+    if input_args.set_native_omega:
+        testing_pose.set_omega( 221, native_pose.omega( 221 ) )
+        testing_pose.set_omega( 445, native_pose.omega( 445 ) )
 
     # if user wants a light reset by perturbing starting glycan phi/psi/omega
     if input_args.light_reset:
@@ -559,6 +605,9 @@ while not jd.job_complete:
 
         # accept or reject the total move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):
+            # reset the counter
+            num_mc_rejects_in_a_row = 0
+
             # up the counters and send to pymol
             num_ssh_accept += 1
             pmm.apply( testing_pose )
@@ -566,7 +615,14 @@ while not jd.job_complete:
             # print out a non-ramped sf to watch for convergence, if desired
             if input_args.watch_for_convergence:
                 print "***Am I converging?:", convergence_sf( testing_pose )
+        else:
+            # update the MC rejection counter
+            num_mc_rejects_in_a_row += 1
+            if num_mc_rejects_in_a_row > max_num_mc_rejects_in_a_row:
+                max_num_mc_rejects_in_a_row = num_mc_rejects_in_a_row
         num_mc_checks += 1
+
+        # check how many rejects have happened in a row and make the appropriate adjustment
 
         # print out the MC acceptance rate every 3 trials and on the last trial
         mc_acceptance = round( ( float( num_ssh_accept ) / float( num_mc_checks ) * 100 ), 2 )

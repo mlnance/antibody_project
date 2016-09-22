@@ -299,6 +299,10 @@ cur_decoy_num = 1
 
 print "Running SugarSmallMover PyJobDistributor..."
 
+
+reset_poses = {}
+
+
 while not jd.job_complete:
     # get a fresh copy of the working pose to be used in this protocol
     testing_pose = Pose()
@@ -415,6 +419,7 @@ while not jd.job_complete:
 
     # store a copy of the reset pose to manually look at later
     reset_pose = testing_pose.clone()
+    reset_poses[ cur_decoy_num ] = testing_pose
 
 
 
@@ -535,9 +540,9 @@ while not jd.job_complete:
         #    print "score after pack:", main_sf( testing_pose )
 
         # minimize the backbone of the Fc sugars
-        Fc_glycan_min_mover.apply( testing_pose )
-        if input_args.verbose:
-            print "score after min:", main_sf( testing_pose )
+        #Fc_glycan_min_mover.apply( testing_pose )
+        #if input_args.verbose:
+        #    print "score after min:", main_sf( testing_pose )
 
         # accept or reject the total move using the MonteCarlo object
         if mc.boltzmann( testing_pose ):
@@ -559,17 +564,18 @@ while not jd.job_complete:
                 print "  Acceptance rate:", mc_acceptance
 
     # minimize the backbone of the Fc sugars before dumping the final pose
-    before_final_min_pose = testing_pose.clone()
-    if input_args.verbose:
-        print "score before final min:", main_sf( testing_pose )
-    Fc_glycan_min_mover.apply( testing_pose )
-    if input_args.verbose:
-        print "score after final min:", main_sf( testing_pose )
-    after_final_min_pose = testing_pose.clone()
-    pmm.apply( testing_pose )
+    #before_final_min_pose = testing_pose.clone()
+    #if input_args.verbose:
+    #    print "score before final min:", main_sf( testing_pose )
+    #Fc_glycan_min_mover.apply( testing_pose )
+    #if input_args.verbose:
+    #    print "score after final min:", main_sf( testing_pose )
+    #after_final_min_pose = testing_pose.clone()
+    #pmm.apply( testing_pose )
 
     # collect additional metric data
     try:
+        print asdf
         metrics = get_pose_metrics_on_native( testing_pose, 
                                               testing_pose_info, 
                                               native_pose, 

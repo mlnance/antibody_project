@@ -300,6 +300,7 @@ cur_decoy_num = 1
 print "Running SugarSmallMover PyJobDistributor..."
 
 
+phi_psi_omegas_seen = []
 reset_poses = {}
 
 
@@ -379,7 +380,7 @@ while not jd.job_complete:
             testing_pose.set_omega( 221, native_pose.omega( 221 ) )
             testing_pose.set_omega( 445, native_pose.omega( 445 ) )
 
-        pmm.apply( testing_pose )
+        #pmm.apply( testing_pose )
         if input_args.verbose:
             print "score of LCM reset:", main_sf( testing_pose )
 
@@ -419,7 +420,19 @@ while not jd.job_complete:
 
     # store a copy of the reset pose to manually look at later
     reset_pose = testing_pose.clone()
-    reset_poses[ cur_decoy_num ] = testing_pose
+
+    # show all the reset poses that are unique-for use in getting a picture of the starting structure ensemble
+    #phi_psi_omega = []
+    #for ii in testing_pose_info.native_Fc_glycan_nums_except_core_GlcNAc:
+    #    phi_psi_omega.append( round( testing_pose.phi(ii), 2 ) )
+    #    phi_psi_omega.append( round( testing_pose.psi(ii), 2 ) )
+    #    phi_psi_omega.append( round( testing_pose.omega(ii), 2 ) )
+    #print cur_decoy_num, phi_psi_omega
+    #print '**', phi_psi_omega in phi_psi_omegas_seen
+    #if ( phi_psi_omega in phi_psi_omegas_seen ) == False:
+    #    pmm.apply( testing_pose )
+    #    reset_poses[ cur_decoy_num ] = testing_pose
+    #    phi_psi_omegas_seen.append( phi_psi_omega )
 
 
 
@@ -575,7 +588,6 @@ while not jd.job_complete:
 
     # collect additional metric data
     try:
-        print asdf
         metrics = get_pose_metrics_on_native( testing_pose, 
                                               testing_pose_info, 
                                               native_pose, 

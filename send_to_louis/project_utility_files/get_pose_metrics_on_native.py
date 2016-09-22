@@ -161,18 +161,16 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( str( delta_interaction_energy ) )
     
 
-    '''
     # check if the GlcNAc above the Gal residue contacts the Phe residue within 5 Angstroms ( 4.68 contact distance in native )
     GlcNAc_to_Phe_cutoff = 5
     working_GlcNAc_to_Phe_contacts = check_GlcNAc_to_Phe_contacts( working, GlcNAc_to_Phe_cutoff, native = True )
     metric_data.append( "GlcNAc_to_its_Phe_contacts_%sA:" %( str( GlcNAc_to_Phe_cutoff ) ) )
     metric_data.append( str( working_GlcNAc_to_Phe_contacts ) )
-    '''
     
 
     #################
     # get the contact maps for the working and the native to use for other metric calculations
-    Fc_glycan_to_Fc_protein_CUTOFF = 10
+    Fc_glycan_to_Fc_protein_CUTOFF = 8
     working_Fc_glycan_to_Fc_protein_contact_map, working_Fc_glycan_to_Fc_protein_tot_contacts = get_contact_map_between_range1_range2( working_info.native_Fc_glycan_nums_except_core_GlcNAc, 
                                                                                                                                        working_info.native_Fc_protein_nums, 
                                                                                                                                        working, 
@@ -183,9 +181,8 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
                                                                                                                                      native, 
                                                                                                                                      cutoff = Fc_glycan_to_Fc_protein_CUTOFF, 
                                                                                                                                      return_more_info = True )
-    '''
 
-    Fc_glycan_to_FcR_glycan_CUTOFF = 10
+    Fc_glycan_to_FcR_glycan_CUTOFF = 8
     working_Fc_glycan_to_FcR_glycan_contact_map, working_Fc_glycan_to_FcR_glycan_tot_contacts = get_contact_map_between_range1_range2( working_info.native_Fc_glycan_nums_except_core_GlcNAc, 
                                                                                                                                        working_info.native_FcR_glycan_nums, 
                                                                                                                                        working, 
@@ -197,6 +194,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
                                                                                                                                      cutoff = Fc_glycan_to_FcR_glycan_CUTOFF, 
                                                                                                                                      return_more_info = True )
 
+    '''
     intf_CUTOFF = 8
     working_intf_contact_map, working_intf_tot_contacts = get_contact_map_with_JUMP_NUM( JUMP_NUM, 
                                                                                          working, 
@@ -265,7 +263,6 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     #metric_data.append( "delta_Fc_glycan_to_Fc_protein_contact_distance_min_%sA:" %( str( Fc_glycan_to_Fc_protein_CUTOFF ) ) )
     #metric_data.append( str( delta_Fc_glycan_to_Fc_protein_contact_distance_min ) )
     
-    '''
     # Fc glycan to FcR glycan contact map analysis
     working_Fc_glycan_to_FcR_glycan_data_holder = analyze_contact_map( working_Fc_glycan_to_FcR_glycan_contact_map, working )
     native_Fc_glycan_to_FcR_glycan_data_holder = analyze_contact_map( native_Fc_glycan_to_FcR_glycan_contact_map, native )
@@ -298,8 +295,9 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     #metric_data.append( str( working_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_min ) )
     #metric_data.append( "delta_Fc_glycan_to_FcR_glycan_contact_distance_min_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
     #metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_contact_distance_min ) )
-    
-    
+
+
+    '''
     # interface residue contact map analysis
     working_intf_data_holder = analyze_contact_map( working_intf_contact_map, working )
     native_intf_data_holder = analyze_contact_map( native_intf_contact_map, native )

@@ -387,6 +387,7 @@ while not jd.job_complete:
         if input_args.verbose:
             print "score of LCM reset:", main_sf( testing_pose )
 
+    '''
     # if user wants multiple rounds of LCM reset to start protocol on the lower E of the reset structures
     if input_args.sample_LCM_reset_first:
         rounds = 20
@@ -463,9 +464,10 @@ while not jd.job_complete:
         pmm.apply( testing_pose )                                                      
         if input_args.verbose:
             print "score of light reset:", main_sf( testing_pose )
-
+    '''
     # store a copy of the reset pose to manually look at later
     reset_pose = testing_pose.clone()
+    reset_pose.pdb_info().name( "reset_pose_" str( cur_decoy_num ) )
 
     # show all the reset poses that are unique-for use in getting a picture of the starting structure ensemble
     #phi_psi_omega = []

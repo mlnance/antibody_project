@@ -2844,47 +2844,47 @@ def get_res_nums_within_radius_of_residue_list( residues, input_pose, radius, in
 
 
 
-def compare_single_residue_energies_between_poses( sf, res_num, pose1, pose2 ):
+def compare_single_residue_energies_between_poses( sf, res_num, native, decoy ):
     """
     Shows the breakdown of the <pose1>'s score by printing the score for the <res_num> of each nonzero weighted ScoreType in <sf> in <pose1> and <pose2>
     :param sf: ScoreFunction
     :param res_num: int( Pose residue number )
-    :param pose1: Pose
-    :param pose2: Pose
+    :param native: Pose
+    :param decoy: Pose
     """
     # imports
     from rosetta import score_type_from_name
 
 
     # get the string version of the residue's energies from Pose
-    # pose1
-    sf( pose1 )
-    res_energies_obj1 = pose1.energies().residue_total_energies( res_num )
+    # native
+    sf( native )
+    res_energies_obj1 = native.energies().residue_total_energies( res_num )
     res_energies1 = res_energies_obj1.show_nonzero().strip().split()
-    score_terms_in_pose1 = []
+    score_terms_in_native = []
     for term in res_energies1:
         try:
             # if this can't be converted into a float, it is a string. Therefore it is a score term
             float( term )
         except ValueError:
-            score_terms_in_pose1.append( term.replace( ':', '' ) )
+            score_terms_in_native.append( term.replace( ':', '' ) )
 
-    # pose2
-    sf( pose2 )
-    res_energies_obj2 = pose2.energies().residue_total_energies( res_num )
+    # decoy
+    sf( decoy )
+    res_energies_obj2 = decoy.energies().residue_total_energies( res_num )
     res_energies2 = res_energies_obj2.show_nonzero().strip().split()
-    score_terms_in_pose2 = []
+    score_terms_in_decoy = []
     for term in res_energies2:
         try:
             float( term )
         except ValueError:
-            score_terms_in_pose2.append( term.replace( ':', '' ) )
+            score_terms_in_decoy.append( term.replace( ':', '' ) )
 
     # get the score terms that are in common between the two poses
-    score_terms = list( set( score_terms_in_pose1 ) & set( score_terms_in_pose2 ) )
+    score_terms = list( set( score_terms_in_native ) & set( score_terms_in_decoy ) )
 
-    # print out each score of the residue from pose1 vs pose2
-    print "{0:<13} {1:^7} {2:^7} {3:>7}".format( "ScoreType", "Pose1", "Pose2", "Delta" )
+    # print out each score of the residue from native vs decoy
+    print "{0:<13} {1:^7} {2:^7} {3:>7}".format( "ScoreType", "Native", "Decoy", "Delta" )
     for score_term in score_terms:
         e1 = res_energies_obj1.get( score_type_from_name( score_term ) )
         e2 = res_energies_obj2.get( score_type_from_name( score_term ) )

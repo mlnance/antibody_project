@@ -467,7 +467,7 @@ while not jd.job_complete:
     '''
     # store a copy of the reset pose to manually look at later
     reset_pose = testing_pose.clone()
-    reset_pose.pdb_info().name( "reset_pose_" str( cur_decoy_num ) )
+    reset_pose.pdb_info().name( "reset_pose_" + str( cur_decoy_num ) )
 
     # show all the reset poses that are unique-for use in getting a picture of the starting structure ensemble
     #phi_psi_omega = []

@@ -63,16 +63,29 @@ if input_args.native_pdb_file is not None:
 #        sys.exit()
 
 
+
+##################################
+#### CREATE NECESSARY OBJECTS ####
+##################################
+
+# imports 
+from antibody_functions import initialize_rosetta, load_pose, \
+    make_fa_scorefxn_from_file, native_Fc_glycan_nums_except_core_GlcNAc
+from rosetta import MoveMap, PyMOL_Mover
+
 # initialize Rosetta
-from antibody_functions import initialize_rosetta
 initialize_rosetta()
 
+# PyMOL_Mover
+pmm = PyMOL_Mover()
+pmm.keep_history( True )
+
 # load the input pose
-from antibody_functions import load_pose
 native_pose = load_pose( input_args.native_pdb_file )
+#native_pose.pdb_info().name( "native_pose" )
+pmm.apply( native_pose )
 
 # create the desired scorefxn
-from antibody_functions import make_fa_scorefxn_from_file
 main_sf = make_fa_scorefxn_from_file( input_args.scorefxn_file )
 
 
@@ -86,14 +99,33 @@ main_sf = make_fa_scorefxn_from_file( input_args.scorefxn_file )
 # instantiate the proper Protocol_X object
 if input_args.protocol_num == 0:
     from native_3ay4_glycan_modeling_protocols import Protocol_0
-    protocol = Protocol_0( main_sf, input_args.nstruct, input_args.structure_dir, input_args.utility_dir )
+
+    # create the necessary minimization and overall movement MoveMap for Protocol_0
+    min_mm = MoveMap()
+    for res_num in native_Fc_glycan_nums_except_core_GlcNAc:
+        min_mm.set_bb( res_num, True )
+        min_mm.set_chi( res_num, False )
+        if native_pose.residue( res_num ).is_branch_point():
+            min_mm.set_branches( res_num, False )
+
+    # Protocol_0
+    protocol = Protocol_0( min_mm, main_sf, input_args.structure_dir, input_args.utility_dir )
+    protocol.write_protocol_info_file( native_pose )
+    protocol.verbose = True
 
 # create an appropriate decoy_name using the protocol.dump_dir and input_args.protocol_num
 decoy_name = protocol.base_structs_dir + "protocol_%s_decoy" %input_args.protocol_num
 
 
-# create and use the PyJobDistributor object
+
+##########################
+#### PYJOBDISTRIBUTOR ####
+##########################
+
+# imports
 from rosetta import PyJobDistributor
+
+# create and use the PyJobDistributor object
 jd = PyJobDistributor( decoy_name, input_args.nstruct, main_sf )
 jd.native_pose = native_pose
 cur_decoy_num = 1
@@ -101,7 +133,9 @@ cur_decoy_num = 1
 print "Running Protocol %s in a PyJobDistributor..." %input_args.protocol_num
 while not jd.job_complete:
     # run the appropriate protocol
-    testing_pose = protocol.apply( native_pose )
+    testing_pose = native_pose.clone()
+    testing_pose.pdb_info().name( "p%s_decoy%s" %( input_args.protocol_num, cur_decoy_num ) )
+    testing_pose.assign( protocol.apply( testing_pose ) )
 
     # collect additional metric data
     try:

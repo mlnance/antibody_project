@@ -225,9 +225,9 @@ class Model3ay4Glycan:
         info_file_details.append( "\nScore weights used in ScoreFunction:\n" )
         for score_type in score_types:
             if str( score_type ) == "fa_atr":
-                info_file_details.append( "%s: %s * %s in ramp\n" %( str( score_type ), str( self.sf.get_weight( score_type ) ), self.fa_atr_ramp_weight ) )
+                info_file_details.append( "%s: %s * %s in ramp\n" %( str( score_type ), str( self.sf.get_weight( score_type ) ), self.fa_atr_ramp_factor ) )
             elif str( score_type ) == "fa_rep":
-                info_file_details.append( "%s: %s * %s in ramp\n" %( str( score_type ), str( self.sf.get_weight( score_type ) ), self.fa_rep_ramp_weight ) )
+                info_file_details.append( "%s: %s * %s in ramp\n" %( str( score_type ), str( self.sf.get_weight( score_type ) ), self.fa_rep_ramp_factor ) )
             else:
                 info_file_details.append( "%s: %s\n" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) )
         self.info_file = ''.join( info_file_details )
@@ -358,10 +358,10 @@ class Model3ay4Glycan:
                     FA_ATR_ORIG = self.sf.get_weight( fa_atr )
                     FA_REP_ORIG = self.sf.get_weight( fa_rep )
                     # adjust the fa_atr weight
-                    FA_ATR_NEW = FA_ATR_ORIG * self.fa_atr_ramp_weight
+                    FA_ATR_NEW = FA_ATR_ORIG * self.fa_atr_ramp_factor
                     self.sf.set_weight( fa_atr, FA_ATR_NEW )
                     # adjust the fa_rep weight
-                    FA_REP_NEW = FA_REP_ORIG * self.fa_rep_ramp_weight
+                    FA_REP_NEW = FA_REP_ORIG * self.fa_rep_ramp_factor
                     self.sf.set_weight( fa_rep, FA_REP_NEW )
 
                 # else, adjust the score weight

@@ -128,8 +128,8 @@ if input_args.protocol_num == 0:
     GlycanModelProtocol.use_population_ideal_LCM_reset = True
     GlycanModelProtocol.set_native_omega = True
     GlycanModelProtocol.ramp_sf = True
-    GlycanModelProtocol.fa_atr_ramp_weight = 2.0
-    GlycanModelProtocol.fa_rep_ramp_weight = 0.5
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.5
     GlycanModelProtocol.minimize_each_round = True
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = True

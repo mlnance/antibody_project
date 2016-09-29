@@ -201,7 +201,7 @@ class Model3ay4Glycan:
             pass
 
 
-    def write_protocol_info_file( self, pose ):
+    def write_protocol_info_file( self, pose, protocol_num ):
         info_file_details = []
         info_file_details.append( "Native PDB filename:\t\t\t%s\n" %pose.pdb_info().name().split( '/' )[-1] )
         #info_file_details.append( "Sugar filename:\t\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
@@ -234,7 +234,7 @@ class Model3ay4Glycan:
         print "\n", self.info_file, "\n"
 
         # write out the info file with the collected info from above
-        info_filename = self.dump_dir + "protocol_0_run.info"
+        info_filename = self.dump_dir + "protocol_%s_run.info" %protocol_num
         with open( info_filename, "wb" ) as fh:
             fh.write( "Info for this run of %s\n\n" %self.name )
             fh.write( self.info_file )

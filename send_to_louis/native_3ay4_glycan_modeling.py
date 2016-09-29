@@ -137,7 +137,7 @@ if input_args.protocol_num == 0:
     GlycanModelProtocol.verbose = True
 
     # write information to file (also prints to screen)
-    GlycanModelProtocol.write_protocol_info_file( native_pose )
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
 
 elif input_args.protocol_num == 1:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_1 version
@@ -157,7 +157,7 @@ elif input_args.protocol_num == 1:
                                            angle_max = 6.0 * 3,  # 6.0 comes from default angle_max from SmallMover and ShearMover
                                            dump_dir = input_args.structure_dir, 
                                            pmm = pmm )
-    GlycanModelProtocol.trials = 200
+    GlycanModelProtocol.trials = 10
     GlycanModelProtocol.moves_per_trial = 3
     GlycanModelProtocol.LCM_reset = True
     GlycanModelProtocol.use_population_ideal_LCM_reset = True
@@ -172,7 +172,7 @@ elif input_args.protocol_num == 1:
     GlycanModelProtocol.verbose = True
 
     # write information to file (also prints to screen)
-    GlycanModelProtocol.write_protocol_info_file( native_pose )
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
 
 # else I haven't made this protocol number yet
 else:

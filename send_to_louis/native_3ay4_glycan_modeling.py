@@ -69,10 +69,8 @@ if input_args.native_pdb_file is not None:
 ##################################
 
 # imports 
-from antibody_functions import initialize_rosetta, \
-    native_Fc_glycan_nums_except_core_GlcNAc
 from native_3ay4_glycan_modeling_protocol_functions import get_fa_scorefxn_with_given_weights, \
-    load_pose
+    load_pose, initialize_rosetta, native_Fc_glycan_nums_except_core_GlcNAc
 from rosetta import MoveMap, PyMOL_Mover
 
 # initialize Rosetta
@@ -132,7 +130,7 @@ if input_args.protocol_num == 0:
     GlycanModelProtocol.fa_rep_ramp_factor = 0.5
     GlycanModelProtocol.minimize_each_round = True
     GlycanModelProtocol.make_small_moves = True
-    GlycanModelProtocol.make_shear_moves = True
+    GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_5A_1A_tol.cst"
     GlycanModelProtocol.verbose = True
 
@@ -151,7 +149,7 @@ elif input_args.protocol_num == 1:
     # create the desired scorefxn
     sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
 
-    # Protocol_0 creation and argument setting
+    # Protocol_1 creation and argument setting
     GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
                                            sf_in = sf, 
                                            angle_max = 6.0 * 3,  # 6.0 comes from default angle_max from SmallMover and ShearMover
@@ -167,8 +165,43 @@ elif input_args.protocol_num == 1:
     GlycanModelProtocol.fa_rep_ramp_factor = 0.5
     GlycanModelProtocol.minimize_each_round = True
     GlycanModelProtocol.make_small_moves = True
-    GlycanModelProtocol.make_shear_moves = True
+    GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_5A_1A_tol.cst"
+    GlycanModelProtocol.verbose = True
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
+elif input_args.protocol_num == 2:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_1 version
+    mm = MoveMap()
+    for res_num in native_Fc_glycan_nums_except_core_GlcNAc:
+        mm.set_bb( res_num, True )
+        mm.set_chi( res_num, False )
+        if native_pose.residue( res_num ).is_branch_point():
+            mm.set_branches( res_num, False )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+
+    # Protocol_2 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 3,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.trials = 200
+    GlycanModelProtocol.moves_per_trial = 3
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = True
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.5
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = None
     GlycanModelProtocol.verbose = True
 
     # write information to file (also prints to screen)

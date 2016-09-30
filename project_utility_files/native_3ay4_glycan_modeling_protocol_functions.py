@@ -7,6 +7,70 @@ Most compiled using the worker functions from antibody_functions
 '''
 
 
+############################
+#### CONSTANT VARIABLES ####
+############################
+
+## Pose numbering information ONLY relevant to native PDB 3ay4
+native_Fc_chain_A_nums = range( 1, 215 + 1 )
+native_Fc_glycan_A_nums = range( 216, 223 + 1 )
+native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
+native_Fc_chain_B_nums = range( 224, 439 + 1 )
+native_Fc_glycan_B_nums = range( 440, 447 + 1 )
+native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
+native_FcR_protein_nums = range( 448, 607 + 1 )
+native_FcR_main_glycan_nums = range( 608, 615 + 1 )
+native_FcR_three_mer_nums = range( 616, 618 + 1 )
+native_FcR_glycan_nums = range( 608, 618 + 1 )
+native_branch_points = [ 69, 218, 292, 442, 478, 595, 608, 610 ]
+native_Fc_glycan_branch_point_nums = [ 218, 442 ]
+native_Fc_glycan_branch_point_nums_with_ASN = [ 69, 218, 292, 442 ]
+native_Fc_protein_nums = []
+native_Fc_protein_nums.extend( native_Fc_chain_A_nums )
+native_Fc_protein_nums.extend( native_Fc_chain_B_nums )
+native_Fc_glycan_nums = []
+native_Fc_glycan_nums.extend( native_Fc_glycan_A_nums )
+native_Fc_glycan_nums.extend( native_Fc_glycan_B_nums )
+native_Fc_glycan_nums_except_core_GlcNAc = []
+native_Fc_glycan_nums_except_core_GlcNAc.extend( native_Fc_glycan_A_nums_except_core_GlcNAc )
+native_Fc_glycan_nums_except_core_GlcNAc.extend( native_Fc_glycan_B_nums_except_core_GlcNAc )
+native_order_nums = range( 1, 618 + 1 )
+native_Fc_protein_chains = [ 'A', 'B' ]
+native_FcR_protein_chains = [ 'C' ]
+native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
+native_Fc_glycan_A_chains = [ 'D', 'E' ]
+native_Fc_glycan_B_chains = [ 'F', 'G' ]
+native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
+
+
+
+###################
+#### FUNCTIONS ####
+###################
+
+def initialize_rosetta( constant_seed = False, debug = False ):
+    """
+    Initialize Rosetta and mute basic, core, and protocols.
+    If constant_seed == True, use default constant seed 1111111
+    If debug == True, use default constant seed and do not mute Rosetta
+    """
+    # imports
+    from rosetta import init
+
+
+    print "Initializing Rosetta with sugar flags"
+
+    # makes Rosetta quiet and sugar I/O ready
+    #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
+    if constant_seed:
+        init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
+    elif debug:
+        init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed -out:level 400" )
+    else:
+        init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
+
+
+
 def load_pose( pose_filename ):
     """
     Load pose from a filename
@@ -15,6 +79,7 @@ def load_pose( pose_filename ):
     """
     # imports
     from rosetta import Pose, pose_from_file, FoldTree
+
     
     # create Pose object from filename
     pose = Pose()
@@ -44,7 +109,8 @@ def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
     "return: ScoreFunction( fa_scorefxn with adjusted weights of given scoretypes )
     """
     # imports
-    from rosetta import get_fa_scorefxn
+    import sys
+    from rosetta import get_fa_scorefxn, score_type_from_name
     from rosetta.core.scoring import fa_atr
 
 
@@ -104,6 +170,7 @@ def native_3ay4_Fc_glycan_LCM_reset( input_pose, residue_numbers, use_population
     from rosetta import MoveMap
     from rosetta.protocols.carbohydrates import LinkageConformerMover
 
+
     # check input arguments
     #if use_population_ideal_LCM_reset and use_ideal_LCM_reset:
     #    print "\nYou want me to use both the population ideal and the main ideal. This does not make sense to me. Ensure you are only setting one of these arguments to True. Exiting\n"
@@ -153,6 +220,7 @@ def add_constraints_to_pose( constraint_file, input_pose ):
     '''
     # imports
     from rosetta.protocols.simple_moves import ConstraintSetMover
+
 
     # copy the input_pose
     pose = input_pose.clone()
@@ -227,6 +295,7 @@ def get_ramp_score_weight( current_weight, target_weight, current_step, total_st
     """
     # imports
     import sys
+
 
     # need to be able to do this a minimum of 10 times, otherwise the math will break
     if total_steps < 10:

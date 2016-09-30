@@ -352,7 +352,7 @@ class Model3ay4Glycan:
             #### RAMP WITH SCORE FUNCTION UPDATE ####
             #########################################
             if self.ramp_sf:
-                # if this is the first move, double the fa_atr and half the fa_rep
+                # if this is the first move, adjust the fa_atr and fa_rep terms by the corresponding factors
                 if trial_num == 1:
                     # store the original fa_atr and fa_rep
                     FA_ATR_ORIG = self.sf.get_weight( fa_atr )
@@ -366,7 +366,7 @@ class Model3ay4Glycan:
 
                 # else, adjust the score weight
                 else:
-                    # ramp up or down the appropriate scoring terms and get it back to the MonteCarlo and MinMover objects
+                    # ramp up or down the appropriate scoring terms
                     self.sf.set_weight( fa_atr, get_ramp_score_weight( self.sf.get_weight( fa_atr ), 
                                                                        FA_ATR_ORIG, 
                                                                        trial_num, 

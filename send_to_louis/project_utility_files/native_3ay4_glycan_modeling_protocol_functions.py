@@ -43,8 +43,9 @@ def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
     :param verbose: bool( print the final weights of the returned ScoreFunction? ) Default = False
     "return: ScoreFunction( fa_scorefxn with adjusted weights of given scoretypes )
     """
+    # imports
     from rosetta import get_fa_scorefxn
-    from rosetta.core.scoring import score_type_from_name
+    from rosetta.core.scoring import fa_atr
 
 
     # argument check - check the passed argument is a dict
@@ -55,11 +56,8 @@ def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
     # get a standard fa_scorefxn to start with
     sf = get_fa_scorefxn()
     
-    # make a dummy ScoreType to use for isinstance() checking
-    fa_dun = score_type_from_name( "fa_dun" )
-
     # for each entry of the dictionary, change the weight
-    for scoretype_name in weights_dict:
+    for scoretype_name, scoretype_weight in weights_dict.items():
         # if the key is a string
         if isinstance( scoretype_name, str ):
             try:
@@ -68,16 +66,13 @@ def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
                 print "\nThe string name: '%s' does not appear to be a valid ScoreType. Exiting" %scoretype_name
                 sys.exit()
             
-            # get the corresponding weight
-            weight = weights_dict[ scoretype_name ]
-
             # set the weight
-            sf.set_weight( scoretype, weight )
+            sf.set_weight( scoretype, scoretype_weight )
 
         # if the argument is a ScoreType object
-        elif isinstance( scoretype_name, type( fa_dun ) ):
+        elif isinstance( scoretype_name, type( fa_atr ) ):
             # adjust the weight in the scorefxn using the corresponding weight given
-            sf.set_weight( scoretype_name, weights_dict[ scoretype_name ] )
+            sf.set_weight( scoretype_name, scoretype_weight )
 
         # else, I don't know what they gave me as a scoretype
         else: 
@@ -159,12 +154,15 @@ def add_constraints_to_pose( constraint_file, input_pose ):
     # imports
     from rosetta.protocols.simple_moves import ConstraintSetMover
 
+    # copy the input_pose
+    pose = input_pose.clone()
+
     # set the constraint from the file
     constraint_setter = ConstraintSetMover()
     constraint_setter.constraint_file( constraint_file )
-    constraint_setter.apply( input_pose )
+    constraint_setter.apply( pose )
 
-    return input_pose
+    return pose
 
 
 

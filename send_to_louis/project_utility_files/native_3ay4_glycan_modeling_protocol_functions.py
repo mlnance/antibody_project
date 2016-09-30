@@ -154,14 +154,14 @@ def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
 
 
 
-def native_3ay4_Fc_glycan_LCM_reset( input_pose, residue_numbers, use_population_ideal_LCM_reset = False ):
+def native_3ay4_Fc_glycan_LCM_reset( mm, input_pose, use_population_ideal_LCM_reset = False ):
     '''
-    Reset the 3ay4 Fc glycan with freedom determined by <movemap_in>
-    Default action is an LCM_reset with stdev +/1
+    Reset the 3ay4 Fc glycan as determined by carbohydrate residues with BB set to True in MoveMap <mm>
+    Default action is an LCM_reset with stdev +/- 1
     Uses data from the LCM default.table
     <use_population_ideal_LCM_reset> makes the reset only use the ideal values (with appropriate population weights). Essentially, stdev = 0
+    :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be reset )
     :param input_pose: Pose
-    :param residue_numbers: list( the Pose numbers for the residues of interest )
     :param use_population_ideal_LCM_reset: bool( use population ideals only? ) Default = False
     :param use_ideal_LCM_reset: bool( use only the ideal value from the highest population? ) Default = False
     '''
@@ -177,17 +177,21 @@ def native_3ay4_Fc_glycan_LCM_reset( input_pose, residue_numbers, use_population
     #    sys.exit()
 
     # copy in the input_pose
-    testing_pose = input_pose.clone()
+    pose = input_pose.clone()
 
-    # for each residue in <residue_numbers>
-    for res_num in residue_numbers:
+    # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
+    # I'm copying this idea from GlycanRelaxMover, but overall it makes sense anyway. Only things with BB freedom should be sampled
+    carbohydrate_res_nums = [ res_num for res_num in range( 1, pose.n_residue() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
+
+    # for each residue in <carbohydrate_res_nums>
+    for res_num in carbohydrate_res_nums:
         # make a BB MoveMap for this single residue
-        res_mm = MoveMap()
-        res_mm.set_bb( res_num, True )
+        lcm_mm = MoveMap()
+        lcm_mm.set_bb( res_num, True )
 
         # create a LinkageConformerMover with the residue MoveMap
         lcm = LinkageConformerMover()
-        lcm.set_movemap( res_mm )
+        lcm.set_movemap( lcm_mm )
 
         # if the user only wants to use ideals, but within the different population clusters
         if use_population_ideal_LCM_reset:
@@ -196,7 +200,7 @@ def native_3ay4_Fc_glycan_LCM_reset( input_pose, residue_numbers, use_population
             # use_conformer_population_stats is True by default, but setting for clarity
             lcm.set_use_conformer_population_stats( True )
             # apply the LCM
-            lcm.apply( testing_pose )
+            lcm.apply( pose )
 
         # else, standard LCM reset using (by default) population data and a stdev of 1
         else:
@@ -204,9 +208,9 @@ def native_3ay4_Fc_glycan_LCM_reset( input_pose, residue_numbers, use_population
             lcm.set_use_conformer_population_stats( True )
             lcm.set_x_standard_deviations( 1 )
             # apply the LCM
-            lcm.apply( testing_pose )
+            lcm.apply( pose )
 
-    return testing_pose
+    return pose
 
 
 
@@ -234,19 +238,22 @@ def add_constraints_to_pose( constraint_file, input_pose ):
 
 
 
-def SugarSmallMover( seqpos, input_pose, angle_max, set_phi = True, set_psi = True, set_omega = True ):
+def SugarSmallMover( mm, nmoves, angle_max, input_pose, set_phi = True, set_psi = True, set_omega = True ):
     """
-    Randomly resets the phi, psi, and omega values of the sugar residue <seqpos> in <input_pose> to old_value +/- angle_max/2
+    Randomly resets the phi, psi, and omega values of <nmoves> residues found in the <mm> MoveMap that are carbohydrates and have their BB freedom turned on
+    Math works out to where the max motion to either direction or starting position is angle_max/2 ( old_value +/- angle_max/2 )
     Emulates the SmallMover but with the additional omega mover
-    :param seqpos: int( the pose number for the residue )
-    :param input_pose: Pose
+    :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be moved )
+    :param nmoves: int( how many moves should be allowed in one call to the SugarSmallMover? )
     :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
+    :param input_pose: Pose
     :param set_phi: bool( do you want to change the phi angle? ) Default = True
     :param set_psi: bool( do you want to change the psi angle? ) Default = True
     :param set_omega: bool( do you want to change the omega angle? ) Default = True
     :return: Pose
     """
     # imports
+    from random import choice
     from rosetta.basic import periodic_range
     from rosetta.numeric.random import rg
     from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
@@ -256,28 +263,37 @@ def SugarSmallMover( seqpos, input_pose, angle_max, set_phi = True, set_psi = Tr
     # copy the input pose
     pose = input_pose.clone()
 
+    # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
+    # I'm copying this idea from GlycanRelaxMover, but overall it makes sense anyway. Only things with BB freedom should be sampled
+    moveable_res_nums = [ res_num for res_num in range( 1, pose.n_residue() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
+
     # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover
     big_angle = angle_max
     small_angle = big_angle / 2.0
 
-    # get current phi, psi, and omega
-    old_phi = pose.phi( seqpos )
-    old_psi = pose.psi( seqpos )
-    old_omega = pose.omega( seqpos )
+    # for as many moves as specified
+    for ii in range( nmoves ):
+        # pick a residue to sample
+        res_num = choice( moveable_res_nums )
 
-    # get random values for phi, psi, and omega
-    # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
-    new_phi = periodic_range( old_phi - small_angle + rg().uniform() * big_angle, 360.0 )
-    new_psi = periodic_range( old_psi - small_angle + rg().uniform() * big_angle, 360.0 )
-    new_omega = periodic_range( old_omega - small_angle + rg().uniform() * big_angle, 360.0 )
+        # get current phi, psi, and omega
+        old_phi = pose.phi( res_num )
+        old_psi = pose.psi( res_num )
+        old_omega = pose.omega( res_num )
 
-    # set the new values
-    if set_phi:
-        set_glycosidic_torsion( phi_dihedral, pose, seqpos, new_phi )
-    if set_psi:
-        set_glycosidic_torsion( psi_dihedral, pose, seqpos, new_psi )
-    if set_omega:
-        set_glycosidic_torsion( omega_dihedral, pose, seqpos, new_omega )
+        # get random values for phi, psi, and omega
+        # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
+        new_phi = periodic_range( old_phi - small_angle + rg().uniform() * big_angle, 360.0 )
+        new_psi = periodic_range( old_psi - small_angle + rg().uniform() * big_angle, 360.0 )
+        new_omega = periodic_range( old_omega - small_angle + rg().uniform() * big_angle, 360.0 )
+
+        # set the new values
+        if set_phi:
+            set_glycosidic_torsion( phi_dihedral, pose, res_num, new_phi )
+        if set_psi:
+            set_glycosidic_torsion( psi_dihedral, pose, res_num, new_psi )
+        if set_omega:
+            set_glycosidic_torsion( omega_dihedral, pose, res_num, new_omega )
 
     return pose
 

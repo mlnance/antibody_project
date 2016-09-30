@@ -264,21 +264,13 @@ class Model3ay4Glycan:
         working_pose = pose.clone()
 
 
-        ################################################
-        #### GET RESIDUES TO WORK WITH FROM MOVEMAP ####
-        ################################################
-        # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
-        # I'm copying this idea from GlycanRelaxMover, but overall it makes sense anyway. Only things with BB freedom should be sampled
-        moveable_res_nums = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) if self.mm.get_bb( res_num ) and working_pose.residue( res_num ).is_carbohydrate() ]
-
-
         ###################
         #### LCM RESET ####
         ###################
         # reset the glycan using the data from the default.table used for the LinkageConformerMover
         if self.LCM_reset:
-            working_pose.assign( native_3ay4_Fc_glycan_LCM_reset( input_pose = working_pose, 
-                                                                  residue_numbers = moveable_res_nums, 
+            working_pose.assign( native_3ay4_Fc_glycan_LCM_reset( mm = self.mm, 
+                                                                  input_pose = working_pose, 
                                                                   use_population_ideal_LCM_reset = self.use_population_ideal_LCM_reset ) )
         # visualize and relay score information
         try:
@@ -384,19 +376,17 @@ class Model3ay4Glycan:
             ##########################
             #### MAKE SUGAR MOVES ####
             ##########################
-            # for as many moves per trial as desired
-            for ii in range( self.moves_per_trial ):
-                # pick a random moveable residue (Fc glycan residue except the core GlcNAc)
-                res_num = choice( moveable_res_nums )
+            # make as many moves per trial as desired
+            # SugarSmallMover
+            if self.make_small_moves:
+                working_pose.assign( SugarSmallMover( self.mm, self.moves_per_trial, self.angle_max, working_pose, 
+                                                      set_phi = True, 
+                                                      set_psi = True, 
+                                                      set_omega = True ) )
+            # SugarShearMover
+            elif self.make_shear_moves:
+                pass
 
-                # SugarSmallMover
-                if self.make_small_moves:
-                    # apply the SugarSmallMover
-                    working_pose.assign( SugarSmallMover( res_num, working_pose, self.angle_max ) )
-
-                # SugarShearMover
-                elif self.make_shear_moves:
-                    pass
             # relay score information
             if self.verbose:
                 print "score after sugar moves:", self.watch_sf( working_pose )

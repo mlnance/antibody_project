@@ -217,7 +217,7 @@ def native_3ay4_Fc_glycan_LCM_reset( mm, input_pose, use_population_ideal_LCM_re
 
 
 
-def native_3ay4_Fc_glycan_random_reset( mm, input_pose )
+def native_3ay4_Fc_glycan_random_reset( mm, input_pose ):
     '''
     Reset the 3ay4 Fc glycan randomly. Each torsion is chosen from -180 to 180
     :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be reset )

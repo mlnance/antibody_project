@@ -163,8 +163,11 @@ def native_3ay4_Fc_glycan_LCM_reset( mm, input_pose, use_population_ideal_LCM_re
     :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be reset )
     :param input_pose: Pose
     :param use_population_ideal_LCM_reset: bool( use population ideals only? ) Default = False
-    :param use_ideal_LCM_reset: bool( use only the ideal value from the highest population? ) Default = False
+    :return: Pose
     '''
+    # TODO add this option back?
+    #:param use_ideal_LCM_reset: bool( use only the ideal value from the highest population? ) Default = False
+
     # imports
     import sys
     from rosetta import MoveMap
@@ -209,6 +212,37 @@ def native_3ay4_Fc_glycan_LCM_reset( mm, input_pose, use_population_ideal_LCM_re
             lcm.set_x_standard_deviations( 1 )
             # apply the LCM
             lcm.apply( pose )
+
+    return pose
+
+
+
+def native_3ay4_Fc_glycan_random_reset( mm, input_pose )
+    '''
+    Reset the 3ay4 Fc glycan randomly. Each torsion is chosen from -180 to 180
+    :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be reset )
+    :param input_pose: Pose
+    :return: Pose
+    '''
+    # imports
+    import sys
+    from random import uniform
+    from rosetta import MoveMap
+
+
+    # copy in the input_pose
+    pose = input_pose.clone()
+
+    # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
+    # I'm copying this idea from GlycanRelaxMover, but overall it makes sense anyway. Only things with BB freedom should be sampled
+    carbohydrate_res_nums = [ res_num for res_num in range( 1, pose.n_residue() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
+
+    # for each residue in <carbohydrate_res_nums>
+    for res_num in carbohydrate_res_nums:
+        # reset the phi, psi, and omega to some random number between -180 and 180
+        pose.set_phi( res_num, uniform( -180, 180 ) )
+        pose.set_psi( res_num, uniform( -180, 180 ) )
+        pose.set_omega( res_num, uniform( -180, 180 ) )
 
     return pose
 

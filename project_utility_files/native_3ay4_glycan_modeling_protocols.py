@@ -4,10 +4,6 @@ __author__="morganlnance"
 
 '''
 The intent for this file is to hold all of the single-call functions for each protocol that is desired to be tested in modeling the 3ay4 glycan. For this to work appropriately, a file or two should hold all of the necessary "worker" functions, and this file should combine those functions into step to create a protocol. Then another script will have all of the needed instantiation information (making dirs, checking files, making the JobDistributor, etc), and will call a single protocol function from here in the JobDistributor
-
-protocol_0: Base protocol. LCM reset starting from ideal for each linkage and sampling within +/- 1 stdev from there. SSM-200 am3 3mpt. am3 applies to each linkage and torsion equally. Core GlcNAc does not move. After LCM reset and before any movements, native omega at branch residues is restored. native_3ay4_Gal_5A_1A_tol.cst is used. Standard fa_intra_rep (0.44) sf. No packing at all, but minimization of just Fc glycan bb (no chi, no branch) before each MonteCarlo call
-
-protocol_1: Comparison protocol. LCM reset starting from ideal for each linkage (no stdev sampling). SSM-200 am3 3mpt. am3 applies to each linkage and torsion equally. Core GlcNAc does not move. After LCM reset and before any movements, native omega at branch residues is restored. native_3ay4_Gal_5A_1A_tol.cst is used. Standard fa_intra_rep (0.44) sf. No packing at all, but minimization of just Fc glycan bb (no chi, no branch) before each MonteCarlo call
 '''
 
 
@@ -43,6 +39,7 @@ class Model3ay4Glycan:
         self.trials = 50
         self.moves_per_trial = 1
         #self.light_reset = False  # not used at the moment
+        self.random_reset = False
         self.LCM_reset = True
         #self.LCM_main_ideal_reset = False  # not a bad idea, just need to make sure I compiled the data correctly
         self.use_population_ideal_LCM_reset = False
@@ -58,6 +55,7 @@ class Model3ay4Glycan:
         self.mc = None  # MonteCarlo object
         self.mc_acceptance = None
         self.min_mover = None
+        self.reset_pose_obj = None
 
         # "optional" arguments
         self.verbose = False
@@ -210,6 +208,7 @@ class Model3ay4Glycan:
         angle_max_txt = "%s (meaning a max of +/- %s to either side of current)" %( self.angle_max, self.angle_max/2 )
         info_file_details.append( "Angle max (arc range available):\t%s\n" %angle_max_txt )
         #info_file_details.append( "Light reset of Fc glycan?:\t\t%s\n" %self.light_reset )
+        info_file_details.append( "Random reset of Fc glycan?:\t\t%s\n" %self.random_reset )
         info_file_details.append( "LCM reset of Fc glycan?:\t\t%s\n" %self.LCM_reset )
         info_file_details.append( "Use population ideals in LCM reset?:\t%s\n" %self.use_population_ideal_LCM_reset )
         #info_file_details.append( "Use main ideal in LCM reset?:\t\t%s\n" %self.LCM_main_ideal_reset )
@@ -253,7 +252,7 @@ class Model3ay4Glycan:
         from rosetta.core.scoring import fa_atr, fa_rep
         #from antibody_functions import native_Fc_glycan_nums_except_core_GlcNAc  # shouldn't need this as a MoveMap is passed to create this class
         from native_3ay4_glycan_modeling_protocol_functions import native_3ay4_Fc_glycan_LCM_reset, \
-            add_constraints_to_pose, get_ramp_score_weight
+            add_constraints_to_pose, get_ramp_score_weight, native_3ay4_Fc_glycan_random_reset
 
 
         ########################################
@@ -272,13 +271,35 @@ class Model3ay4Glycan:
             working_pose.assign( native_3ay4_Fc_glycan_LCM_reset( mm = self.mm, 
                                                                   input_pose = working_pose, 
                                                                   use_population_ideal_LCM_reset = self.use_population_ideal_LCM_reset ) )
-        # visualize and relay score information
-        try:
-            self.pmm.apply( working_pose )
-        except:
-            pass
-        if self.verbose:
-            print "score of LCM reset:", self.watch_sf( working_pose )
+            # store a copy of the reset pose object
+            self.reset_pose_obj = working_pose.clone()
+
+            # visualize and relay score information
+            try:
+                self.pmm.apply( working_pose )
+            except:
+                pass
+            if self.verbose:
+                print "score of LCM reset:", self.watch_sf( working_pose )
+
+
+        ##########################
+        #### OR, RANDOM RESET ####
+        ##########################
+        # reset the glycan to random values from -180 to 180
+        if self.random_reset:
+            working_pose.assign( native_3ay4_Fc_glycan_random_reset( mm = self.mm, 
+                                                                     input_pose = working_pose ) )
+            # store a copy of the reset pose object
+            self.reset_pose_obj = working_pose.clone()
+
+            # visualize and relay score information
+            try:
+                self.pmm.apply( working_pose )
+            except:
+                pass
+            if self.verbose:
+                print "score of random reset:", self.watch_sf( working_pose )
 
 
         #########################################

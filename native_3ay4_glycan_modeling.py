@@ -18,8 +18,9 @@ parser.add_argument("utility_dir", type=str, help="where do your utility files l
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
 #parser.add_argument("scorefxn_file", type=str, help="which scorefxn weights do you want to use on top of a standard full atom scorefunction?")
-parser.add_argument("protocol_num", type=int, help="which protocol number from native_3ay4_glycan_modeling_protocols do you want to run?")
+parser.add_argument("protocol_num", type=int, help="which protocol number do you want to run?")
 parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
+parser.add_argument("--zip_decoy", "-z", action="store_true", default=False, help="do you want to zip up the dumped decoy pdb?")
 input_args = parser.parse_args()
 
 
@@ -101,7 +102,7 @@ except:
 #########################
 
 # instantiate the proper Protocol_X object
-from native_3ay4_glycan_modeling_protocols import Model3ay4Glycan
+from native_3ay4_glycan_modeling_protocol import Model3ay4Glycan
 if input_args.protocol_num == 0:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_0 version
     mm = MoveMap()
@@ -347,6 +348,43 @@ elif input_args.protocol_num == 6:
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
 
+elif input_args.protocol_num == 7:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_7 version
+    mm = MoveMap()
+    for res_num in native_Fc_glycan_nums_except_core_GlcNAc:
+        mm.set_bb( res_num, True )
+        mm.set_chi( res_num, False )
+        if native_pose.residue( res_num ).is_branch_point():
+            mm.set_branches( res_num, False )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44 } )
+
+    # Protocol_7 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 3,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.trials = 200
+    GlycanModelProtocol.moves_per_trial = 3
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.01
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = None
+    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.dump_reset_pose = True
+    GlycanModelProtocol.zip_dump_poses = True
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
 # else I haven't made this protocol number yet
 else:
     print "\nI haven't created the protocol number you gave me yet.\n"
@@ -369,11 +407,16 @@ jd = PyJobDistributor( decoy_name, input_args.nstruct, sf )
 jd.native_pose = native_pose
 cur_decoy_num = 1
 
+# run the appropriate protocol
 print "Running Protocol %s in a PyJobDistributor..." %input_args.protocol_num
 while not jd.job_complete:
-    # run the appropriate protocol
+    # get a fresh pose object
     working_pose = native_pose.clone()
-    working_pose.pdb_info().name( "p%s_decoy%s" %( input_args.protocol_num, cur_decoy_num ) )
+    # name to use specifically in PyMOL
+    GlycanModelProtocol.pmm_name = "p%s_decoy%s" %( input_args.protocol_num, cur_decoy_num ) 
+    # name to use when dumping the decoy. Should include full path
+    working_pose.pdb_info().name( jd.current_name )
+    # apply the protocol
     working_pose.assign( GlycanModelProtocol.apply( working_pose ) )
 
     # collect additional metric data
@@ -405,5 +448,14 @@ while not jd.job_complete:
     jd.additional_decoy_info = metrics
 
     # dump the decoy
-    jd.output_decoy( working_pose )
+    # sometimes it gets caught up on deleing a filename that doesn't actually exist, so I think this is for the best
+    try:
+        jd.output_decoy( working_pose )
+        # zip up the decoy pose, if desired
+        if input_args.zip_decoy:
+            os.popen( "gzip %s" %working_pose.pdb_info().name() )
+    except:
+        pass
+
+    # increment the decoy number counter
     cur_decoy_num += 1

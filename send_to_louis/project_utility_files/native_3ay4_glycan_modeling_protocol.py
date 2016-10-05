@@ -56,6 +56,12 @@ class Model3ay4Glycan:
         self.mc_acceptance = None
         self.min_mover = None
         self.reset_pose_obj = None
+        self.pmm_name = None
+        self.decoy_name = None
+
+        # dumping arguments
+        self.dump_reset_pose = False
+        self.zip_dump_poses = False
 
         # "optional" arguments
         self.verbose = False
@@ -247,6 +253,7 @@ class Model3ay4Glycan:
         #################
         #### IMPORTS ####
         #################
+        from os import popen
         from random import choice
         from rosetta import MinMover, MonteCarlo
         from rosetta.core.scoring import fa_atr, fa_rep
@@ -261,6 +268,7 @@ class Model3ay4Glycan:
         # get the working and native pose (for this particular script, they are the same thing)
         native_pose = pose.clone()
         working_pose = pose.clone()
+        self.decoy_name = working_pose.pdb_info().name()
 
 
         ###################
@@ -274,9 +282,22 @@ class Model3ay4Glycan:
             # store a copy of the reset pose object
             self.reset_pose_obj = working_pose.clone()
 
+            # dump the reset pose, if desired
+            if self.dump_reset_pose:
+                reset_name = self.reset_pose_obj.pdb_info().name().split( ".pdb" )[0] +"_reset.pdb"
+                self.reset_pose_obj.dump_file( reset_name )
+                # zip the dump file, if desired
+                if self.zip_dump_poses:
+                    os.popen( "gzip %s" %reset_name )
+
             # visualize and relay score information
             try:
-                self.pmm.apply( working_pose )
+                if self.pmm_name is not None:
+                    working_pose.pdb_info().name( self.pmm_name )
+                    self.pmm.apply( working_pose )
+                    working_pose.pdb_info().name( self.decoy_name )
+                else:
+                    self.pmm.apply( working_pose )
             except:
                 pass
             if self.verbose:
@@ -295,7 +316,12 @@ class Model3ay4Glycan:
 
             # visualize and relay score information
             try:
-                self.pmm.apply( working_pose )
+                if self.pmm_name is not None:
+                    working_pose.pdb_info().name( self.pmm_name )
+                    self.pmm.apply( working_pose )
+                    working_pose.pdb_info().name( self.decoy_name )
+                else:
+                    self.pmm.apply( working_pose )
             except:
                 pass
             if self.verbose:
@@ -390,6 +416,7 @@ class Model3ay4Glycan:
                                                                        self.trials ) )
                 # give ramped sf back to MC and MinMover
                 # this is because PyRosetta apparently doesn't do the whole pointer thing with the sf
+                #print "\n".join( [ "%s %s" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) for score_type in self.sf.get_nonzero_weighted_scoretypes() ] )
                 self.mc.score_function( self.sf )
                 self.min_mover.score_function( self.sf )
 
@@ -431,7 +458,12 @@ class Model3ay4Glycan:
                 # up the counters and send to pymol
                 num_mc_accepts += 1
                 try:
-                    self.pmm.apply( working_pose )
+                    if self.pmm_name is not None:
+                        working_pose.pdb_info().name( self.pmm_name )
+                        self.pmm.apply( working_pose )
+                        working_pose.pdb_info().name( self.decoy_name )
+                    else:
+                        self.pmm.apply( working_pose )
                 except:
                     pass
             num_mc_checks += 1

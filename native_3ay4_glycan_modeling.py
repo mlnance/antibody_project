@@ -380,7 +380,6 @@ elif input_args.protocol_num == 7:
     GlycanModelProtocol.constraint_file = None
     GlycanModelProtocol.verbose = True
     GlycanModelProtocol.dump_reset_pose = True
-    GlycanModelProtocol.zip_dump_poses = True
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -448,14 +447,10 @@ while not jd.job_complete:
     jd.additional_decoy_info = metrics
 
     # dump the decoy
-    # sometimes it gets caught up on deleing a filename that doesn't actually exist, so I think this is for the best
-    try:
-        jd.output_decoy( working_pose )
-        # zip up the decoy pose, if desired
-        if input_args.zip_decoy:
-            os.popen( "gzip %s" %working_pose.pdb_info().name() )
-    except:
-        pass
+    jd.output_decoy( working_pose )
+    # zip up the decoy pose, if desired
+    if input_args.zip_decoy:
+        os.popen( "gzip %s" %working_pose.pdb_info().name() )
 
     # increment the decoy number counter
     cur_decoy_num += 1

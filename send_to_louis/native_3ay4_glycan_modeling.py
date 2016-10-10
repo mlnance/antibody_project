@@ -442,7 +442,7 @@ elif input_args.protocol_num == 9:
                                            angle_max = 6.0 * 3,  # 6.0 comes from default angle_max from SmallMover and ShearMover
                                            dump_dir = input_args.structure_dir, 
                                            pmm = pmm )
-    GlycanModelProtocol.trials = 10
+    GlycanModelProtocol.trials = 100
     GlycanModelProtocol.moves_per_trial = 3
     GlycanModelProtocol.LCM_reset = True
     GlycanModelProtocol.use_population_ideal_LCM_reset = False

@@ -137,7 +137,7 @@ if input_args.protocol_num == 0:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_5A_1A_tol.cst"
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -172,7 +172,7 @@ elif input_args.protocol_num == 1:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_5A_1A_tol.cst"
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -207,7 +207,7 @@ elif input_args.protocol_num == 2:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = None
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -242,7 +242,7 @@ elif input_args.protocol_num == 3:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = None
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -277,7 +277,7 @@ elif input_args.protocol_num == 4:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = None
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -312,7 +312,7 @@ elif input_args.protocol_num == 5:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = None
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -347,7 +347,7 @@ elif input_args.protocol_num == 6:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -382,7 +382,7 @@ elif input_args.protocol_num == 7:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = None
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
     GlycanModelProtocol.dump_reset_pose = True
 
     # write information to file (also prints to screen)
@@ -418,7 +418,7 @@ elif input_args.protocol_num == 8:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -454,7 +454,7 @@ elif input_args.protocol_num == 9:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -489,7 +489,7 @@ elif input_args.protocol_num == 10:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -524,7 +524,7 @@ elif input_args.protocol_num == 11:
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = None
-    GlycanModelProtocol.verbose = True
+    GlycanModelProtocol.verbose = input_args.verbose
     GlycanModelProtocol.dump_reset_pose = True
 
     # write information to file (also prints to screen)

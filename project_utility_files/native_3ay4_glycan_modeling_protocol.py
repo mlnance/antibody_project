@@ -207,6 +207,7 @@ class Model3ay4Glycan:
 
     def write_protocol_info_file( self, pose, protocol_num ):
         info_file_details = []
+        info_file_details.append( "Protocol Number Used:\t\t\t%s\n" %protocol_num )
         info_file_details.append( "Native PDB filename:\t\t\t%s\n" %pose.pdb_info().name().split( '/' )[-1] )
         #info_file_details.append( "Sugar filename:\t\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
         info_file_details.append( "Number of SugarSmallMove trials:\t%s\n" %self.trials )

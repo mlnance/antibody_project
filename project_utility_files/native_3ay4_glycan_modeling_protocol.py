@@ -48,6 +48,7 @@ class Model3ay4Glycan:
         self.fa_atr_ramp_factor = 2.0
         self.fa_rep_ramp_factor = 0.5
         self.minimize_each_round = True
+        self.pack_after_x_rounds = 0
         self.make_small_moves = True
         self.make_shear_moves = False
         self.move_all_torsions = True
@@ -56,6 +57,8 @@ class Model3ay4Glycan:
         self.mc = None  # MonteCarlo object
         self.mc_acceptance = None
         self.min_mover = None
+        self.pack_rotamers_mover = None
+        self.packer_task = None
         self.reset_pose_obj = None
         self.pmm_name = None
         self.decoy_name = None
@@ -224,6 +227,8 @@ class Model3ay4Glycan:
         info_file_details.append( "Reset omega torsion back to native?:\t%s\n" %self.set_native_omega )
         info_file_details.append( "Using score ramping?:\t\t\t%s\n" %self.ramp_sf )
         info_file_details.append( "Minimize after each move?:\t\t%s\n" %self.minimize_each_round )
+        if self.pack_after_x_rounds is not 0:
+            info_file_details.append( "Local pack after X rounds:\t\tX = %x\n" %self.pack_after_x_rounds )
         info_file_details.append( "Native constraint file used?:\t\t%s\n" %self.constraint_file )
         info_file_details.append( "Main structure directory:\t\t%s\n" %self.dump_dir )
         info_file_details.append( "Base structure directory:\t\t%s\n" %self.base_structs_dir )
@@ -258,11 +263,12 @@ class Model3ay4Glycan:
         #################
         from os import popen
         from random import choice
-        from rosetta import MinMover, MonteCarlo
+        from rosetta import MinMover, MonteCarlo, standard_packer_task, RotamerTrialsMover
         from rosetta.core.scoring import fa_atr, fa_rep
         #from antibody_functions import native_Fc_glycan_nums_except_core_GlcNAc  # shouldn't need this as a MoveMap is passed to create this class
         from native_3ay4_glycan_modeling_protocol_functions import native_3ay4_Fc_glycan_LCM_reset, \
-            add_constraints_to_pose, get_ramp_score_weight, native_3ay4_Fc_glycan_random_reset
+            add_constraints_to_pose, get_ramp_score_weight, native_3ay4_Fc_glycan_random_reset, \
+            get_res_nums_within_radius_of_residue_list
 
 
         ########################################
@@ -359,13 +365,57 @@ class Model3ay4Glycan:
         ############################
         #### MIN MOVER CREATION ####
         ############################
-        # make the MinMover from the passed MoveMap, if needed
-        if self.min_mover is None:
-            self.min_mover = MinMover( movemap_in = self.mm, 
-                                       scorefxn_in = self.sf,
-                                       min_type_in = "dfpmin_strong_wolfe",
-                                       tolerance_in = 0.01,
-                                       use_nb_list_in = True )
+        # make the MinMover from the passed MoveMap
+        # if desired
+        if self.minimize_each_round:
+            # if needed
+            if self.min_mover is None:
+                self.min_mover = MinMover( movemap_in = self.mm, 
+                                           scorefxn_in = self.sf,
+                                           min_type_in = "dfpmin_strong_wolfe",
+                                           tolerance_in = 0.01,
+                                           use_nb_list_in = True )
+
+
+        ######################################
+        #### PACK ROTAMERS MOVER CREATION ####
+        ######################################
+        # make the PackerRotamersMover from the passed MoveMap
+        # if desired
+        if self.pack_after_x_rounds > 0:
+            # if needed
+            if self.pack_rotamers_mover is None:
+                # make the packer task
+                task = standard_packer_task( working_pose )
+                task.or_include_current( True )
+                task.restrict_to_repacking()
+
+                # get the moveable residues from passed MoveMap
+                # moveable means the BackBone in the MoveMap was set to True and it is a carbohydrate
+                moveable_residues = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) if self.mm.get_bb( res_num ) and working_pose.residue( res_num ).is_carbohydrate() ]
+
+                # get all the protein residues within 8A of these moveable_residues
+                # this uses the nbr_atom to determine if a residue is nearby or not, hence why I'm using a big distance like 8A
+                # this will include the Tyr if core GlcNAc is moveable in 3ay4
+                nearby_protein_residues = get_res_nums_within_radius_of_residue_list( moveable_residues, working_pose, 8, include_res_nums = False )
+
+                # create a list of residue numbers that can be packed
+                # meaning, the moveable carbohydrate residues and the residues around them
+                moveable_residues.extend( nearby_protein_residues )
+                moveable_residues = set( moveable_residues )
+
+                # turn off packing for all residues that are NOT_packable_residues
+                # this is a new set with elements in pose.n_residue() but not in moveable_residues ( disjoint, s - t )
+                # meaning, all residue numbers in pose.n_residue() that are not moveable need to be NOT packed
+                NOT_packable_residues = list( set( range( 1, working_pose.n_residue() + 1 ) ) - moveable_residues )
+                [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in NOT_packable_residues ]
+
+                # make the pack_rotamers_mover
+                pack_rotamers_mover = RotamerTrialsMover( self.sf, task )
+
+                # attach the task and the mover to the protocol object
+                self.packer_task = task
+                self.pack_rotamers_mover = pack_rotamers_mover
 
 
         ####################################
@@ -439,6 +489,19 @@ class Model3ay4Glycan:
             # relay score information
             if self.verbose:
                 print "score after sugar moves:", self.watch_sf( working_pose )
+
+            ##############
+            #### PACK ####
+            ##############
+            # pack the sugars and surrounding residues, if desired
+            if self.pack_after_x_rounds > 0:
+                if trial_num % self.pack_after_x_rounds == 0:
+                    # pack
+                    self.pack_rotamers_mover.apply( working_pose )
+
+                    # relay score information
+                    if self.verbose:
+                        print "score after local pack:", self.watch_sf( working_pose )
 
 
             ###################

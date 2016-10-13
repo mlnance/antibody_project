@@ -381,3 +381,86 @@ def get_ramp_score_weight( current_weight, target_weight, current_step, total_st
         new_weight = current_weight
 
     return new_weight
+
+
+
+def get_res_nums_within_radius( res_num_in, input_pose, radius, include_res_num = False ):
+    """
+    Use the nbr_atom_xyz to find residue numbers within <radius> of <pose_num> in <pose>
+    :param res_num_in: int( Pose residue number )
+    :param input_pose: Pose
+    :param radius: int or float( radius around <pose_num> to use to select resiudes )
+    :param include_res_num: bool( do you want to include <res_num> in the return list? ) Default = False
+    :return: list( Pose residue numbers within <radius> of <pose_num>
+    """
+    # clone the <input_pose>
+    pose = input_pose.clone()
+
+    # container for the centers of each residue in pose
+    centers_of_res = []
+
+    # fill up the centers container
+    for res_num in range( 1, pose.n_residue() + 1 ):
+        center = pose.residue( res_num ).nbr_atom_xyz()
+        centers_of_res.append( center )
+
+    # container for residues inside the <radius>
+    res_nums_in_radius = []
+
+    # nbr_xyz of the residue of interest
+    res_num_xyz = pose.residue( res_num_in ).nbr_atom_xyz()
+
+    for res_num in range( 1, pose.n_residue() + 1 ):
+        # this will get the xyz of the residue of interest, but it will be removed from the final list if desired
+        # (since it will be added as 0 will always be less than <radius>)
+        # get the center of the residue
+        center = pose.residue( res_num ).nbr_atom_xyz()
+
+        # keep the residue number if the nbr_atom_xyz is less than <radius>
+        if center.distance( res_num_xyz ) <= radius:
+            res_nums_in_radius.append( res_num )
+
+    # if the user didn't want the residue of interest in the return list, remove it
+    if not include_res_num:
+        res_nums_in_radius.remove( res_num_in )
+
+    return res_nums_in_radius
+
+
+
+def get_res_nums_within_radius_of_residue_list( residues, input_pose, radius, include_res_nums = False ):
+    """
+    Find all residue numbers around the list of <residues> given in <input_pose> within <radius> Angstroms.
+    Set <include_residues> if you want to include the list of passed <residues> in the return list of residue numbers.
+    :param residues: list( Pose residue numbers )
+    :param input_pose: Pose
+    :param radius: int() or float( radius in Angstroms )
+    :param include_res_nums: bool( do you want to include the passed <residues> in the return list of resiude numbers? ) Default = False
+    :return: list( residues around passed <residues> list within <radius> Angstroms
+    """
+    # argument check: ensure passed <residues> argument is a list
+    if type( residues ) != list:
+        print "\nArgument error. You're supposed to past me a list of residue numbers for the <residues> argument. Returning None."
+        return None
+
+    # use get_res_nums_within_radius to get all residue numbers
+    residues_within_radius = []
+    for res_num in residues:
+        residues_within_radius.extend( get_res_nums_within_radius( res_num, input_pose, radius, include_res_num = include_res_nums ) )
+
+
+    # get the set of the list and sort the residue numbers
+    set_of_residues_within_radius = [ res for res in set( residues_within_radius ) ]
+
+    # it is possible that there are still residues from <residues> in the list, so remove them one by one if desired
+    if not include_res_nums:
+        for res in residues:
+            try:
+                set_of_residues_within_radius.remove( res )
+            except ValueError:
+                pass
+
+    # sort
+    set_of_residues_within_radius.sort()
+
+    return set_of_residues_within_radius

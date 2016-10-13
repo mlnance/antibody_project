@@ -50,6 +50,7 @@ class Model3ay4Glycan:
         self.minimize_each_round = True
         self.make_small_moves = True
         self.make_shear_moves = False
+        self.move_all_torsions = True
         self.constraint_file = None
         self.kT = 0.8
         self.mc = None  # MonteCarlo object
@@ -219,6 +220,7 @@ class Model3ay4Glycan:
         info_file_details.append( "LCM reset of Fc glycan?:\t\t%s\n" %self.LCM_reset )
         info_file_details.append( "Use population ideals in LCM reset?:\t%s\n" %self.use_population_ideal_LCM_reset )
         #info_file_details.append( "Use main ideal in LCM reset?:\t\t%s\n" %self.LCM_main_ideal_reset )
+        info_file_details.append( "Move all torsions on a residue?:\t%s\n" %self.move_all_torsions )
         info_file_details.append( "Reset omega torsion back to native?:\t%s\n" %self.set_native_omega )
         info_file_details.append( "Using score ramping?:\t\t\t%s\n" %self.ramp_sf )
         info_file_details.append( "Minimize after each move?:\t\t%s\n" %self.minimize_each_round )
@@ -429,9 +431,7 @@ class Model3ay4Glycan:
             # SugarSmallMover
             if self.make_small_moves:
                 working_pose.assign( SugarSmallMover( self.mm, self.moves_per_trial, self.angle_max, working_pose, 
-                                                      set_phi = True, 
-                                                      set_psi = True, 
-                                                      set_omega = True ) )
+                                                      move_all_torsions = self.move_all_torsions ) )
             # SugarShearMover
             elif self.make_shear_moves:
                 pass

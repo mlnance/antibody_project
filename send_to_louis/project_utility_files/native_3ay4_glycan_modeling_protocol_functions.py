@@ -272,26 +272,26 @@ def add_constraints_to_pose( constraint_file, input_pose ):
 
 
 
-def SugarSmallMover( mm, nmoves, angle_max, input_pose, set_phi = True, set_psi = True, set_omega = True ):
+def SugarSmallMover( mm, nmoves, angle_max, input_pose, move_all_torsions = True ):
     """
     Randomly resets the phi, psi, and omega values of <nmoves> residues found in the <mm> MoveMap that are carbohydrates and have their BB freedom turned on
     Math works out to where the max motion to either direction or starting position is angle_max/2 ( old_value +/- angle_max/2 )
     Emulates the SmallMover but with the additional omega mover
+    Can either move all torsions found on the chosen residue (Default action), or can set move_all_torsions to False and will instead pick one of the available torsions of that residue to perturb
     :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be moved )
     :param nmoves: int( how many moves should be allowed in one call to the SugarSmallMover? )
     :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
     :param input_pose: Pose
-    :param set_phi: bool( do you want to change the phi angle? ) Default = True
-    :param set_psi: bool( do you want to change the psi angle? ) Default = True
-    :param set_omega: bool( do you want to change the omega angle? ) Default = True
+    :param move_all_torsions: bool( do you want to move all BackBone torsions of the residues at the same time? If not, a single torsion will be randomly chosen and perturbed ) Default = True
     :return: Pose
     """
     # imports
     from random import choice
     from rosetta.basic import periodic_range
     from rosetta.numeric.random import rg
-    from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral
-    from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
+    from rosetta.core.id import MainchainTorsionType
+    from rosetta.core.pose.carbohydrates import get_glycosidic_torsion, set_glycosidic_torsion, \
+        get_reference_atoms
 
 
     # copy the input pose
@@ -310,24 +310,31 @@ def SugarSmallMover( mm, nmoves, angle_max, input_pose, set_phi = True, set_psi 
         # pick a residue to sample
         res_num = choice( moveable_res_nums )
 
-        # get current phi, psi, and omega
-        old_phi = pose.phi( res_num )
-        old_psi = pose.psi( res_num )
-        old_omega = pose.omega( res_num )
+        # check which glycosidic torsions it has (except omega3_dihedral, that doesn't work at the moment)
+        moveable_torsions = []
+        for torsion_name in MainchainTorsionType.names:
+            # have to skip omega3, hence doing by name
+            if torsion_name != "omega3_dihedral":
+                # if this torsion has reference atoms, it exists
+                # bool( len([]) ) = False, so it will return False if there are no reference atoms (ie. it doesn't exist)
+                if bool( len( get_reference_atoms( MainchainTorsionType.names[ torsion_name ], pose, res_num ) ) ):
+                    # this torsion type has reference atoms, thus it exists. Keep it
+                    moveable_torsions.append( MainchainTorsionType.names[ torsion_name ] )
+        # keep one torsion if the user doesn't want all torsions sampled
+        if move_all_torsions is False:
+            moveable_torsions = [ choice( moveable_torsions ) ]
 
-        # get random values for phi, psi, and omega
-        # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
-        new_phi = periodic_range( old_phi - small_angle + rg().uniform() * big_angle, 360.0 )
-        new_psi = periodic_range( old_psi - small_angle + rg().uniform() * big_angle, 360.0 )
-        new_omega = periodic_range( old_omega - small_angle + rg().uniform() * big_angle, 360.0 )
+        # get the current torsions for the moveable_torsions and perturb them according to angle_max
+        for moveable_torsion in moveable_torsions:
+            # get the current torsion value
+            old_torsion_value = get_glycosidic_torsion( moveable_torsion, pose, res_num )
 
-        # set the new values
-        if set_phi:
-            set_glycosidic_torsion( phi_dihedral, pose, res_num, new_phi )
-        if set_psi:
-            set_glycosidic_torsion( psi_dihedral, pose, res_num, new_psi )
-        if set_omega:
-            set_glycosidic_torsion( omega_dihedral, pose, res_num, new_omega )
+            # perturb this torsion randomly
+            # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
+            new_torsion_value = periodic_range( old_torsion_value - small_angle + rg().uniform() * big_angle, 360.0 )
+
+            # set the new torsion
+            set_glycosidic_torsion( moveable_torsion, pose, res_num, new_torsion_value )
 
     return pose
 

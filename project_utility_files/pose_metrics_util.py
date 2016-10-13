@@ -131,6 +131,10 @@ def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
     from rosetta.core.scoring import score_type_from_name
 
 
+    # if this isn't the Fc-FcR structure of 3ay4, just return 0
+    if pose.n_residue() != 618:
+        return 0
+
     # set atom_pair_constraint weight to 0
     sf = in_sf.clone()
     sf.set_weight( score_type_from_name( "atom_pair_constraint" ), 0.0 )

@@ -320,6 +320,12 @@ while not jd.job_complete:
     # increment the decoy number counter
     cur_decoy_num += 1
 
+    #for res_num in native_Fc_glycan_nums_except_core_GlcNAc:
+    #    print "Res num", res_num, "Reset phi:", GlycanModelProtocol.reset_pose_obj.phi( res_num ), "end phi:", working_pose.phi( res_num )
+    #    print "Res num", res_num, "Reset psi:", GlycanModelProtocol.reset_pose_obj.psi( res_num ), "end psi:", working_pose.psi( res_num )
+    #    print "Res num", res_num, "Reset omega:", GlycanModelProtocol.reset_pose_obj.omega( res_num ), "end omega:", working_pose.omega( res_num )
+    #    print
+
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 fasc_filename = decoy_name + ".fasc"
 lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, GlycanModelProtocol.lowest_E_structs_dir, 10 )

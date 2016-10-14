@@ -293,7 +293,7 @@ class Model3ay4Glycan:
 
             # dump the reset pose, if desired
             if self.dump_reset_pose:
-                reset_name = self.reset_pose_obj.pdb_info().name().split( ".pdb" )[0] +"_reset.pdb"
+                reset_name = self.reset_pose_obj.pdb_info().name().split( ".pdb" )[0] + "_reset.pdb"
                 self.reset_pose_obj.dump_file( reset_name )
                 # zip the dump file, if desired
                 if self.zip_dump_poses:

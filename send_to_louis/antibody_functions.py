@@ -46,13 +46,9 @@ kT = 0.8  # used in MonteCarlo and small and shear movers
 native_Fc_chain_A_nums = range( 1, 215 + 1 )
 native_Fc_glycan_A_nums = range( 216, 223 + 1 )
 native_Fc_glycan_A_nums_except_core_GlcNAc = range( 217, 223 + 1 )
-#native_Fc_glycan_A_nums = range( 216, 223 + 1 )
-#native_Fc_glycan_A_nums_except_core_GlcNAc = range( 223, 223 + 1 )
 native_Fc_chain_B_nums = range( 224, 439 + 1 )
 native_Fc_glycan_B_nums = range( 440, 447 + 1 )
 native_Fc_glycan_B_nums_except_core_GlcNAc = range( 441, 447 + 1 )
-#native_Fc_glycan_B_nums = range( 440 - 0, 447 - 0 + 1 )
-#native_Fc_glycan_B_nums_except_core_GlcNAc = range( 447 - 0, 447 - 0 + 1 )
 native_FcR_protein_nums = range( 448, 607 + 1 )
 native_FcR_main_glycan_nums = range( 608, 615 + 1 )
 native_FcR_three_mer_nums = range( 616, 618 + 1 )
@@ -73,11 +69,8 @@ native_order_nums = range( 1, 618 + 1 )
 native_Fc_protein_chains = [ 'A', 'B' ]
 native_FcR_protein_chains = [ 'C' ]
 native_Fc_glycan_chains = [ 'D', 'E', 'F', 'G' ]
-#native_Fc_glycan_chains = [ 'D', 'F', ]
 native_Fc_glycan_A_chains = [ 'D', 'E' ]
-#native_Fc_glycan_A_chains = [ 'D' ]
 native_Fc_glycan_B_chains = [ 'F', 'G' ]
-#native_Fc_glycan_B_chains = [ 'F' ]
 native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 
 # glycosylated decoy
@@ -109,6 +102,7 @@ decoy_Fc_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 decoy_Fc_glycan_A_chains = [ 'H', 'I' ]
 decoy_Fc_glycan_B_chains = [ 'J', 'K' ]
 decoy_FcR_glycan_chains = [ 'D', 'E', 'F', 'G' ]
+
 
 
 # make an appropriate dictionary map
@@ -690,7 +684,8 @@ def set_3ay4_Fc_glycan_except_core_GlcNAc_to_ideal_LCM_phi_psi_omega( input_pose
 
     return pose
 
-'''
+
+
 # TODO: finish this function! There is a function that must do this buried in Rosetta as CarbohydrateInfoManager can get this data from default.table
 def get_ideal_LCM_phi_psi_omega_info( linkage_conformer_filename, verbose = False ):
     """
@@ -739,8 +734,7 @@ def get_ideal_LCM_phi_psi_omega_info( linkage_conformer_filename, verbose = Fals
     # dict: key = non-reducing_reducing : value = [ [ population, phi_mean, phi_stdev, psi_mean, psi_stdev, omega_mean, omega_stdev, omega2_mean, omega2_stdev
     nonred_to_red_data_dict = {}
  
-    return "NOT DONE WITH THIS FUNCTION YET"
-'''
+    return header_info, linkage_conformer_data
 
 
 
@@ -2764,6 +2758,7 @@ def calc_distance( vec1, vec2 ):
 def get_res_nums_within_radius( res_num_in, input_pose, radius, include_res_num = False ):
     """
     Use the nbr_atom_xyz to find residue numbers within <radius> of <pose_num> in <pose>
+    The nbr_atom seems to be C4 on carbohydrates
     :param res_num_in: int( Pose residue number )
     :param input_pose: Pose
     :param radius: int or float( radius around <pose_num> to use to select resiudes )
@@ -2809,6 +2804,7 @@ def get_res_nums_within_radius_of_residue_list( residues, input_pose, radius, in
     """
     Find all residue numbers around the list of <residues> given in <input_pose> within <radius> Angstroms.
     Set <include_residues> if you want to include the list of passed <residues> in the return list of residue numbers.
+    Uses the nbr_atom to calculate distance. The nbr_atom seems to be C4 on carbohydrates
     :param residues: list( Pose residue numbers )
     :param input_pose: Pose
     :param radius: int() or float( radius in Angstroms )
@@ -5179,7 +5175,7 @@ if __name__ == '__main__':
     #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
     init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
     #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
-    #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed -out:level 400" )
+    #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed -out:level 200" )
 
 ############################
 #### INITIALIZE ROSETTA ####

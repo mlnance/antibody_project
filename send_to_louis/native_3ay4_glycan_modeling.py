@@ -175,9 +175,9 @@ elif input_args.protocol_num == 10:
 elif input_args.protocol_num == 12:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_12 version
     mm = MoveMap()
-    ###############################################
-    #### CORE GlcNAc CAN MOVE IN THIS PROTOCOL ####
-    ###############################################
+    #######################################################################
+    #### CORE GlcNAc CAN MOVE IN THIS PROTOCOL BUT IT STARTS AT NATIVE ####
+    #######################################################################
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
         mm.set_chi( res_num, False )
@@ -197,7 +197,9 @@ elif input_args.protocol_num == 12:
     GlycanModelProtocol.moves_per_trial = 3
     GlycanModelProtocol.LCM_reset = True
     GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = False
     GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = True
     GlycanModelProtocol.ramp_sf = True
     GlycanModelProtocol.fa_atr_ramp_factor = 2.0
     GlycanModelProtocol.fa_rep_ramp_factor = 0.01
@@ -213,12 +215,12 @@ elif input_args.protocol_num == 12:
 elif input_args.protocol_num == 13:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_13 version
     mm = MoveMap()
-    ####################################################
-    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN ####
-    ####################################################
-    for res_num in native_Fc_glycan_nums_except_core_GlcNAc:
+    ########################################################################################################
+    #### CORE GlcNAc CAN MOVE IN THIS PROTOCOL BUT OMEGA 1 & 2 IS SPUN AROUND INSTEAD OF USING LCM DATA ####
+    ########################################################################################################
+    for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
-        mm.set_chi( res_num, True )
+        mm.set_chi( res_num, False )
         if native_pose.residue( res_num ).is_branch_point():
             mm.set_branches( res_num, True )
 
@@ -231,11 +233,94 @@ elif input_args.protocol_num == 13:
                                            angle_max = 6.0 * 3,  # 6.0 comes from default angle_max from SmallMover and ShearMover
                                            dump_dir = input_args.structure_dir, 
                                            pmm = pmm )
+    #GlycanModelProtocol.trials = 10
     GlycanModelProtocol.trials = 200
     GlycanModelProtocol.moves_per_trial = 3
     GlycanModelProtocol.LCM_reset = True
     GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = True  # at time of run, omega1 and omega2 can independently be 180, 60, or -60
     GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = False
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.01
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
+    GlycanModelProtocol.verbose = input_args.verbose
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
+elif input_args.protocol_num == 14:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_14 version
+    mm = MoveMap()
+    ###############################################
+    #### CORE GlcNAc CAN MOVE IN THIS PROTOCOL ####
+    ###############################################
+    for res_num in native_Fc_glycan_nums:
+        mm.set_bb( res_num, True )
+        mm.set_chi( res_num, False )
+        if native_pose.residue( res_num ).is_branch_point():
+            mm.set_branches( res_num, True )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+
+    # Protocol_14 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 3,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.trials = 200
+    GlycanModelProtocol.moves_per_trial = 3
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = False
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = False
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.01
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
+    GlycanModelProtocol.verbose = input_args.verbose
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
+elif input_args.protocol_num == 15:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_15 version
+    mm = MoveMap()
+    ####################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN ####
+    ####################################################
+    for res_num in native_Fc_glycan_nums_except_core_GlcNAc:
+        mm.set_bb( res_num, True )
+        mm.set_chi( res_num, True )
+        if native_pose.residue( res_num ).is_branch_point():
+            mm.set_branches( res_num, True )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+
+    # Protocol_15 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 3,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.trials = 200
+    GlycanModelProtocol.moves_per_trial = 3
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = False
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = False
     GlycanModelProtocol.ramp_sf = True
     GlycanModelProtocol.fa_atr_ramp_factor = 2.0
     GlycanModelProtocol.fa_rep_ramp_factor = 0.01
@@ -321,9 +406,9 @@ while not jd.job_complete:
     cur_decoy_num += 1
 
     #for res_num in native_Fc_glycan_nums_except_core_GlcNAc:
-    #    print "Res num", res_num, "Reset phi:", GlycanModelProtocol.reset_pose_obj.phi( res_num ), "end phi:", working_pose.phi( res_num )
-    #    print "Res num", res_num, "Reset psi:", GlycanModelProtocol.reset_pose_obj.psi( res_num ), "end psi:", working_pose.psi( res_num )
-    #    print "Res num", res_num, "Reset omega:", GlycanModelProtocol.reset_pose_obj.omega( res_num ), "end omega:", working_pose.omega( res_num )
+    #    print "Res num", res_num, "Reset phi:", GlycanModelProtocol.reset_pose.phi( res_num ), "end phi:", working_pose.phi( res_num )
+    #    print "Res num", res_num, "Reset psi:", GlycanModelProtocol.reset_pose.psi( res_num ), "end psi:", working_pose.psi( res_num )
+    #    print "Res num", res_num, "Reset omega:", GlycanModelProtocol.reset_pose.omega( res_num ), "end omega:", working_pose.omega( res_num )
     #    print
 
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir

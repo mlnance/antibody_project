@@ -478,3 +478,51 @@ def get_res_nums_within_radius_of_residue_list( residues, input_pose, radius, in
     set_of_residues_within_radius.sort()
 
     return set_of_residues_within_radius
+
+
+
+def spin_carbs_connected_to_prot( mm, input_pose ):
+    """
+    The intent of this spin is to set the carbohydrate involved in the protein-carbohydrate connection into a reasonable starting position after the reset. This is because current LCM data found in the default.table was collected for surface glycans. These data are not reflective of the glycans found in the Ig system
+    :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be reset )
+    :param input_pose: Pose
+    :return: Pose
+    """
+    # imports
+    from random import choice
+    from rosetta.core.pose.carbohydrates import find_seqpos_of_saccharides_parent_residue, \
+        get_reference_atoms, set_glycosidic_torsion
+    from rosetta.core.id import omega_dihedral, omega2_dihedral
+
+
+    # copy the input pose
+    pose = input_pose.clone()
+
+    # use the MoveMap to see which residues have a parent connection to a protein
+    # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
+    carbohydrate_res_nums = [ res_num for res_num in range( 1, pose.n_residue() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
+
+    # find the seqpos of the parent residue of each moveable residue and determine if it is a protein
+    residues_to_spin = []
+    for glyc_res_num in carbohydrate_res_nums:
+        # skip residues that are of VariantType LOWER_TERMINUS as they, like Batman, do not have a parent
+        if not pose.residue( glyc_res_num ).is_lower_terminus():
+            # get residue number of this carbohydrate's parent and check if it is a protein residue
+            if pose.residue( find_seqpos_of_saccharides_parent_residue( pose.residue( glyc_res_num ) ) ).is_protein():
+                residues_to_spin.append( glyc_res_num )
+
+    # reset values for omega 1 and omega 2
+    # omega has stronger steric constraints
+    possible_omega_values = [ 180, -60, 60 ]
+
+    # for each carbohydrate residue connected to the protein
+    for glyc_res_num in residues_to_spin:
+        # bool( len([]) ) = False, so it will return False if there are no reference atoms (ie. it doesn't exist)
+        # if an omega 1 exists (which it should...)
+        if bool( len( get_reference_atoms( omega_dihedral, pose, glyc_res_num ) ) ):
+            set_glycosidic_torsion( omega_dihedral, pose, glyc_res_num, choice( possible_omega_values ) )
+        # if an omega 2 exists
+        if bool( len( get_reference_atoms( omega2_dihedral, pose, glyc_res_num ) ) ):
+            set_glycosidic_torsion( omega2_dihedral, pose, glyc_res_num, choice( possible_omega_values ) )
+
+    return pose

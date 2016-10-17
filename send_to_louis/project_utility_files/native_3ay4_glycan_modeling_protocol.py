@@ -43,7 +43,9 @@ class Model3ay4Glycan:
         self.LCM_reset = True
         #self.LCM_main_ideal_reset = False  # not a bad idea, just need to make sure I compiled the data correctly
         self.use_population_ideal_LCM_reset = False
-        self.set_native_omega = True
+        self.set_native_omega = False
+        self.set_native_core = False
+        self.spin_carb_connected_to_prot = False
         self.ramp_sf = True
         self.fa_atr_ramp_factor = 2.0
         self.fa_rep_ramp_factor = 0.5
@@ -59,7 +61,8 @@ class Model3ay4Glycan:
         self.min_mover = None
         self.pack_rotamers_mover = None
         self.packer_task = None
-        self.reset_pose_obj = None
+        self.native_pose = None
+        self.reset_pose = None
         self.pmm_name = None
         self.decoy_name = None
 
@@ -225,6 +228,8 @@ class Model3ay4Glycan:
         #info_file_details.append( "Use main ideal in LCM reset?:\t\t%s\n" %self.LCM_main_ideal_reset )
         info_file_details.append( "Move all torsions on a residue?:\t%s\n" %self.move_all_torsions )
         info_file_details.append( "Reset omega torsion back to native?:\t%s\n" %self.set_native_omega )
+        info_file_details.append( "Reset core GlcNAc torsions to native?:\t%s\n" %self.set_native_core )
+        info_file_details.append( "Spin carb connected to the protein?:\t%s\n" %self.spin_carb_connected_to_prot )
         info_file_details.append( "Using score ramping?:\t\t\t%s\n" %self.ramp_sf )
         info_file_details.append( "Minimize after each move?:\t\t%s\n" %self.minimize_each_round )
         if self.pack_after_x_rounds is not 0:
@@ -278,6 +283,15 @@ class Model3ay4Glycan:
         native_pose = pose.clone()
         working_pose = pose.clone()
         self.decoy_name = working_pose.pdb_info().name()
+        self.native_pose = native_pose.clone()
+
+
+        ###############################
+        #### GET MOVEABLE RESIDUES ####
+        ###############################
+        # get the moveable residues from passed MoveMap
+        # moveable means the BackBone in the MoveMap was set to True and it is a carbohydrate
+        moveable_residues = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) if self.mm.get_bb( res_num ) and working_pose.residue( res_num ).is_carbohydrate() ]
 
 
         ###################
@@ -288,27 +302,6 @@ class Model3ay4Glycan:
             working_pose.assign( native_3ay4_Fc_glycan_LCM_reset( mm = self.mm, 
                                                                   input_pose = working_pose, 
                                                                   use_population_ideal_LCM_reset = self.use_population_ideal_LCM_reset ) )
-            # store a copy of the reset pose object
-            self.reset_pose_obj = working_pose.clone()
-
-            # dump the reset pose, if desired
-            if self.dump_reset_pose:
-                reset_name = self.reset_pose_obj.pdb_info().name().split( ".pdb" )[0] + "_reset.pdb"
-                self.reset_pose_obj.dump_file( reset_name )
-                # zip the dump file, if desired
-                if self.zip_dump_poses:
-                    os.popen( "gzip %s" %reset_name )
-
-            # visualize and relay score information
-            try:
-                if self.pmm_name is not None:
-                    working_pose.pdb_info().name( self.pmm_name )
-                    self.pmm.apply( working_pose )
-                    working_pose.pdb_info().name( self.decoy_name )
-                else:
-                    self.pmm.apply( working_pose )
-            except:
-                pass
             if self.verbose:
                 print "score of LCM reset:", self.watch_sf( working_pose )
 
@@ -320,21 +313,25 @@ class Model3ay4Glycan:
         if self.random_reset:
             working_pose.assign( native_3ay4_Fc_glycan_random_reset( mm = self.mm, 
                                                                      input_pose = working_pose ) )
-            # store a copy of the reset pose object
-            self.reset_pose_obj = working_pose.clone()
-
-            # visualize and relay score information
-            try:
-                if self.pmm_name is not None:
-                    working_pose.pdb_info().name( self.pmm_name )
-                    self.pmm.apply( working_pose )
-                    working_pose.pdb_info().name( self.decoy_name )
-                else:
-                    self.pmm.apply( working_pose )
-            except:
-                pass
             if self.verbose:
                 print "score of random reset:", self.watch_sf( working_pose )
+
+
+        ######################################################
+        #### SPIN CARB OF PROTEIN-CARBOHYDRATE CONNECTION ####
+        ######################################################
+        # the intent of this spin is to set the carbohydrate involved in the protein-carbohydrate connection into
+        # a reasonable starting position after the reset. This is because current LCM data found in the default.table
+        # was collected for surface glycans. These data are not reflective of the glycans found in the Ig system
+        # use the MoveMap to see which residues have a parent connection to a protein
+        if self.spin_carb_connected_to_prot:
+            from native_3ay4_glycan_modeling_protocol_functions import spin_carbs_connected_to_prot
+
+            # the spin takes residue 216 and 440 of 3ay4 and assigns either 180, 60, or -60 to omega1 and omega2 individually
+            working_pose.assign( spin_carbs_connected_to_prot( self.mm, 
+                                                               input_pose = working_pose ) )
+            if self.verbose:
+                print "score of core GlcNAc spin:", self.watch_sf( working_pose )
 
 
         #########################################
@@ -345,6 +342,61 @@ class Model3ay4Glycan:
         if self.set_native_omega:
             working_pose.set_omega( 221, native_pose.omega( 221 ) )
             working_pose.set_omega( 445, native_pose.omega( 445 ) )
+            if self.verbose:
+                print "score of omega branch reset:", self.watch_sf( working_pose )
+
+
+        ########################################
+        #### HARDCODED CORE RESET TO NATIVE ####
+        ########################################
+        # reset the native torsions for the core GlcNAcs, if desired
+        # hardcoded for now as this is not something that would be done in a real protocol
+        if self.set_native_core:
+            from rosetta.core.id import omega2_dihedral
+            from rosetta.core.pose.carbohydrates import get_glycosidic_torsion, set_glycosidic_torsion
+
+            # reset the phi, psi, omega, and omega2 torsions of residues 216 and 440 (core GlcNAc to ASN-69)
+            # 216
+            working_pose.set_phi( 216, native_pose.phi( 216 ) )
+            working_pose.set_psi( 216, native_pose.psi( 216 ) )
+            working_pose.set_omega( 216, native_pose.omega( 216 ) )
+            set_glycosidic_torsion( omega2_dihedral, working_pose, 216, 
+                                    get_glycosidic_torsion( omega2_dihedral, native_pose, 216 ) )
+            # 440
+            working_pose.set_phi( 440, native_pose.phi( 440 ) )
+            working_pose.set_psi( 440, native_pose.psi( 440 ) )
+            working_pose.set_omega( 440, native_pose.omega( 440 ) )
+            set_glycosidic_torsion( omega2_dihedral, working_pose, 440, 
+                                    get_glycosidic_torsion( omega2_dihedral, native_pose, 440 ) )
+            if self.verbose:
+                print "score of core GlcNAc reset:", self.watch_sf( working_pose )
+
+
+        ############################################
+        #### VISUALIZE AND STORE THE RESET POSE ####
+        ############################################
+        # visualize the pose that has had all components of reset completed
+        try:
+            if self.pmm_name is not None:
+                working_pose.pdb_info().name( self.pmm_name )
+                self.pmm.apply( working_pose )
+                working_pose.pdb_info().name( self.decoy_name )
+            else:
+                self.pmm.apply( working_pose )
+        except:
+            pass
+
+        # store a copy of the reset pose object
+        # storing it here so that all types of resets could have been done, including the reset back to natives
+        self.reset_pose = working_pose.clone()
+
+        # dump the reset pose, if desired
+        if self.dump_reset_pose:
+            reset_name = self.reset_pose.pdb_info().name().split( ".pdb" )[0] + "_reset.pdb"
+            self.reset_pose.dump_file( reset_name )
+            # zip the dump file, if desired
+            if self.zip_dump_poses:
+                os.popen( "gzip %s" %reset_name )
 
 
         #########################
@@ -386,28 +438,26 @@ class Model3ay4Glycan:
             # if needed
             if self.pack_rotamers_mover is None:
                 # make the packer task
+                # default of standard_packer_task is to set packing for residues to True
                 task = standard_packer_task( working_pose )
                 task.or_include_current( True )
                 task.restrict_to_repacking()
 
-                # get the moveable residues from passed MoveMap
-                # moveable means the BackBone in the MoveMap was set to True and it is a carbohydrate
-                moveable_residues = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) if self.mm.get_bb( res_num ) and working_pose.residue( res_num ).is_carbohydrate() ]
-
-                # get all the protein residues within 8A of these moveable_residues
+                # get all the protein residues within 8A of the moveable_residues
                 # this uses the nbr_atom to determine if a residue is nearby or not, hence why I'm using a big distance like 8A
                 # this will include the Tyr if core GlcNAc is moveable in 3ay4
                 nearby_protein_residues = get_res_nums_within_radius_of_residue_list( moveable_residues, working_pose, 8, include_res_nums = False )
 
                 # create a list of residue numbers that can be packed
                 # meaning, the moveable carbohydrate residues and the residues around them
-                moveable_residues.extend( nearby_protein_residues )
-                moveable_residues = set( moveable_residues )
+                packable_residues = moveable_residues
+                packable_residues.extend( nearby_protein_residues )
+                packable_residues = set( packable_residues )
 
                 # turn off packing for all residues that are NOT_packable_residues
-                # this is a new set with elements in pose.n_residue() but not in moveable_residues ( disjoint, s - t )
-                # meaning, all residue numbers in pose.n_residue() that are not moveable need to be NOT packed
-                NOT_packable_residues = list( set( range( 1, working_pose.n_residue() + 1 ) ) - moveable_residues )
+                # this is a new set with elements in pose.n_residue() but not in packable_residues ( disjoint, s - t )
+                # meaning, all residue numbers in pose.n_residue() that are not packable need to be NOT packed
+                NOT_packable_residues = list( set( range( 1, working_pose.n_residue() + 1 ) ) - packable_residues )
                 [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in NOT_packable_residues ]
 
                 # make the pack_rotamers_mover
@@ -467,9 +517,10 @@ class Model3ay4Glycan:
                                                                        FA_REP_ORIG, 
                                                                        trial_num, 
                                                                        self.trials ) )
+                # DEBUG
+                #print "\n".join( [ "%s %s" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) for score_type in self.sf.get_nonzero_weighted_scoretypes() ] )
                 # give ramped sf back to MC and MinMover
                 # this is because PyRosetta apparently doesn't do the whole pointer thing with the sf
-                #print "\n".join( [ "%s %s" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) for score_type in self.sf.get_nonzero_weighted_scoretypes() ] )
                 self.mc.score_function( self.sf )
                 self.min_mover.score_function( self.sf )
 
@@ -489,6 +540,7 @@ class Model3ay4Glycan:
             # relay score information
             if self.verbose:
                 print "score after sugar moves:", self.watch_sf( working_pose )
+
 
             ##############
             #### PACK ####

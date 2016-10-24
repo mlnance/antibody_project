@@ -189,7 +189,14 @@ print "***Top 10 glycan_rmsd protocol_9_again"
 print using_native_full_glycan_protocol_9_again_data.sort_values( "Fc_glycan_rmsd", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :10 ]
 print "***Top 10 Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A protocol_9_again"
 print using_native_full_glycan_protocol_9_again_data.sort_values( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", ascending=False )[ [ "total_score", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
-
+grab_these_structs = []
+#for jj in range( 1, 11 ):
+#    low_E_struct = using_native_full_glycan_protocol_9_again_data[ ( using_native_full_glycan_protocol_9_again_data[ "Fc_glycan_rmsd" ] >= jj - 1 ) & ( using_native_full_glycan_protocol_9_again_data[ "Fc_glycan_rmsd" ] <= jj ) ].sort_values( "total_score", ascending=True )
+#    print jj-1, jj, "mean:", np.mean( low_E_struct["total_score"] ), "median:", np.median( low_E_struct["total_score"] ), "min:", min( low_E_struct["total_score"] ), "max:", max( low_E_struct["total_score"] ), "range:", max( low_E_struct["total_score"] ) - min( low_E_struct["total_score"] )
+#    print "  /home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/glycan_modeling_protocols/protocol_9_again/base_structs/%s" %low_E_struct.iloc[0]["filename"]
+#    grab_these_structs.append( "/home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/glycan_modeling_protocols/protocol_9_again/base_structs/protocol_%s.gz\n" %low_E_struct.iloc[0]["filename"] )
+#with open( "protocol_9_again_lowest_E_of_1A_binned_rmsd", "wb" ) as fh:
+#    fh.writelines( grab_these_structs )
 
 metrics = list( using_native_full_glycan_protocol_9_again_data.columns.values )
 r_squared_to_metric_dict = {}
@@ -251,10 +258,11 @@ plt.ylim( [ -560, -520 ] )
 
 plt.subplot( 223 )
 xmin = 0
+xmax = 12
 #xmin = floor( min( using_native_full_glycan_protocol_9_again_data[ "Fc_glycan_rmsd" ] ) )
-xmax = ceil( max( using_native_full_glycan_protocol_9_again_data[ "Fc_glycan_rmsd" ] ) )
+#xmax = ceil( max( using_native_full_glycan_protocol_9_again_data[ "Fc_glycan_rmsd" ] ) )
 bins = np.arange( xmin, xmax + 0.5, 0.5 )
-plt.hist( using_native_full_glycan_protocol_9_again_data[ "Fc_glycan_rmsd" ], histtype="stepfilled" )
+plt.hist( using_native_full_glycan_protocol_9_again_data[ "Fc_glycan_rmsd" ], bins=bins, histtype="stepfilled" )
 #plt.hist( using_native_full_glycan_protocol_9_again_data[ "Fc_glycan_rmsd" ], bins, histtype="stepfilled" )
 #plt.xticks( bins )
 plt.xlabel( "Fc_glycan_rmsd" )
@@ -298,7 +306,7 @@ print "***Top 10 glycan_rmsd protocol_10_again"
 print using_native_full_glycan_protocol_10_again_data.sort_values( "Fc_glycan_rmsd", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :10 ]
 print "***Top 10 Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A protocol_10_again"
 print using_native_full_glycan_protocol_10_again_data.sort_values( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", ascending=False )[ [ "total_score", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
-print using_native_full_glycan_protocol_10_again_data[ ( using_native_full_glycan_protocol_10_again_data[ "Fc_glycan_rmsd" ] >= 4 ) & ( using_native_full_glycan_protocol_10_again_data[ "Fc_glycan_rmsd" ] <= 6 ) ].sort_values( "total_score", ascending=True )[ [ "filename", "total_score", "Fc_glycan_rmsd", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :5 ]
+#print using_native_full_glycan_protocol_10_again_data[ ( using_native_full_glycan_protocol_10_again_data[ "Fc_glycan_rmsd" ] >= 4 ) & ( using_native_full_glycan_protocol_10_again_data[ "Fc_glycan_rmsd" ] <= 6 ) ].sort_values( "total_score", ascending=True )[ [ "filename", "total_score", "Fc_glycan_rmsd", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :5 ]
 
 metrics = list( using_native_full_glycan_protocol_10_again_data.columns.values )
 r_squared_to_metric_dict = {}
@@ -360,10 +368,11 @@ plt.ylim( [ -560, -520 ] )
 
 plt.subplot( 223 )
 xmin = 0
+xmax = 12
 #xmin = floor( min( using_native_full_glycan_protocol_10_again_data[ "Fc_glycan_rmsd" ] ) )
-xmax = ceil( max( using_native_full_glycan_protocol_10_again_data[ "Fc_glycan_rmsd" ] ) )
+#xmax = ceil( max( using_native_full_glycan_protocol_10_again_data[ "Fc_glycan_rmsd" ] ) )
 bins = np.arange( xmin, xmax + 0.5, 0.5 )
-plt.hist( using_native_full_glycan_protocol_10_again_data[ "Fc_glycan_rmsd" ], histtype="stepfilled" )
+plt.hist( using_native_full_glycan_protocol_10_again_data[ "Fc_glycan_rmsd" ], bins=bins, histtype="stepfilled" )
 #plt.hist( using_native_full_glycan_protocol_10_again_data[ "Fc_glycan_rmsd" ], bins, histtype="stepfilled" )
 #plt.xticks( bins )
 plt.xlabel( "Fc_glycan_rmsd" )
@@ -403,6 +412,641 @@ print "protocol_10_again\n\n\n"
 
 
 
+############
+#### 12 ####
+############
+# glycan_modeling_protocols/protocol_12
+path_to_using_native_full_glycan_protocol_12 = "/Users/mlnance/pyrosetta_dir/metric_data/glycan_modeling_protocols/using_native_full_glycan_protocol_12.csv"
+using_native_full_glycan_protocol_12_data = pd.read_csv( path_to_using_native_full_glycan_protocol_12 )
+#path_to_using_native_full_glycan_protocol_12_no_reset = "/Users/mlnance/pyrosetta_dir/metric_data/glycan_modeling_protocols/using_native_full_glycan_protocol_12_no_reset.csv"
+#using_native_full_glycan_protocol_12_no_reset_data = pd.read_csv( path_to_using_native_full_glycan_protocol_12_no_reset )
+
+low_E_native_pseudo_interface_energy = np.mean( using_native_full_glycan_protocol_12_data[ "pseudo_interface_energy" ] - using_native_full_glycan_protocol_12_data[ "delta_pseudo_interface_energy" ] )
+low_E_native_total_score = np.mean( using_native_full_glycan_protocol_12_data[ "total_score" ] - using_native_full_glycan_protocol_12_data[ "delta_total_score" ] )
+
+print "***Top10 total_score protocol_12"
+print using_native_full_glycan_protocol_12_data.sort_values( "total_score", ascending=True )[ :10 ].sort_values( "total_score" )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ]
+#print using_native_full_glycan_protocol_12_data.sort_values( "total_score", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
+print "***Top 10 glycan_rmsd protocol_12"
+print using_native_full_glycan_protocol_12_data.sort_values( "Fc_glycan_rmsd", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :10 ]
+print "***Top 10 Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A protocol_12"
+print using_native_full_glycan_protocol_12_data.sort_values( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", ascending=False )[ [ "total_score", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
+#print using_native_full_glycan_protocol_12_data[ ( using_native_full_glycan_protocol_12_data[ "Fc_glycan_rmsd" ] >= 4 ) & ( using_native_full_glycan_protocol_12_data[ "Fc_glycan_rmsd" ] <= 6 ) ].sort_values( "total_score", ascending=True )[ [ "filename", "total_score", "Fc_glycan_rmsd", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :5 ]
+
+metrics = list( using_native_full_glycan_protocol_12_data.columns.values )
+r_squared_to_metric_dict = {}
+log10_r_squared_to_metric_dict = {}
+binned_r_squared_to_metric_dict = {}
+for metric in metrics:
+    if metric == "atom_pair_constraint" or metric == "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A":
+#    if metric != "filename" and metric != "Fc_glycan_rmsd":
+        ## check normality of data
+        #z, pval = normaltest( using_native_full_glycan_protocol_12_data[ metric ] )
+        #if pval >= 0.05:
+        r = get_r_of_line_of_best_fit( using_native_full_glycan_protocol_12_data, metric )
+        r_squared_to_metric_dict[ r**2 ] = metric
+
+        #r = get_r_of_line_of_best_fit( using_native_full_glycan_protocol_12_data, metric, log10 )
+        #log10_r_squared_to_metric_dict[ r**2 ] = metric
+
+for metric in metrics:
+    if metric != "filename" and not metric.startswith( "delta" ) and metric != "Fc_glycan_rmsd":
+        binned_r = get_r_of_line_of_best_fit_binned_Fc_glycan_rmsd( using_native_full_glycan_protocol_12_data, metric)
+        binned_r_squared_to_metric_dict[ binned_r**2 ] = metric
+
+
+fig, ax = plt.subplots(figsize=(40,25))
+plt.subplot( 221 )
+x = 0.0
+y = low_E_native_pseudo_interface_energy
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+#sc = plt.scatter( using_native_full_glycan_protocol_12_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_12_no_reset_data[ "pseudo_interface_energy" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_12_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_12_data[ "pseudo_interface_energy" ] )
+#sc = plt.scatter( using_native_full_glycan_protocol_12_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_12_data[ "pseudo_interface_energy" ], c=using_native_full_glycan_protocol_12_data[ "sugar_bb" ] )
+#plt.colorbar(sc)
+#ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_12_no_reset_data[ "pseudo_interface_energy" ])), floor(min(using_native_full_glycan_protocol_12_data[ "pseudo_interface_energy" ])) ]
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_12_data[ "pseudo_interface_energy" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_12_data[ "pseudo_interface_energy" ], 20) )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ -1, 10 ] )
+plt.ylabel( "pseudo_interface_energy" )
+plt.ylim( [ -25, 0 ] )
+#plt.ylim( [ min(ymins) - 5, ymax + 5 ] )
+
+plt.subplot( 222 )
+x = 0.0
+y = low_E_native_total_score
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+#sc = plt.scatter( using_native_full_glycan_protocol_12_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_12_no_reset_data[ "total_score" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_12_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_12_data[ "total_score" ] )
+#sc = plt.scatter( using_native_full_glycan_protocol_12_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_12_data[ "total_score" ], c=using_native_full_glycan_protocol_12_data[ "sugar_bb" ] )
+#plt.colorbar(sc)
+#ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_12_no_reset_data[ "total_score" ])), floor(min(using_native_full_glycan_protocol_12_data[ "total_score" ])) ]
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_12_data[ "total_score" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_12_data[ "total_score" ], 20) )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ -1, 10 ] )
+plt.ylabel( "total_score" )
+plt.ylim( [ -560, -520 ] )
+#plt.ylim( [ -560, -460 ] )
+#plt.ylim( [ min(ymins) - 5, ymax + 5 ] )
+
+plt.subplot( 223 )
+xmin = 0
+xmax = 12
+#xmin = floor( min( using_native_full_glycan_protocol_12_data[ "Fc_glycan_rmsd" ] ) )
+#xmax = ceil( max( using_native_full_glycan_protocol_12_data[ "Fc_glycan_rmsd" ] ) )
+bins = np.arange( xmin, xmax + 0.5, 0.5 )
+plt.hist( using_native_full_glycan_protocol_12_data[ "Fc_glycan_rmsd" ], bins=bins, histtype="stepfilled" )
+#plt.hist( using_native_full_glycan_protocol_12_data[ "Fc_glycan_rmsd" ], bins, histtype="stepfilled" )
+#plt.xticks( bins )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ xmin, xmax ] )
+plt.ylabel( "count" )
+
+plt.subplot( 224 )
+x = 100.0
+y = low_E_native_total_score
+#sc = plt.scatter( using_native_full_glycan_protocol_12_data[ "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ], using_native_full_glycan_protocol_12_data[ "total_score" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_12_data[ "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ], using_native_full_glycan_protocol_12_data[ "total_score" ] )
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_12_data[ "total_score" ])), floor(min(using_native_full_glycan_protocol_12_data[ "total_score" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_12_data[ "total_score" ], 20) )
+plt.xlabel( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" )
+plt.xlim( [ 101, 0 ] )
+plt.ylabel( "total_score" )
+plt.ylim( [ -560, -520 ] )
+
+
+# save the plot
+plt.tight_layout()
+plot_title = "protocol_12"
+#plot_title = "fa_intra_rep 3ay4 using SSM-200 on Fc glycan with LCM reset, using ideal pop data with native omega, no pack, min before mc, ramp, am3, 3 mpt, Gal_5A_1A_tol cst"
+plt.suptitle( plot_title, fontsize = 36 )
+plt.subplots_adjust(top=0.93)
+plt.savefig( plot_title, dpi=120, transparent=True )
+plt.close()
+
+# print data
+#print_r_squared_data( using_native_full_glycan_protocol_12_data, r_squared_to_metric_dict, "linear" )
+#print_r_squared_data( using_native_full_glycan_protocol_12_data, log10_r_squared_to_metric_dict, "log10" )
+#print_r_squared_data( using_native_full_glycan_protocol_12_data, binned_r_squared_to_metric_dict, "binned rmsd" )
+protocol_12_total_score_num_hits, protocol_12_pseudo_interface_energy_num_hits, protocol_12_total_score_glycan_rmsd_count_2, protocol_12_total_score_glycan_rmsd_count_1_point_5, protocol_12_total_score_glycan_rmsd_count_1 = get_top10_data( using_native_full_glycan_protocol_12_data )
+protocol_12_total_score_Fnat_num_hits = get_top10_Fnat_data( using_native_full_glycan_protocol_12_data )
+print "protocol_12\n\n\n"
+
+
+
+############
+#### 13 ####
+############
+# glycan_modeling_protocols/protocol_13
+path_to_using_native_full_glycan_protocol_13 = "/Users/mlnance/pyrosetta_dir/metric_data/glycan_modeling_protocols/using_native_full_glycan_protocol_13.csv"
+using_native_full_glycan_protocol_13_data = pd.read_csv( path_to_using_native_full_glycan_protocol_13 )
+#path_to_using_native_full_glycan_protocol_13_no_reset = "/Users/mlnance/pyrosetta_dir/metric_data/glycan_modeling_protocols/using_native_full_glycan_protocol_13_no_reset.csv"
+#using_native_full_glycan_protocol_13_no_reset_data = pd.read_csv( path_to_using_native_full_glycan_protocol_13_no_reset )
+
+low_E_native_pseudo_interface_energy = np.mean( using_native_full_glycan_protocol_13_data[ "pseudo_interface_energy" ] - using_native_full_glycan_protocol_13_data[ "delta_pseudo_interface_energy" ] )
+low_E_native_total_score = np.mean( using_native_full_glycan_protocol_13_data[ "total_score" ] - using_native_full_glycan_protocol_13_data[ "delta_total_score" ] )
+
+print "***Top10 total_score protocol_13"
+print using_native_full_glycan_protocol_13_data.sort_values( "total_score", ascending=True )[ :10 ].sort_values( "total_score" )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ]
+#print using_native_full_glycan_protocol_13_data.sort_values( "total_score", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
+print "***Top 10 glycan_rmsd protocol_13"
+print using_native_full_glycan_protocol_13_data.sort_values( "Fc_glycan_rmsd", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :10 ]
+print "***Top 10 Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A protocol_13"
+print using_native_full_glycan_protocol_13_data.sort_values( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", ascending=False )[ [ "total_score", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
+#print using_native_full_glycan_protocol_13_data[ ( using_native_full_glycan_protocol_13_data[ "Fc_glycan_rmsd" ] >= 4 ) & ( using_native_full_glycan_protocol_13_data[ "Fc_glycan_rmsd" ] <= 6 ) ].sort_values( "total_score", ascending=True )[ [ "filename", "total_score", "Fc_glycan_rmsd", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :5 ]
+
+metrics = list( using_native_full_glycan_protocol_13_data.columns.values )
+r_squared_to_metric_dict = {}
+log10_r_squared_to_metric_dict = {}
+binned_r_squared_to_metric_dict = {}
+for metric in metrics:
+    if metric == "atom_pair_constraint" or metric == "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A":
+#    if metric != "filename" and metric != "Fc_glycan_rmsd":
+        ## check normality of data
+        #z, pval = normaltest( using_native_full_glycan_protocol_13_data[ metric ] )
+        #if pval >= 0.05:
+        r = get_r_of_line_of_best_fit( using_native_full_glycan_protocol_13_data, metric )
+        r_squared_to_metric_dict[ r**2 ] = metric
+
+        #r = get_r_of_line_of_best_fit( using_native_full_glycan_protocol_13_data, metric, log10 )
+        #log10_r_squared_to_metric_dict[ r**2 ] = metric
+
+for metric in metrics:
+    if metric != "filename" and not metric.startswith( "delta" ) and metric != "Fc_glycan_rmsd":
+        binned_r = get_r_of_line_of_best_fit_binned_Fc_glycan_rmsd( using_native_full_glycan_protocol_13_data, metric)
+        binned_r_squared_to_metric_dict[ binned_r**2 ] = metric
+
+
+fig, ax = plt.subplots(figsize=(40,25))
+plt.subplot( 221 )
+x = 0.0
+y = low_E_native_pseudo_interface_energy
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+#sc = plt.scatter( using_native_full_glycan_protocol_13_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_13_no_reset_data[ "pseudo_interface_energy" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_13_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_13_data[ "pseudo_interface_energy" ] )
+#sc = plt.scatter( using_native_full_glycan_protocol_13_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_13_data[ "pseudo_interface_energy" ], c=using_native_full_glycan_protocol_13_data[ "sugar_bb" ] )
+#plt.colorbar(sc)
+#ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_13_no_reset_data[ "pseudo_interface_energy" ])), floor(min(using_native_full_glycan_protocol_13_data[ "pseudo_interface_energy" ])) ]
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_13_data[ "pseudo_interface_energy" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_13_data[ "pseudo_interface_energy" ], 20) )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ -1, 10 ] )
+plt.ylabel( "pseudo_interface_energy" )
+plt.ylim( [ -25, 0 ] )
+#plt.ylim( [ min(ymins) - 5, ymax + 5 ] )
+
+plt.subplot( 222 )
+x = 0.0
+y = low_E_native_total_score
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+#sc = plt.scatter( using_native_full_glycan_protocol_13_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_13_no_reset_data[ "total_score" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_13_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_13_data[ "total_score" ] )
+#sc = plt.scatter( using_native_full_glycan_protocol_13_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_13_data[ "total_score" ], c=using_native_full_glycan_protocol_13_data[ "sugar_bb" ] )
+#plt.colorbar(sc)
+#ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_13_no_reset_data[ "total_score" ])), floor(min(using_native_full_glycan_protocol_13_data[ "total_score" ])) ]
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_13_data[ "total_score" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_13_data[ "total_score" ], 20) )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ -1, 10 ] )
+plt.ylabel( "total_score" )
+plt.ylim( [ -560, -520 ] )
+#plt.ylim( [ -560, -460 ] )
+#plt.ylim( [ min(ymins) - 5, ymax + 5 ] )
+
+plt.subplot( 223 )
+xmin = 0
+xmax = 12
+#xmin = floor( min( using_native_full_glycan_protocol_13_data[ "Fc_glycan_rmsd" ] ) )
+#xmax = ceil( max( using_native_full_glycan_protocol_13_data[ "Fc_glycan_rmsd" ] ) )
+bins = np.arange( xmin, xmax + 0.5, 0.5 )
+plt.hist( using_native_full_glycan_protocol_13_data[ "Fc_glycan_rmsd" ], bins=bins, histtype="stepfilled" )
+#plt.hist( using_native_full_glycan_protocol_13_data[ "Fc_glycan_rmsd" ], bins, histtype="stepfilled" )
+#plt.xticks( bins )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ xmin, xmax ] )
+plt.ylabel( "count" )
+
+plt.subplot( 224 )
+x = 100.0
+y = low_E_native_total_score
+#sc = plt.scatter( using_native_full_glycan_protocol_13_data[ "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ], using_native_full_glycan_protocol_13_data[ "total_score" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_13_data[ "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ], using_native_full_glycan_protocol_13_data[ "total_score" ] )
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_13_data[ "total_score" ])), floor(min(using_native_full_glycan_protocol_13_data[ "total_score" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_13_data[ "total_score" ], 20) )
+plt.xlabel( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" )
+plt.xlim( [ 101, 0 ] )
+plt.ylabel( "total_score" )
+plt.ylim( [ -560, -520 ] )
+
+
+# save the plot
+plt.tight_layout()
+plot_title = "protocol_13"
+#plot_title = "fa_intra_rep 3ay4 using SSM-200 on Fc glycan with LCM reset, using ideal pop data with native omega, no pack, min before mc, ramp, am3, 3 mpt, Gal_5A_1A_tol cst"
+plt.suptitle( plot_title, fontsize = 36 )
+plt.subplots_adjust(top=0.93)
+plt.savefig( plot_title, dpi=120, transparent=True )
+plt.close()
+
+# print data
+#print_r_squared_data( using_native_full_glycan_protocol_13_data, r_squared_to_metric_dict, "linear" )
+#print_r_squared_data( using_native_full_glycan_protocol_13_data, log10_r_squared_to_metric_dict, "log10" )
+#print_r_squared_data( using_native_full_glycan_protocol_13_data, binned_r_squared_to_metric_dict, "binned rmsd" )
+protocol_13_total_score_num_hits, protocol_13_pseudo_interface_energy_num_hits, protocol_13_total_score_glycan_rmsd_count_2, protocol_13_total_score_glycan_rmsd_count_1_point_5, protocol_13_total_score_glycan_rmsd_count_1 = get_top10_data( using_native_full_glycan_protocol_13_data )
+protocol_13_total_score_Fnat_num_hits = get_top10_Fnat_data( using_native_full_glycan_protocol_13_data )
+print "protocol_13\n\n\n"
+
+
+
+############
+#### 14 ####
+############
+# glycan_modeling_protocols/protocol_14
+path_to_using_native_full_glycan_protocol_14 = "/Users/mlnance/pyrosetta_dir/metric_data/glycan_modeling_protocols/using_native_full_glycan_protocol_14.csv"
+using_native_full_glycan_protocol_14_data = pd.read_csv( path_to_using_native_full_glycan_protocol_14 )
+#path_to_using_native_full_glycan_protocol_14_no_reset = "/Users/mlnance/pyrosetta_dir/metric_data/glycan_modeling_protocols/using_native_full_glycan_protocol_14_no_reset.csv"
+#using_native_full_glycan_protocol_14_no_reset_data = pd.read_csv( path_to_using_native_full_glycan_protocol_14_no_reset )
+
+low_E_native_pseudo_interface_energy = np.mean( using_native_full_glycan_protocol_14_data[ "pseudo_interface_energy" ] - using_native_full_glycan_protocol_14_data[ "delta_pseudo_interface_energy" ] )
+low_E_native_total_score = np.mean( using_native_full_glycan_protocol_14_data[ "total_score" ] - using_native_full_glycan_protocol_14_data[ "delta_total_score" ] )
+
+print "***Top10 total_score protocol_14"
+print using_native_full_glycan_protocol_14_data.sort_values( "total_score", ascending=True )[ :10 ].sort_values( "total_score" )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ]
+#print using_native_full_glycan_protocol_14_data.sort_values( "total_score", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
+print "***Top 10 glycan_rmsd protocol_14"
+print using_native_full_glycan_protocol_14_data.sort_values( "Fc_glycan_rmsd", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :10 ]
+print "***Top 10 Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A protocol_14"
+print using_native_full_glycan_protocol_14_data.sort_values( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", ascending=False )[ [ "total_score", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
+#print using_native_full_glycan_protocol_14_data[ ( using_native_full_glycan_protocol_14_data[ "Fc_glycan_rmsd" ] >= 4 ) & ( using_native_full_glycan_protocol_14_data[ "Fc_glycan_rmsd" ] <= 6 ) ].sort_values( "total_score", ascending=True )[ [ "filename", "total_score", "Fc_glycan_rmsd", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :5 ]
+
+metrics = list( using_native_full_glycan_protocol_14_data.columns.values )
+r_squared_to_metric_dict = {}
+log10_r_squared_to_metric_dict = {}
+binned_r_squared_to_metric_dict = {}
+for metric in metrics:
+    if metric == "atom_pair_constraint" or metric == "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A":
+#    if metric != "filename" and metric != "Fc_glycan_rmsd":
+        ## check normality of data
+        #z, pval = normaltest( using_native_full_glycan_protocol_14_data[ metric ] )
+        #if pval >= 0.05:
+        r = get_r_of_line_of_best_fit( using_native_full_glycan_protocol_14_data, metric )
+        r_squared_to_metric_dict[ r**2 ] = metric
+
+        #r = get_r_of_line_of_best_fit( using_native_full_glycan_protocol_14_data, metric, log10 )
+        #log10_r_squared_to_metric_dict[ r**2 ] = metric
+
+for metric in metrics:
+    if metric != "filename" and not metric.startswith( "delta" ) and metric != "Fc_glycan_rmsd":
+        binned_r = get_r_of_line_of_best_fit_binned_Fc_glycan_rmsd( using_native_full_glycan_protocol_14_data, metric)
+        binned_r_squared_to_metric_dict[ binned_r**2 ] = metric
+
+
+fig, ax = plt.subplots(figsize=(40,25))
+plt.subplot( 221 )
+x = 0.0
+y = low_E_native_pseudo_interface_energy
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+#sc = plt.scatter( using_native_full_glycan_protocol_14_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_14_no_reset_data[ "pseudo_interface_energy" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_14_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_14_data[ "pseudo_interface_energy" ] )
+#sc = plt.scatter( using_native_full_glycan_protocol_14_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_14_data[ "pseudo_interface_energy" ], c=using_native_full_glycan_protocol_14_data[ "sugar_bb" ] )
+#plt.colorbar(sc)
+#ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_14_no_reset_data[ "pseudo_interface_energy" ])), floor(min(using_native_full_glycan_protocol_14_data[ "pseudo_interface_energy" ])) ]
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_14_data[ "pseudo_interface_energy" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_14_data[ "pseudo_interface_energy" ], 20) )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ -1, 10 ] )
+plt.ylabel( "pseudo_interface_energy" )
+plt.ylim( [ -25, 0 ] )
+#plt.ylim( [ min(ymins) - 5, ymax + 5 ] )
+
+plt.subplot( 222 )
+x = 0.0
+y = low_E_native_total_score
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+#sc = plt.scatter( using_native_full_glycan_protocol_14_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_14_no_reset_data[ "total_score" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_14_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_14_data[ "total_score" ] )
+#sc = plt.scatter( using_native_full_glycan_protocol_14_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_14_data[ "total_score" ], c=using_native_full_glycan_protocol_14_data[ "sugar_bb" ] )
+#plt.colorbar(sc)
+#ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_14_no_reset_data[ "total_score" ])), floor(min(using_native_full_glycan_protocol_14_data[ "total_score" ])) ]
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_14_data[ "total_score" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_14_data[ "total_score" ], 20) )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ -1, 10 ] )
+plt.ylabel( "total_score" )
+plt.ylim( [ -560, -520 ] )
+#plt.ylim( [ -560, -460 ] )
+#plt.ylim( [ min(ymins) - 5, ymax + 5 ] )
+
+plt.subplot( 223 )
+xmin = 0
+xmax = 12
+#xmin = floor( min( using_native_full_glycan_protocol_14_data[ "Fc_glycan_rmsd" ] ) )
+#xmax = ceil( max( using_native_full_glycan_protocol_14_data[ "Fc_glycan_rmsd" ] ) )
+bins = np.arange( xmin, xmax + 0.5, 0.5 )
+plt.hist( using_native_full_glycan_protocol_14_data[ "Fc_glycan_rmsd" ], bins=bins, histtype="stepfilled" )
+#plt.hist( using_native_full_glycan_protocol_14_data[ "Fc_glycan_rmsd" ], bins, histtype="stepfilled" )
+#plt.xticks( bins )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ xmin, xmax ] )
+plt.ylabel( "count" )
+
+plt.subplot( 224 )
+x = 100.0
+y = low_E_native_total_score
+#sc = plt.scatter( using_native_full_glycan_protocol_14_data[ "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ], using_native_full_glycan_protocol_14_data[ "total_score" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_14_data[ "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ], using_native_full_glycan_protocol_14_data[ "total_score" ] )
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_14_data[ "total_score" ])), floor(min(using_native_full_glycan_protocol_14_data[ "total_score" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_14_data[ "total_score" ], 20) )
+plt.xlabel( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" )
+plt.xlim( [ 101, 0 ] )
+plt.ylabel( "total_score" )
+plt.ylim( [ -560, -520 ] )
+
+
+# save the plot
+plt.tight_layout()
+plot_title = "protocol_14"
+#plot_title = "fa_intra_rep 3ay4 using SSM-200 on Fc glycan with LCM reset, using ideal pop data with native omega, no pack, min before mc, ramp, am3, 3 mpt, Gal_5A_1A_tol cst"
+plt.suptitle( plot_title, fontsize = 36 )
+plt.subplots_adjust(top=0.93)
+plt.savefig( plot_title, dpi=120, transparent=True )
+plt.close()
+
+# print data
+#print_r_squared_data( using_native_full_glycan_protocol_14_data, r_squared_to_metric_dict, "linear" )
+#print_r_squared_data( using_native_full_glycan_protocol_14_data, log10_r_squared_to_metric_dict, "log10" )
+#print_r_squared_data( using_native_full_glycan_protocol_14_data, binned_r_squared_to_metric_dict, "binned rmsd" )
+protocol_14_total_score_num_hits, protocol_14_pseudo_interface_energy_num_hits, protocol_14_total_score_glycan_rmsd_count_2, protocol_14_total_score_glycan_rmsd_count_1_point_5, protocol_14_total_score_glycan_rmsd_count_1 = get_top10_data( using_native_full_glycan_protocol_14_data )
+protocol_14_total_score_Fnat_num_hits = get_top10_Fnat_data( using_native_full_glycan_protocol_14_data )
+print "protocol_14\n\n\n"
+
+
+
+############
+#### 15 ####
+############
+# glycan_modeling_protocols/protocol_15
+path_to_using_native_full_glycan_protocol_15 = "/Users/mlnance/pyrosetta_dir/metric_data/glycan_modeling_protocols/using_native_full_glycan_protocol_15.csv"
+using_native_full_glycan_protocol_15_data = pd.read_csv( path_to_using_native_full_glycan_protocol_15 )
+#path_to_using_native_full_glycan_protocol_15_no_reset = "/Users/mlnance/pyrosetta_dir/metric_data/glycan_modeling_protocols/using_native_full_glycan_protocol_15_no_reset.csv"
+#using_native_full_glycan_protocol_15_no_reset_data = pd.read_csv( path_to_using_native_full_glycan_protocol_15_no_reset )
+
+low_E_native_pseudo_interface_energy = np.mean( using_native_full_glycan_protocol_15_data[ "pseudo_interface_energy" ] - using_native_full_glycan_protocol_15_data[ "delta_pseudo_interface_energy" ] )
+low_E_native_total_score = np.mean( using_native_full_glycan_protocol_15_data[ "total_score" ] - using_native_full_glycan_protocol_15_data[ "delta_total_score" ] )
+
+print "***Top10 total_score protocol_15"
+print using_native_full_glycan_protocol_15_data.sort_values( "total_score", ascending=True )[ :10 ].sort_values( "total_score" )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ]
+#print using_native_full_glycan_protocol_15_data.sort_values( "total_score", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
+print "***Top 10 glycan_rmsd protocol_15"
+print using_native_full_glycan_protocol_15_data.sort_values( "Fc_glycan_rmsd", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :10 ]
+print "***Top 10 Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A protocol_15"
+print using_native_full_glycan_protocol_15_data.sort_values( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", ascending=False )[ [ "total_score", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
+#print using_native_full_glycan_protocol_15_data[ ( using_native_full_glycan_protocol_15_data[ "Fc_glycan_rmsd" ] >= 7 ) & ( using_native_full_glycan_protocol_15_data[ "Fc_glycan_rmsd" ] <= 7.5 ) ].sort_values( "total_score", ascending=True )[ [ "filename", "total_score", "Fc_glycan_rmsd", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :10 ]
+
+metrics = list( using_native_full_glycan_protocol_15_data.columns.values )
+r_squared_to_metric_dict = {}
+log10_r_squared_to_metric_dict = {}
+binned_r_squared_to_metric_dict = {}
+for metric in metrics:
+    if metric == "atom_pair_constraint" or metric == "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A":
+#    if metric != "filename" and metric != "Fc_glycan_rmsd":
+        ## check normality of data
+        #z, pval = normaltest( using_native_full_glycan_protocol_15_data[ metric ] )
+        #if pval >= 0.05:
+        r = get_r_of_line_of_best_fit( using_native_full_glycan_protocol_15_data, metric )
+        r_squared_to_metric_dict[ r**2 ] = metric
+
+        #r = get_r_of_line_of_best_fit( using_native_full_glycan_protocol_15_data, metric, log10 )
+        #log10_r_squared_to_metric_dict[ r**2 ] = metric
+
+for metric in metrics:
+    if metric != "filename" and not metric.startswith( "delta" ) and metric != "Fc_glycan_rmsd":
+        binned_r = get_r_of_line_of_best_fit_binned_Fc_glycan_rmsd( using_native_full_glycan_protocol_15_data, metric)
+        binned_r_squared_to_metric_dict[ binned_r**2 ] = metric
+
+
+fig, ax = plt.subplots(figsize=(40,25))
+plt.subplot( 221 )
+x = 0.0
+y = low_E_native_pseudo_interface_energy
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+#sc = plt.scatter( using_native_full_glycan_protocol_15_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_15_no_reset_data[ "pseudo_interface_energy" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_15_data[ "pseudo_interface_energy" ] )
+#sc = plt.scatter( using_native_full_glycan_protocol_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_15_data[ "pseudo_interface_energy" ], c=using_native_full_glycan_protocol_15_data[ "sugar_bb" ] )
+#plt.colorbar(sc)
+#ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_15_no_reset_data[ "pseudo_interface_energy" ])), floor(min(using_native_full_glycan_protocol_15_data[ "pseudo_interface_energy" ])) ]
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_15_data[ "pseudo_interface_energy" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_15_data[ "pseudo_interface_energy" ], 20) )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ -1, 10 ] )
+plt.ylabel( "pseudo_interface_energy" )
+plt.ylim( [ -25, 0 ] )
+#plt.ylim( [ min(ymins) - 5, ymax + 5 ] )
+
+plt.subplot( 222 )
+x = 0.0
+y = low_E_native_total_score
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+#sc = plt.scatter( using_native_full_glycan_protocol_15_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_15_no_reset_data[ "total_score" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_15_data[ "total_score" ] )
+#sc = plt.scatter( using_native_full_glycan_protocol_15_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_15_data[ "total_score" ], c=using_native_full_glycan_protocol_15_data[ "sugar_bb" ] )
+#plt.colorbar(sc)
+#ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_15_no_reset_data[ "total_score" ])), floor(min(using_native_full_glycan_protocol_15_data[ "total_score" ])) ]
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_15_data[ "total_score" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_15_data[ "total_score" ], 20) )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ -1, 10 ] )
+plt.ylabel( "total_score" )
+plt.ylim( [ -560, -520 ] )
+#plt.ylim( [ -560, -460 ] )
+#plt.ylim( [ min(ymins) - 5, ymax + 5 ] )
+
+plt.subplot( 223 )
+xmin = 0
+xmax = 12
+#xmin = floor( min( using_native_full_glycan_protocol_15_data[ "Fc_glycan_rmsd" ] ) )
+#xmax = ceil( max( using_native_full_glycan_protocol_15_data[ "Fc_glycan_rmsd" ] ) )
+bins = np.arange( xmin, xmax + 0.5, 0.5 )
+plt.hist( using_native_full_glycan_protocol_15_data[ "Fc_glycan_rmsd" ], bins=bins, histtype="stepfilled" )
+#plt.hist( using_native_full_glycan_protocol_15_data[ "Fc_glycan_rmsd" ], bins, histtype="stepfilled" )
+#plt.xticks( bins )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ xmin, xmax ] )
+plt.ylabel( "count" )
+
+plt.subplot( 224 )
+x = 100.0
+y = low_E_native_total_score
+#sc = plt.scatter( using_native_full_glycan_protocol_15_data[ "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ], using_native_full_glycan_protocol_15_data[ "total_score" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_15_data[ "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ], using_native_full_glycan_protocol_15_data[ "total_score" ] )
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_15_data[ "total_score" ])), floor(min(using_native_full_glycan_protocol_15_data[ "total_score" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_15_data[ "total_score" ], 20) )
+plt.xlabel( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" )
+plt.xlim( [ 101, 0 ] )
+plt.ylabel( "total_score" )
+plt.ylim( [ -560, -520 ] )
+
+
+# save the plot
+plt.tight_layout()
+plot_title = "protocol_15"
+#plot_title = "fa_intra_rep 3ay4 using SSM-200 on Fc glycan with LCM reset, using ideal pop data with native omega, no pack, min before mc, ramp, am3, 3 mpt, Gal_5A_1A_tol cst"
+plt.suptitle( plot_title, fontsize = 36 )
+plt.subplots_adjust(top=0.93)
+plt.savefig( plot_title, dpi=120, transparent=True )
+plt.close()
+
+# print data
+#print_r_squared_data( using_native_full_glycan_protocol_15_data, r_squared_to_metric_dict, "linear" )
+#print_r_squared_data( using_native_full_glycan_protocol_15_data, log10_r_squared_to_metric_dict, "log10" )
+#print_r_squared_data( using_native_full_glycan_protocol_15_data, binned_r_squared_to_metric_dict, "binned rmsd" )
+protocol_15_total_score_num_hits, protocol_15_pseudo_interface_energy_num_hits, protocol_15_total_score_glycan_rmsd_count_2, protocol_15_total_score_glycan_rmsd_count_1_point_5, protocol_15_total_score_glycan_rmsd_count_1 = get_top10_data( using_native_full_glycan_protocol_15_data )
+protocol_15_total_score_Fnat_num_hits = get_top10_Fnat_data( using_native_full_glycan_protocol_15_data )
+print "protocol_15\n\n\n"
+
+
+
+############
+#### 16 ####
+############
+# glycan_modeling_protocols/protocol_16
+path_to_using_native_full_glycan_protocol_16 = "/Users/mlnance/pyrosetta_dir/metric_data/glycan_modeling_protocols/using_native_full_glycan_protocol_16.csv"
+using_native_full_glycan_protocol_16_data = pd.read_csv( path_to_using_native_full_glycan_protocol_16 )
+#path_to_using_native_full_glycan_protocol_16_no_reset = "/Users/mlnance/pyrosetta_dir/metric_data/glycan_modeling_protocols/using_native_full_glycan_protocol_16_no_reset.csv"
+#using_native_full_glycan_protocol_16_no_reset_data = pd.read_csv( path_to_using_native_full_glycan_protocol_16_no_reset )
+
+low_E_native_pseudo_interface_energy = np.mean( using_native_full_glycan_protocol_16_data[ "pseudo_interface_energy" ] - using_native_full_glycan_protocol_16_data[ "delta_pseudo_interface_energy" ] )
+low_E_native_total_score = np.mean( using_native_full_glycan_protocol_16_data[ "total_score" ] - using_native_full_glycan_protocol_16_data[ "delta_total_score" ] )
+
+print "***Top10 total_score protocol_16"
+print using_native_full_glycan_protocol_16_data.sort_values( "total_score", ascending=True )[ :10 ].sort_values( "total_score" )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ]
+#print using_native_full_glycan_protocol_16_data.sort_values( "total_score", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
+print "***Top 10 glycan_rmsd protocol_16"
+print using_native_full_glycan_protocol_16_data.sort_values( "Fc_glycan_rmsd", ascending=True )[ [ "total_score", "Fc_glycan_rmsd", "filename", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :10 ]
+print "***Top 10 Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A protocol_16"
+print using_native_full_glycan_protocol_16_data.sort_values( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", ascending=False )[ [ "total_score", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A", "Fc_glycan_rmsd", "filename" ] ][ :10 ]
+#print using_native_full_glycan_protocol_16_data[ ( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ] >= 6 ) & ( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ] <= 8 ) ].sort_values( "total_score", ascending=True )[ [ "filename", "total_score", "Fc_glycan_rmsd", "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ] ][ :10 ]
+grab_these_structs = []
+#for jj in range( 1, 11 ):
+#    low_E_struct = using_native_full_glycan_protocol_16_data[ ( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ] >= jj - 1 ) & ( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ] <= jj ) ].sort_values( "total_score", ascending=True )
+#    print jj-1, jj, "mean:", np.mean( low_E_struct["total_score"] ), "median:", np.median( low_E_struct["total_score"] ), "min:", min( low_E_struct["total_score"] ), "max:", max( low_E_struct["total_score"] ), "range:", max( low_E_struct["total_score"] ) - min( low_E_struct["total_score"] )
+#    print "  /home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/glycan_modeling_protocols/protocol_16/base_structs/%s" %low_E_struct.iloc[0]["filename"]
+#    grab_these_structs.append( "/home/mlnance/project_created_structs/3ay4_Fc_FcgRIIIa/glycan_modeling_protocols/protocol_16/base_structs/protocol_%s.gz\n" %low_E_struct.iloc[0]["filename"] )
+#with open( "protocol_16_lowest_E_of_1A_binned_rmsd", "wb" ) as fh:
+#    fh.writelines( grab_these_structs )
+
+
+metrics = list( using_native_full_glycan_protocol_16_data.columns.values )
+r_squared_to_metric_dict = {}
+log10_r_squared_to_metric_dict = {}
+binned_r_squared_to_metric_dict = {}
+for metric in metrics:
+    if metric == "atom_pair_constraint" or metric == "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_10A":
+#    if metric != "filename" and metric != "Fc_glycan_rmsd":
+        ## check normality of data
+        #z, pval = normaltest( using_native_full_glycan_protocol_16_data[ metric ] )
+        #if pval >= 0.05:
+        r = get_r_of_line_of_best_fit( using_native_full_glycan_protocol_16_data, metric )
+        r_squared_to_metric_dict[ r**2 ] = metric
+
+        #r = get_r_of_line_of_best_fit( using_native_full_glycan_protocol_16_data, metric, log10 )
+        #log10_r_squared_to_metric_dict[ r**2 ] = metric
+
+for metric in metrics:
+    if metric != "filename" and not metric.startswith( "delta" ) and metric != "Fc_glycan_rmsd":
+        binned_r = get_r_of_line_of_best_fit_binned_Fc_glycan_rmsd( using_native_full_glycan_protocol_16_data, metric)
+        binned_r_squared_to_metric_dict[ binned_r**2 ] = metric
+
+
+fig, ax = plt.subplots(figsize=(40,25))
+plt.subplot( 221 )
+x = 0.0
+y = low_E_native_pseudo_interface_energy
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+#sc = plt.scatter( using_native_full_glycan_protocol_16_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_16_no_reset_data[ "pseudo_interface_energy" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_16_data[ "pseudo_interface_energy" ] )
+#sc = plt.scatter( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_16_data[ "pseudo_interface_energy" ], c=using_native_full_glycan_protocol_16_data[ "sugar_bb" ] )
+#plt.colorbar(sc)
+#ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_16_no_reset_data[ "pseudo_interface_energy" ])), floor(min(using_native_full_glycan_protocol_16_data[ "pseudo_interface_energy" ])) ]
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_16_data[ "pseudo_interface_energy" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_16_data[ "pseudo_interface_energy" ], 20) )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ -1, 10 ] )
+plt.ylabel( "pseudo_interface_energy" )
+plt.ylim( [ -25, 0 ] )
+#plt.ylim( [ min(ymins) - 5, ymax + 5 ] )
+
+plt.subplot( 222 )
+x = 0.0
+y = low_E_native_total_score
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+#sc = plt.scatter( using_native_full_glycan_protocol_16_no_reset_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_16_no_reset_data[ "total_score" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_16_data[ "total_score" ] )
+#sc = plt.scatter( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ], using_native_full_glycan_protocol_16_data[ "total_score" ], c=using_native_full_glycan_protocol_16_data[ "sugar_bb" ] )
+#plt.colorbar(sc)
+#ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_16_no_reset_data[ "total_score" ])), floor(min(using_native_full_glycan_protocol_16_data[ "total_score" ])) ]
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_16_data[ "total_score" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_16_data[ "total_score" ], 20) )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ -1, 10 ] )
+plt.ylabel( "total_score" )
+plt.ylim( [ -560, -520 ] )
+#plt.ylim( [ -560, -460 ] )
+#plt.ylim( [ min(ymins) - 5, ymax + 5 ] )
+
+plt.subplot( 223 )
+xmin = 0
+xmax = 12
+#xmin = floor( min( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ] ) )
+#xmax = ceil( max( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ] ) )
+bins = np.arange( xmin, xmax + 0.5, 0.5 )
+plt.hist( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ], bins=bins, histtype="stepfilled" )
+#plt.hist( using_native_full_glycan_protocol_16_data[ "Fc_glycan_rmsd" ], bins, histtype="stepfilled" )
+#plt.xticks( bins )
+plt.xlabel( "Fc_glycan_rmsd" )
+plt.xlim( [ xmin, xmax ] )
+plt.ylabel( "count" )
+
+plt.subplot( 224 )
+x = 100.0
+y = low_E_native_total_score
+#sc = plt.scatter( using_native_full_glycan_protocol_16_data[ "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ], using_native_full_glycan_protocol_16_data[ "total_score" ], marker='v', linewidth='0', s=20, c="orange", clip_on=False )
+sc = plt.scatter( x, y, marker='D', s=36, c="red", clip_on=False )
+sc = plt.scatter( using_native_full_glycan_protocol_16_data[ "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" ], using_native_full_glycan_protocol_16_data[ "total_score" ] )
+ymins = [ floor(y), floor(min(using_native_full_glycan_protocol_16_data[ "total_score" ])), floor(min(using_native_full_glycan_protocol_16_data[ "total_score" ])) ]
+ymax = ceil( np.percentile(using_native_full_glycan_protocol_16_data[ "total_score" ], 20) )
+plt.xlabel( "Fc_glycan_to_Fc_protein_Fnat_tot_contacts_recovered_8A" )
+plt.xlim( [ 101, 0 ] )
+plt.ylabel( "total_score" )
+plt.ylim( [ -560, -520 ] )
+
+
+# save the plot
+plt.tight_layout()
+plot_title = "protocol_16"
+#plot_title = "fa_intra_rep 3ay4 using SSM-200 on Fc glycan with LCM reset, using ideal pop data with native omega, no pack, min before mc, ramp, am3, 3 mpt, Gal_5A_1A_tol cst"
+plt.suptitle( plot_title, fontsize = 36 )
+plt.subplots_adjust(top=0.93)
+plt.savefig( plot_title, dpi=120, transparent=True )
+plt.close()
+
+# print data
+#print_r_squared_data( using_native_full_glycan_protocol_16_data, r_squared_to_metric_dict, "linear" )
+#print_r_squared_data( using_native_full_glycan_protocol_16_data, log10_r_squared_to_metric_dict, "log10" )
+#print_r_squared_data( using_native_full_glycan_protocol_16_data, binned_r_squared_to_metric_dict, "binned rmsd" )
+protocol_16_total_score_num_hits, protocol_16_pseudo_interface_energy_num_hits, protocol_16_total_score_glycan_rmsd_count_2, protocol_16_total_score_glycan_rmsd_count_1_point_5, protocol_16_total_score_glycan_rmsd_count_1 = get_top10_data( using_native_full_glycan_protocol_16_data )
+protocol_16_total_score_Fnat_num_hits = get_top10_Fnat_data( using_native_full_glycan_protocol_16_data )
+print "protocol_16\n\n\n"
+
+
+
+
 
 
 ###########################
@@ -411,12 +1055,12 @@ print "protocol_10_again\n\n\n"
 # protocol_9_again_total_score_num_hits, protocol_9_again_pseudo_interface_energy_num_hits = using_native_full_glycan_protocol_9_again_data
 # protocol_10_again_total_score_num_hits, protocol_10_again_pseudo_interface_energy_num_hits = using_native_full_glycan_protocol_10_again_data
 
-names = ( "Protocol_9_again", "Protocol_10_again", )
-total_score_protocol_data = ( protocol_9_again_total_score_num_hits, protocol_10_again_total_score_num_hits, )
-pseudo_interface_energy_protocol_data = ( protocol_9_again_pseudo_interface_energy_num_hits, protocol_10_again_pseudo_interface_energy_num_hits, )
-total_score_glycan_rmsd_count_2 = ( protocol_9_again_total_score_glycan_rmsd_count_2, protocol_10_again_total_score_glycan_rmsd_count_2, )
-total_score_glycan_rmsd_count_1_point_5 = ( protocol_9_again_total_score_glycan_rmsd_count_1_point_5, protocol_10_again_total_score_glycan_rmsd_count_1_point_5, )
-total_score_glycan_rmsd_count_1 = ( protocol_9_again_total_score_glycan_rmsd_count_1, protocol_10_again_total_score_glycan_rmsd_count_1, )
+names = ( "Protocol_9_again", "Protocol_10_again", "Protocol_12", "Protocol_13", "Protocol_14", "Protocol_15", "Protocol_16", )
+total_score_protocol_data = ( protocol_9_again_total_score_num_hits, protocol_10_again_total_score_num_hits, protocol_12_total_score_num_hits, protocol_13_total_score_num_hits, protocol_14_total_score_num_hits, protocol_15_total_score_num_hits, protocol_16_total_score_num_hits, )
+pseudo_interface_energy_protocol_data = ( protocol_9_again_pseudo_interface_energy_num_hits, protocol_10_again_pseudo_interface_energy_num_hits, protocol_12_pseudo_interface_energy_num_hits, protocol_13_pseudo_interface_energy_num_hits, protocol_14_pseudo_interface_energy_num_hits, protocol_15_pseudo_interface_energy_num_hits, protocol_16_pseudo_interface_energy_num_hits, )
+total_score_glycan_rmsd_count_2 = ( protocol_9_again_total_score_glycan_rmsd_count_2, protocol_10_again_total_score_glycan_rmsd_count_2, protocol_12_total_score_glycan_rmsd_count_2, protocol_13_total_score_glycan_rmsd_count_2, protocol_14_total_score_glycan_rmsd_count_2, protocol_15_total_score_glycan_rmsd_count_2, protocol_16_total_score_glycan_rmsd_count_2, )
+total_score_glycan_rmsd_count_1_point_5 = ( protocol_9_again_total_score_glycan_rmsd_count_1_point_5, protocol_10_again_total_score_glycan_rmsd_count_1_point_5, protocol_12_total_score_glycan_rmsd_count_1_point_5, protocol_13_total_score_glycan_rmsd_count_1_point_5, protocol_14_total_score_glycan_rmsd_count_1_point_5, protocol_15_total_score_glycan_rmsd_count_1_point_5, protocol_16_total_score_glycan_rmsd_count_1_point_5, )
+total_score_glycan_rmsd_count_1 = ( protocol_9_again_total_score_glycan_rmsd_count_1, protocol_10_again_total_score_glycan_rmsd_count_1, protocol_12_total_score_glycan_rmsd_count_1, protocol_13_total_score_glycan_rmsd_count_1, protocol_14_total_score_glycan_rmsd_count_1, protocol_15_total_score_glycan_rmsd_count_1, protocol_16_total_score_glycan_rmsd_count_1, )
 
 N = np.arange( len( names ) )
 width = 0.3

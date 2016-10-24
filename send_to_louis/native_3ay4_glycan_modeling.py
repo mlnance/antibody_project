@@ -233,7 +233,6 @@ elif input_args.protocol_num == 13:
                                            angle_max = 6.0 * 3,  # 6.0 comes from default angle_max from SmallMover and ShearMover
                                            dump_dir = input_args.structure_dir, 
                                            pmm = pmm )
-    #GlycanModelProtocol.trials = 10
     GlycanModelProtocol.trials = 200
     GlycanModelProtocol.moves_per_trial = 3
     GlycanModelProtocol.LCM_reset = True
@@ -255,10 +254,10 @@ elif input_args.protocol_num == 13:
 
 elif input_args.protocol_num == 14:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_14 version
-    mm = MoveMap()
     ###############################################
     #### CORE GlcNAc CAN MOVE IN THIS PROTOCOL ####
     ###############################################
+    mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
         mm.set_chi( res_num, False )

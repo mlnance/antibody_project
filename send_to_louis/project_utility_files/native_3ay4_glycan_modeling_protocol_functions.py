@@ -527,6 +527,8 @@ def spin_carbs_connected_to_prot( mm, input_pose ):
 
     return pose
 
+
+
 def glycosylate_working_pose( input_pose, glyco_file, glyco_sites ):
     """
     Glycosylate the <input_pose> using the <glyco_file> at the <glyco_sites> on the ND2 atom (assumes an ASN N-linked glycosylation, for now)
@@ -597,3 +599,26 @@ def glycosylate_working_pose( input_pose, glyco_file, glyco_sites ):
             sys.exit()
 
     return pose
+
+
+
+def get_chains( input_pose, residue_range = None ):
+    """
+    Get a list of the chain ID's in the Pose. Can get the chain ID's associated with specific residues in <residue_range>
+    :param input_pose: Pose
+    :return: list( chains ) such as [ 'A', 'B', 'C' ]
+    """
+    chains = []
+
+    # if no residue_range was given, replace it with all the residues in the input_pose
+    if residue_range is None:
+        residue_range = range( 1, input_pose.n_residue() + 1 )
+
+    for res_num in residue_range:
+        # example output of input_pose.pdb_info().pose2pdb( 45 ) is "245 B ", so strip whitespace and get the second item in the output
+        chain_id = input_pose.pdb_info().pose2pdb( res_num ).strip().split( ' ' )[1]
+        if chain_id not in chains:
+            chains.append( chain_id )
+
+    chains.sort()
+    return chains

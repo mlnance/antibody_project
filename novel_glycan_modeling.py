@@ -73,7 +73,7 @@ if input_args.glyco_file is not None:
 # imports 
 from native_3ay4_glycan_modeling_protocol_functions import get_fa_scorefxn_with_given_weights, \
     load_pose, initialize_rosetta, native_Fc_glycan_nums_except_core_GlcNAc, \
-    native_Fc_glycan_nums, glycosylate_working_pose
+    native_Fc_glycan_nums, glycosylate_working_pose, get_chains
 from rosetta import MoveMap, PyMOL_Mover
 
 # utility directory function
@@ -108,6 +108,8 @@ native_pose_numbers = set( range( 1, native_pose.n_residue() + 1 ) )
 working_pose_numbers = set( range( 1, working_pose.n_residue() + 1 ) )
 working_glycan_numbers = list( working_pose_numbers - native_pose_numbers )
 
+# and keep track of the new glycan chains
+working_glycan_chains = get_chains( working_pose, residue_range = working_glycan_numbers )
 
 
 

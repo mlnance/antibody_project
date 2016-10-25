@@ -526,3 +526,74 @@ def spin_carbs_connected_to_prot( mm, input_pose ):
             set_glycosidic_torsion( omega2_dihedral, pose, glyc_res_num, choice( possible_omega_values ) )
 
     return pose
+
+def glycosylate_working_pose( input_pose, glyco_file, glyco_sites ):
+    """
+    Glycosylate the <input_pose> using the <glyco_file> at the <glyco_sites> on the ND2 atom (assumes an ASN N-linked glycosylation, for now)
+    Can work with PDB numbers (must have chain!) or Pose numbers for the glycosylation sites
+    PDB number example: 123B. Or can give a list [ 123A, 123B ]
+    Pose number example: 98. Or can give a list [ 98, 209 ]
+    Assumes your glyco_file actually exists (doesn't use os.path.isfile)
+    :param input_pose: Pose
+    :param glyco_file: str( /path/to/glyco.iupac file )
+    :param glyco_sites: PDB numbers list( [ 123A, 123B ] ) or Pose numbers list( [ 35, 78 ] )
+    :return: glycosylated Pose
+    """
+    # imports
+    import re, sys
+    from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
+
+
+    # copy over the input_pose
+    pose = input_pose.clone()
+
+    # convert all the glyco_sites to Pose numbers first
+    # this is because the PDB numbering changes as soon as you glycosylate the Pose (not the Pose numbering)
+    # so you need the Pose numbering which remains absolute in order to properly glycosylate the Pose
+    all_glyco_sites = {}
+    for glyco_site in glyco_sites:
+        # remove any whitespace
+        glyco_site.replace( ' ', '' )
+
+        # if the numbers are integers, then Pose numbers were passed
+        try:
+            #### POSE NUM ####
+            all_glyco_sites[ glyco_site ] = int( glyco_site )
+
+        # if the numbers didn't turn into integers, then a PDB number with a chain was passed
+        except ValueError:
+            # use a regular expression to match numbers and upper and lower case letters
+            # should be something like 123A
+            glyco_site_split = re.match(r"([0-9]+)([A-Za-z]+)", glyco_site )
+
+            # if this resulted in a splitting, turn this PDB number and chain into a pose number
+            #### PDB NUM ####
+            if glyco_site_split is not None:
+                # get the Pose number conversion from the PDB number <residue_num><residue_chain> format
+                glyco_site_split = glyco_site_split.groups()
+                glyco_site_pose_num = pose.pdb_info().pdb2pose( glyco_site_split[ 1 ], int( glyco_site_split[ 0 ] ) )
+                # if glyco_site_pose_num came back as 0, then the chain and/or number doesn't exist in the Pose
+                if glyco_site_pose_num == 0:
+                    print "\nYou gave me an invalid PDB number as there is no to-Pose conversion. Does PDB number %s look right to you? Does this chain and number exist?\n" %glyco_site
+                    sys.exit()
+                # otherwise, this PDB number is a valid Pose number
+                all_glyco_sites[ glyco_site ] = glyco_site_pose_num
+
+            # if the regular expression returned None, then the PDB code wasn't in the right format that I asked for (number)(string)
+            else:
+                print "\nThere is something wrong with the glycosylation site you gave me. Does PDB number %s look right to you? Make sure it's in the order of <residue number><residue chain> with no spaces. Should look like 123A\n" %glyco_site
+                sys.exit()
+
+    # glycosylate all of the Pose-numbered glycosylation sites
+    # it's stored as a dictionary as to relay to the user which glyco_site they originally gave messed up (if it does)
+    for orig_glyco_site, glyco_site in all_glyco_sites.items():
+        try:
+            # since this should be a Pose number now, try it
+            glycosylate_pose_by_file( pose, glyco_site, "ND2", glyco_file )
+        except:
+            # maybe the glycosylation site is in the right format but what they gave me is wrong?
+            # maybe this is a Pose number but not a good glycosylation site?
+            print "\nThere is something wrong with the glycosylation site you gave me. Does Pose number %s look right to you? Are you sure this residue can be glycosylated? Or maybe your glyco_file doesn't exist or work.\n" %orig_glyco_site
+            sys.exit()
+
+    return pose

@@ -13,8 +13,9 @@ import argparse
 parser = argparse.ArgumentParser(description="Use PyRosetta to glycosylate a pose and find a low E structure")
 #parser.add_argument("argument_file", type=str, help="/path/to/the protocol argument file")
 parser.add_argument("native_pdb_file", type=str, help="the filename of the native PDB structure.")
+parser.add_argument("working_pdb_file", type=str, help="the filename of the working PDB structure.")
 parser.add_argument("glyco_file", type=str, help="/path/to/the .iupac glycan file to be used.")
-parser.add_argument("glyco_sites", nargs='+', type=str, help="give me one or more glycosylation sites. Can give me a PDB number if you specify the chain (ex. 123B) or the pose number if you do NOT specify chain (ex. 70)")
+parser.add_argument("glyco_sites", nargs='+', type=str, help="give me one or more glycosylation sites. Can give me a PDB number if you specify the chain (ex. 123B) or the Pose number if you do NOT specify chain (ex. 70)")
 parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
 parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
 parser.add_argument("nstruct", type=int, help="how many decoys do you want to make using this protocol?")
@@ -59,6 +60,10 @@ if input_args.native_pdb_file is not None:
     if not os.path.isfile( input_args.native_pdb_file ):
         print "\nYour native_pdb_file argument ( %s ) does not exist. Please check your input. Exiting" %input_args.native_pdb_file
         sys.exit()
+if input_args.working_pdb_file is not None:
+    if not os.path.isfile( input_args.working_pdb_file ):
+        print "\nYour working_pdb_file argument ( %s ) does not exist. Please check your input. Exiting" %input_args.working_pdb_file
+        sys.exit()
 if input_args.glyco_file is not None:
     if not os.path.isfile( input_args.glyco_file ):
         print "\nYour glyco_file argument ( %s ) does not exist. Please check your input. Exiting" %input_args.glyco_file
@@ -97,10 +102,14 @@ pmm.apply( native_pose )
 ####################################
 #### GLYCOSYLATE THE INPUT POSE ####
 ####################################
-# glycosylate
-working_pose = native_pose.clone()
+# get the working pose
+working_pose = load_pose( input_args.working_pdb_file )
+working_pose.pdb_info().name( "working_pose" )
+pmm.apply( working_pose )
+
+# glycosylate the working pose
 working_pose.assign( glycosylate_working_pose( working_pose, input_args.glyco_file, input_args.glyco_sites ) )
-working_pose.pdb_info().name( "glycosylated_pose" )
+working_pose.pdb_info().name( "working_pose" )
 pmm.apply( working_pose )
 
 # keep track of the new glycan residues
@@ -110,6 +119,7 @@ working_glycan_numbers = list( working_pose_numbers - native_pose_numbers )
 
 # and keep track of the new glycan chains
 working_glycan_chains = get_chains( working_pose, residue_range = working_glycan_numbers )
+
 
 
 
@@ -198,28 +208,32 @@ while not jd.job_complete:
     # apply the protocol
     #testing_pose.assign( GlycanModelProtocol.apply( testing_pose ) )
 
-    # collect additional metric data
     '''
+    # TODO: update get_pose_metrics by using the _on_native one and changing everything so that it works with the decoy instead
     try:
-        # all this is here until I update get_pose_metrics(_on_native)
+        # collect additional metric data
+        # all this is here until I update get_pose_metrics
         from antibody_functions import hold_chain_and_res_designations_3ay4
-        from get_pose_metrics_on_native import main as get_pose_metrics_on_native
+        from get_pose_metrics import main as get_pose_metrics
         native_pose_info = hold_chain_and_res_designations_3ay4()
         native_pose_info.native()
         testing_pose_info = hold_chain_and_res_designations_3ay4()
-        testing_pose_info.native()
+        testing_pose_info.Fc_glycan_chains = working_glycan_chains
+        testing_pose_info.Fc_glycan_nums = working_glycan_numbers
+        testing_pose_info.Fc_protein_nums = range( 1, 431 + 1 )
+        testing_pose_info.FcR_glycan_nums = range( 592, 602 + 1 )
         # metric calculations
-        metrics = get_pose_metrics_on_native( testing_pose, 
-                                              testing_pose_info, 
-                                              native_pose, 
-                                              native_pose_info, 
-                                              sf, 
-                                              2, # Fc-FcR interface JUMP_NUM
-                                              jd.current_num, 
-                                              GlycanModelProtocol.metrics_dump_dir, 
-                                              input_args.utility_dir, 
-                                              MC_acceptance_rate = GlycanModelProtocol.mc_acceptance, 
-                                              native_constraint_file = GlycanModelProtocol.constraint_file )
+        metrics = get_pose_metrics( testing_pose, 
+                                    testing_pose_info, 
+                                    native_pose, 
+                                    native_pose_info, 
+                                    sf, 
+                                    2, # Fc-FcR interface JUMP_NUM
+                                    jd.current_num, 
+                                    GlycanModelProtocol.metrics_dump_dir, 
+                                    input_args.utility_dir, 
+                                    MC_acceptance_rate = GlycanModelProtocol.mc_acceptance, 
+                                    native_constraint_file = GlycanModelProtocol.constraint_file )
     except:
         metrics = ''
         pass
@@ -227,6 +241,7 @@ while not jd.job_complete:
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics
     '''
+
     # dump the decoy
     jd.output_decoy( testing_pose )
     # zip up the decoy pose, if desired

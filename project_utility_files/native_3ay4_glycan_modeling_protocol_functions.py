@@ -398,6 +398,50 @@ def get_ramp_score_weight( current_weight, target_weight, current_step, total_st
 
 
 
+def get_ramp_angle_max( current_angle_max, target_angle_max, current_step, total_steps ):
+    """
+    Given the <current_angle_max> and the <target_angle_max>, use the <current_step> and the <total_steps> to determine how much the angle_max should be increased or decreased for this particular round
+    Current and Total steps -- Say you're doing 100 (1-100) rounds, if you're on round 57, current_step = 57, total_steps = 100
+    :param current_angle_max: int( or float( value of your current angle_max ) )
+    :param target_angle_max: int( or float( value of your target angle_max ) )
+    :param current_step: int( current step of how many rounds you're doing )
+    :param total_steps: int( number of rounds you're doing )
+    :return: float( the new angle angle_max to set for your SugarSmall/ShearMover for this particular round )
+    """
+    # imports
+    import sys
+
+
+    # need to be able to do this a minimum of 10 times, otherwise the math will break
+    if total_steps < 10:
+        print
+        print "You need to run a loop at least more than 10 times - otherwise the math in here won't work"
+        sys.exit()
+
+    # adjust the total_steps so that it's actually 10% less than what it actually is
+    # this is so that the final 10% of the simulation will run with the target score weights
+    total_steps = int( total_steps * 0.9 )
+
+    # make appropriate angle_max adjustments
+    if current_angle_max > target_angle_max:  # we're decreasing the angle_max
+        amount_left = target_angle_max - current_angle_max
+        moves_left = float( total_steps - current_step )
+        add_angle_max = amount_left / moves_left  # should be negative
+        new_angle_max = current_angle_max + add_angle_max
+
+    elif target_angle_max > current_angle_max:  # we're increasing the angle_max
+        amount_left = target_angle_max - current_angle_max
+        moves_left = float( total_steps - current_step )
+        add_angle_max = amount_left / moves_left  # should be positive
+        new_angle_max = current_angle_max + add_angle_max
+
+    else:
+        new_angle_max = current_angle_max
+
+    return new_angle_max
+
+
+
 def get_res_nums_within_radius( res_num_in, input_pose, radius, include_res_num = False ):
     """
     Use the nbr_atom_xyz to find residue numbers within <radius> of <pose_num> in <pose>
@@ -481,11 +525,12 @@ def get_res_nums_within_radius_of_residue_list( residues, input_pose, radius, in
 
 
 
-def spin_carbs_connected_to_prot( mm, input_pose ):
+def spin_carbs_connected_to_prot( mm, input_pose, spin_using_ideal_omegas = True ):
     """
     The intent of this spin is to set the carbohydrate involved in the protein-carbohydrate connection into a reasonable starting position after the reset. This is because current LCM data found in the default.table was collected for surface glycans. These data are not reflective of the glycans found in the Ig system
     :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be reset )
     :param input_pose: Pose
+    :param spin_using_ideal_omegas: bool( set omega1 (and omega2) to either 180, 60, or -60? If not, it would be those values +/- 0-20 ) Default = True
     :return: Pose
     """
     # imports
@@ -493,6 +538,8 @@ def spin_carbs_connected_to_prot( mm, input_pose ):
     from rosetta.core.pose.carbohydrates import find_seqpos_of_saccharides_parent_residue, \
         get_reference_atoms, set_glycosidic_torsion
     from rosetta.core.id import omega_dihedral, omega2_dihedral
+    from rosetta.basic import periodic_range
+    from rosetta.numeric.random import rg
 
 
     # copy the input pose
@@ -513,17 +560,31 @@ def spin_carbs_connected_to_prot( mm, input_pose ):
 
     # reset values for omega 1 and omega 2
     # omega has stronger steric constraints
-    possible_omega_values = [ 180, -60, 60 ]
+    possible_omega_values = [ 180, 60, -60 ]
 
     # for each carbohydrate residue connected to the protein
     for glyc_res_num in residues_to_spin:
         # bool( len([]) ) = False, so it will return False if there are no reference atoms (ie. it doesn't exist)
         # if an omega 1 exists (which it should...)
         if bool( len( get_reference_atoms( omega_dihedral, pose, glyc_res_num ) ) ):
-            set_glycosidic_torsion( omega_dihedral, pose, glyc_res_num, choice( possible_omega_values ) )
-        # if an omega 2 exists
+            # get a base omega value to start at
+            new_omega = choice( possible_omega_values )
+            if not spin_using_ideal_omegas:
+                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
+                # small_angle = 15 meaning the max you can move your angle in one direction ( + or - )
+                # big_angle = 30 meaning the entire range available from your current ( + and - small_angle )
+                new_omega = periodic_range( new_omega - 15.0 + rg().uniform() * 30.0, 360.0 )
+            set_glycosidic_torsion( omega_dihedral, pose, glyc_res_num, new_omega )
+        # if an omega2 exists
         if bool( len( get_reference_atoms( omega2_dihedral, pose, glyc_res_num ) ) ):
-            set_glycosidic_torsion( omega2_dihedral, pose, glyc_res_num, choice( possible_omega_values ) )
+            # get a base omega value to start at
+            new_omega2 = choice( possible_omega_values )
+            if not spin_using_ideal_omegas:
+                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
+                # small_angle = 15 meaning the max you can move your angle in one direction ( + or - )
+                # big_angle = 30 meaning the entire range available from your current ( + and - small_angle )
+                new_omega2 = periodic_range( new_omega2 - 15.0 + rg().uniform() * 30.0, 360.0 )
+            set_glycosidic_torsion( omega2_dihedral, pose, glyc_res_num, new_omega2 )
 
     return pose
 

@@ -29,6 +29,7 @@ class Model3ay4Glycan:
         # required arguments
         self.mm = mm_in
         self.sf = sf_in
+        self.angle_max_in = angle_max
         self.angle_max = angle_max
         self.dump_dir = dump_dir
         self.watch_sf = sf_in.clone()  # used when looking for convergence and verbose print outs
@@ -46,7 +47,10 @@ class Model3ay4Glycan:
         self.set_native_omega = False
         self.set_native_core = False
         self.spin_carb_connected_to_prot = False
+        self.spin_using_ideal_omegas = True
         self.ramp_sf = True
+        self.ramp_angle_max = False
+        self.angle_min = 6.0
         self.fa_atr_ramp_factor = 2.0
         self.fa_rep_ramp_factor = 0.5
         self.minimize_each_round = True
@@ -219,7 +223,10 @@ class Model3ay4Glycan:
         #info_file_details.append( "Sugar filename:\t\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
         info_file_details.append( "Number of SugarSmallMove trials:\t%s\n" %self.trials )
         info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %self.moves_per_trial )
-        angle_max_txt = "%s (meaning a max of +/- %s to either side of current)" %( self.angle_max, self.angle_max/2 )
+        if self.ramp_angle_max:
+            angle_max_txt = "%s (meaning a max of +/- %s to either side of current which ramps down to %s throughout protocol)" %( self.angle_max_in, self.angle_max_in/2, self.angle_min/2 )
+        else:
+            angle_max_txt = "%s (meaning a max of +/- %s to either side of current)" %( self.angle_max_in, self.angle_max_in/2 )
         info_file_details.append( "Angle max (arc range available):\t%s\n" %angle_max_txt )
         #info_file_details.append( "Light reset of Fc glycan?:\t\t%s\n" %self.light_reset )
         info_file_details.append( "Random reset of Fc glycan?:\t\t%s\n" %self.random_reset )
@@ -230,7 +237,9 @@ class Model3ay4Glycan:
         info_file_details.append( "Reset omega torsion back to native?:\t%s\n" %self.set_native_omega )
         info_file_details.append( "Reset core GlcNAc torsions to native?:\t%s\n" %self.set_native_core )
         info_file_details.append( "Spin carb connected to the protein?:\t%s\n" %self.spin_carb_connected_to_prot )
+        info_file_details.append( "Spin carb using ideal omegas?:\t\t%s\n" %self.spin_using_ideal_omegas )
         info_file_details.append( "Using score ramping?:\t\t\t%s\n" %self.ramp_sf )
+        info_file_details.append( "Using angle_max ramping?:\t\t%s\n" %self.ramp_angle_max )
         info_file_details.append( "Minimize after each move?:\t\t%s\n" %self.minimize_each_round )
         if self.pack_after_x_rounds is not 0:
             info_file_details.append( "Local pack after X rounds:\t\tX = %x\n" %self.pack_after_x_rounds )
@@ -272,8 +281,8 @@ class Model3ay4Glycan:
         from rosetta.core.scoring import fa_atr, fa_rep
         #from antibody_functions import native_Fc_glycan_nums_except_core_GlcNAc  # shouldn't need this as a MoveMap is passed to create this class
         from native_3ay4_glycan_modeling_protocol_functions import native_3ay4_Fc_glycan_LCM_reset, \
-            add_constraints_to_pose, get_ramp_score_weight, native_3ay4_Fc_glycan_random_reset, \
-            get_res_nums_within_radius_of_residue_list
+            add_constraints_to_pose, get_ramp_score_weight, get_ramp_angle_max, \
+            native_3ay4_Fc_glycan_random_reset, get_res_nums_within_radius_of_residue_list
 
 
         ########################################
@@ -328,8 +337,10 @@ class Model3ay4Glycan:
             from native_3ay4_glycan_modeling_protocol_functions import spin_carbs_connected_to_prot
 
             # the spin takes residue 216 and 440 of 3ay4 and assigns either 180, 60, or -60 to omega1 and omega2 individually
+            # can sample within +/- 15 of those three values as well, if specified
             working_pose.assign( spin_carbs_connected_to_prot( self.mm, 
-                                                               input_pose = working_pose ) )
+                                                               input_pose = working_pose, 
+                                                               spin_using_ideal_omegas = self.spin_using_ideal_omegas) )
             if self.verbose:
                 print "score of core GlcNAc spin:", self.watch_sf( working_pose )
 
@@ -489,6 +500,20 @@ class Model3ay4Glycan:
             # print current score
             if self.verbose:
                 print "\nstarting score:", self.watch_sf( working_pose )
+
+            ####################################
+            #### RAMP WITH ANGLE MAX UPDATE ####
+            ####################################
+            if self.ramp_angle_max:
+                # skip ramping on the first trial because the passed angle_max should be the angle_max used
+                if trial_num !=1:
+                    # by the end of the protocol our angle_max should be angle_min
+                    # angle_min is 6.0 by default which is the angle_max for loop residues in the BackboneMover
+                    self.angle_max = get_ramp_angle_max( self.angle_max, 
+                                                         self.angle_min, 
+                                                         trial_num, 
+                                                         self.trials )
+
 
             #########################################
             #### RAMP WITH SCORE FUNCTION UPDATE ####

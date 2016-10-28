@@ -282,7 +282,8 @@ class Model3ay4Glycan:
         #from antibody_functions import native_Fc_glycan_nums_except_core_GlcNAc  # shouldn't need this as a MoveMap is passed to create this class
         from native_3ay4_glycan_modeling_protocol_functions import native_3ay4_Fc_glycan_LCM_reset, \
             add_constraints_to_pose, get_ramp_score_weight, get_ramp_angle_max, \
-            native_3ay4_Fc_glycan_random_reset, get_res_nums_within_radius_of_residue_list
+            native_3ay4_Fc_glycan_random_reset, get_res_nums_within_radius_of_residue_list, \
+            SugarSmallMover
 
 
         ########################################
@@ -456,8 +457,11 @@ class Model3ay4Glycan:
 
                 # get all the protein residues within 8A of the moveable_residues
                 # this uses the nbr_atom to determine if a residue is nearby or not, hence why I'm using a big distance like 8A
-                # this will include the Tyr if core GlcNAc is moveable in 3ay4
-                nearby_protein_residues = get_res_nums_within_radius_of_residue_list( moveable_residues, working_pose, 8, include_res_nums = False )
+                # nbr_atom seems to be basically the same as C4 in sugars
+                # this should include the Tyr if core GlcNAc is moveable in 3ay4
+                nearby_protein_residues = get_res_nums_within_radius_of_residue_list( moveable_residues, working_pose, 
+                                                                                      radius = 8, 
+                                                                                      include_res_nums = False )
 
                 # create a list of residue numbers that can be packed
                 # meaning, the moveable carbohydrate residues and the residues around them
@@ -490,9 +494,6 @@ class Model3ay4Glycan:
         ########################################
         #### MAKE AND APPLY THE SUGAR MOVER ####
         ########################################
-        # imports 
-        from native_3ay4_glycan_modeling_protocol_functions import SugarSmallMover
-
         # for as many trials as specified
         num_mc_accepts = 0
         num_mc_checks = 0
@@ -509,10 +510,10 @@ class Model3ay4Glycan:
                 if trial_num !=1:
                     # by the end of the protocol our angle_max should be angle_min
                     # angle_min is 6.0 by default which is the angle_max for loop residues in the BackboneMover
-                    self.angle_max = get_ramp_angle_max( self.angle_max, 
-                                                         self.angle_min, 
-                                                         trial_num, 
-                                                         self.trials )
+                    self.angle_max = get_ramp_angle_max( current_angle_max = self.angle_max, 
+                                                         target_angle_max = self.angle_min, 
+                                                         current_step = trial_num, 
+                                                         total_steps = self.trials )
 
 
             #########################################
@@ -524,24 +525,24 @@ class Model3ay4Glycan:
                     # store the original fa_atr and fa_rep
                     FA_ATR_ORIG = self.sf.get_weight( fa_atr )
                     FA_REP_ORIG = self.sf.get_weight( fa_rep )
-                    # adjust the fa_atr weight
+                    # adjust the fa_atr weight by the passed fa_atr_ramp_factor
                     FA_ATR_NEW = FA_ATR_ORIG * self.fa_atr_ramp_factor
                     self.sf.set_weight( fa_atr, FA_ATR_NEW )
-                    # adjust the fa_rep weight
+                    # adjust the fa_rep weight by the passed fa_rep_ramp_factor
                     FA_REP_NEW = FA_REP_ORIG * self.fa_rep_ramp_factor
                     self.sf.set_weight( fa_rep, FA_REP_NEW )
 
                 # else, adjust the score weight
                 else:
                     # ramp up or down the appropriate scoring terms
-                    self.sf.set_weight( fa_atr, get_ramp_score_weight( self.sf.get_weight( fa_atr ), 
-                                                                       FA_ATR_ORIG, 
-                                                                       trial_num, 
-                                                                       self.trials ) )
-                    self.sf.set_weight( fa_rep, get_ramp_score_weight( self.sf.get_weight( fa_rep ), 
-                                                                       FA_REP_ORIG, 
-                                                                       trial_num, 
-                                                                       self.trials ) )
+                    self.sf.set_weight( fa_atr, get_ramp_score_weight( current_weight = self.sf.get_weight( fa_atr ), 
+                                                                       target_weight = FA_ATR_ORIG, 
+                                                                       current_step = trial_num, 
+                                                                       total_steps = self.trials ) )
+                    self.sf.set_weight( fa_rep, get_ramp_score_weight( current_weight = self.sf.get_weight( fa_rep ), 
+                                                                       target_weight = FA_REP_ORIG, 
+                                                                       current_step = trial_num, 
+                                                                       total_steps = self.trials ) )
                 # DEBUG
                 #print "\n".join( [ "%s %s" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) for score_type in self.sf.get_nonzero_weighted_scoretypes() ] )
                 # give ramped sf back to MC and MinMover
@@ -573,10 +574,7 @@ class Model3ay4Glycan:
             # pack the sugars and surrounding residues, if desired
             if self.pack_after_x_rounds > 0:
                 if trial_num % self.pack_after_x_rounds == 0:
-                    # pack
                     self.pack_rotamers_mover.apply( working_pose )
-
-                    # relay score information
                     if self.verbose:
                         print "score after local pack:", self.watch_sf( working_pose )
 

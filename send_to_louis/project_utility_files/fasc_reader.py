@@ -35,6 +35,7 @@ def read_fasc( fasc_filename, return_this_many_structures ):
                     
                     # pull total score out
                     tot_score = float( line.split( "total_score: " )[1].split( ' ' )[0] )
+                    #tot_score = float( line.split( "glycan_rmsd: " )[1].split( ' ' )[0] )
                     
                     # add the data to a dictionary
                     data_dict[ pdb_name ] = tot_score

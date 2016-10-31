@@ -686,30 +686,20 @@ def get_chains( input_pose, residue_range = None ):
 
 
 
-'''
 def calc_mean_degrees( data ):
     """
     Given a list of <data> in degrees from -180 to 180, return the mean
-    Found from https://rosettacode.org/wiki/Averages/Mean_angle
     Since I can't use NumPy on Jazz
     :param data: list( data points )
     :return: float( mean )
     """
+    '''
     # imports
+    Found from https://rosettacode.org/wiki/Averages/Mean_angle
     from cmath import rect, phase
     from math import radians, degrees
-
     return degrees( phase( sum( rect( 1, radians( deg ) ) for deg in data ) / len( data ) ) )
-'''
-
-
-def calc_mean_degrees( data ):
-    """
-    Given a list of <data> in degrees from -180 to 180, return the mean
-    Since I can't use NumPy on Jazz
-    :param data: list( data points )
-    :return: float( mean )
-    """
+    '''
     return sum( data ) / len( data )
 
 

@@ -569,7 +569,7 @@ elif input_args.protocol_num == 21:
     GlycanModelProtocol.LCM_reset = True
     GlycanModelProtocol.use_population_ideal_LCM_reset = False
     GlycanModelProtocol.spin_carb_connected_to_prot = False
-    GlycanModelProtocol.spin_using_ideal_omegas = False  # meaning use 180, 60, -60 but sample within +/- 0-15 of these values
+    GlycanModelProtocol.spin_using_ideal_omegas = False
     GlycanModelProtocol.set_native_omega = False
     GlycanModelProtocol.set_native_core = False
     GlycanModelProtocol.set_native_core_omegas_to_stats = True

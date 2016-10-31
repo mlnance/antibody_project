@@ -418,6 +418,8 @@ class Model3ay4Glycan:
 
             # pick a number within a gaussian distribution (I think??) of the torsions
             # mean + ( stddev * gaussian() )
+            # not doing it the SmallMover way because I would want to be able to sample out more than 1 standard deviation
+            # SmallMover way would be periodic_range( mean_torsion - torsion_stddev * rg().uniform(), 360.0 )
             # mean
             base_omega1 = calc_mean_degrees( omega1_data )
             base_omega2 = calc_mean_degrees( omega2_data )

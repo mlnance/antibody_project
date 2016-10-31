@@ -46,6 +46,7 @@ class Model3ay4Glycan:
         self.use_population_ideal_LCM_reset = False
         self.set_native_omega = False
         self.set_native_core = False
+        self.set_native_core_omegas_to_stats = False
         self.spin_carb_connected_to_prot = False
         self.spin_using_ideal_omegas = True
         self.ramp_sf = True
@@ -236,6 +237,7 @@ class Model3ay4Glycan:
         info_file_details.append( "Move all torsions on a residue?:\t%s\n" %self.move_all_torsions )
         info_file_details.append( "Reset omega torsion back to native?:\t%s\n" %self.set_native_omega )
         info_file_details.append( "Reset core GlcNAc torsions to native?:\t%s\n" %self.set_native_core )
+        info_file_details.append( "Reset core GlcNAc omegas to Fc data?:\t%s\n" %self.set_native_core_omegas_to_stats )
         info_file_details.append( "Spin carb connected to the protein?:\t%s\n" %self.spin_carb_connected_to_prot )
         info_file_details.append( "Spin carb using ideal omegas?:\t\t%s\n" %self.spin_using_ideal_omegas )
         info_file_details.append( "Using score ramping?:\t\t\t%s\n" %self.ramp_sf )
@@ -384,6 +386,63 @@ class Model3ay4Glycan:
                 print "score of core GlcNAc reset:", self.watch_sf( working_pose )
 
 
+        ###################################################
+        #### HARDCODED CORE RESET TO IgG FC STATISTICS ####
+        ###################################################
+        # reset the torsions for the core GlcNAcs to values seen in IgG Fcs, if desired
+        # hardcoded for now as this is not something that would be done in a real protocol
+        if self.set_native_core_omegas_to_stats:
+            from rosetta.core.id import omega2_dihedral
+            from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
+            from rosetta.numeric.random import gaussian
+            from native_3ay4_glycan_modeling_protocol_functions import calc_mean_degrees, calc_stddev_degrees
+
+            # compile the data I have found from native crystal structures
+            # subtracting 360 from positive numbers because...I think that's how I should do this
+            phi_data = []
+            psi_data = []
+            omega1_data = [ -154.566, -162.504,  # 3ay4 - IgG1 Fc G2 to FcgRIIIa
+                             -163.850, 176.923,  # 3ave - IgG1 Fc no paper, but it comes out as G0F2
+                             -164.387, -146.038, # 5d4q - IgG1 Fc G2F1 ( check )
+                             -146.449, -146.340, # 5d6d - IgG1 Fc G2F2 to FcgRIIIa ( check )
+                             -166.996, -171.113  # 1h3x - IgG1 Fc G0F2
+                             ]
+            omega1_data = [ deg - 360 if deg > 0 else deg for deg in omega1_data ]
+            omega2_data = [ 59.198, 59.055,  # 3ay4
+                            53.823, 47.082,  # 3ave
+                            48.590, 63.976,  # 5d4q
+                            64.005, 63.988,  # 5d6d
+                            45.997, 59.196   # 1h3x
+                            ]
+            omega2_data = [ deg - 360 if deg > 0 else deg for deg in omega2_data ]
+
+            # pick a number within a gaussian distribution (I think??) of the torsions
+            # mean + ( stddev * gaussian() )
+            # mean
+            base_omega1 = calc_mean_degrees( omega1_data )
+            base_omega2 = calc_mean_degrees( omega2_data )
+            # standard deviation
+            omega1_stddev = calc_stddev_degrees( omega1_data )
+            omega2_stddev = calc_stddev_degrees( omega2_data )
+            # 216
+            new_omega1_216 = base_omega1 + ( omega1_stddev * gaussian() )
+            new_omega2_216 = base_omega2 + ( omega2_stddev * gaussian() )
+            # 440
+            new_omega1_440 = base_omega1 + ( omega1_stddev * gaussian() )
+            new_omega2_440 = base_omega2 + ( omega2_stddev * gaussian() )
+
+            # reset the omega1 and omega2 torsions of residues 216 and 440 (core GlcNAc to ASN-69)
+            # 216
+            working_pose.set_omega( 216, new_omega1_216 )
+            set_glycosidic_torsion( omega2_dihedral, working_pose, 216, new_omega2_216 )
+            # 440
+            working_pose.set_omega( 440, new_omega1_440 )
+            set_glycosidic_torsion( omega2_dihedral, working_pose, 440, new_omega2_440 )
+
+            if self.verbose:
+                print "score of core GlcNAc reset using IgG Fc statistics:", self.watch_sf( working_pose )
+
+
         ############################################
         #### VISUALIZE AND STORE THE RESET POSE ####
         ############################################
@@ -497,6 +556,7 @@ class Model3ay4Glycan:
         # for as many trials as specified
         num_mc_accepts = 0
         num_mc_checks = 0
+        mc_acceptance = -1
         for trial_num in range( 1, self.trials + 1 ):
             # print current score
             if self.verbose:

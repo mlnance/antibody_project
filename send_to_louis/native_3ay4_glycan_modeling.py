@@ -587,6 +587,51 @@ elif input_args.protocol_num == 21:
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
 
+elif input_args.protocol_num == 22:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_22 version
+    ##########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
+    ##########################################################################################
+    mm = MoveMap()
+    for res_num in native_Fc_glycan_nums:
+        mm.set_bb( res_num, True )
+        mm.set_chi( res_num, True )
+        if native_pose.residue( res_num ).is_branch_point():
+            mm.set_branches( res_num, True )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+
+    # Protocol_22 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.trials = 200
+    GlycanModelProtocol.moves_per_trial = 3
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = False
+    GlycanModelProtocol.spin_using_ideal_omegas = False
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = False
+    GlycanModelProtocol.set_native_core_omegas_to_stats = True
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.ramp_angle_max = True
+    GlycanModelProtocol.angle_min = 6.0 * 3
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.01
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.pack_after_x_rounds = 3
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
+    GlycanModelProtocol.verbose = input_args.verbose
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
 # else I haven't made this protocol number yet
 else:
     print "\nI haven't created the protocol number you gave me yet.\n"

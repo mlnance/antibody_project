@@ -3956,7 +3956,7 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
     pose.replace_residue( pose_num, new_residue, orient_backbone = True )
 
     # get residue numbers (including mutation site) to be packed and minimized
-    res_nums_around_mutation_site = get_res_nums_within_radius( pose_num, pose, pack_radius, include_seq_pos = True )
+    res_nums_around_mutation_site = get_res_nums_within_radius( pose_num, pose, pack_radius, include_res_num = True )
 
     # pack around mutation
     pack_rotamers_mover = make_pack_rotamers_mover( sf, pose,
@@ -3976,9 +3976,6 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
                           tolerance_in = 0.01,
                           use_nb_list_in = True )
     min_mover.apply( pose )
-
-    # make a new name for this pose
-    pose.pdb_info().name( "mutant" )
 
     return pose
 
@@ -4266,22 +4263,22 @@ def get_best_3ay4_mutant_of_20_asymmetrical( pose_num, sf, input_pose, pdb_num =
 
 
 
-def read_3ay4_mutation_file( mutation_filepath ):
+def read_mutation_file( mutation_filepath ):
     """
     Return a list of mutations to be made by reading a mutation file designated by the <mutation_filepath>
     Assumes PDB numbering!!!
-    Chain designations are separated by '_', multiple mutations are separated by '+'. See below for examples
+    Chain designations are separated by '_', multiple mutations are separated by '-'. See below for examples
     Five possible formats for a mutation string
     1) Single point mutation on both sides (symmetrical)
        A123T (Ala at position 123 on chain A and B to Thr)
     2) Single point mutation on a specific side (asymmetrical)
        A123T_B (Ala at position 123 on chain B to Thr)
     3) Multiple point mutations on both sides (symmetrical)
-       A123T+S456Y (Ala at position 123 to Thr and Ser at position 456 to Tyr both on chain A and B)
+       A123T-S456Y (Ala at position 123 to Thr and Ser at position 456 to Tyr both on chain A and B)
     4) Multiple point mutations on a specific chain (asymmetrical)
-       A123T_A+S456Y_B (Ala at position 123 to Thr on chain A and Ser at position 456 to Tyr on chain B)
+       A123T_A-S456Y_B (Ala at position 123 to Thr on chain A and Ser at position 456 to Tyr on chain B)
     5) Multiple point mutations with a combination of symmetrical and asymmetrical
-       A123T+S456Y_B (Ala at position 123 to Thr on chain A and B and Ser at position 456 to Try on chain B)
+       A123T-S456Y_B (Ala at position 123 to Thr on chain A and B and Ser at position 456 to Try on chain B)
     Chain designation is optional. If the mutation should be made on both sides, then don't add a chain designation
     This is designed to read mutations for 3ay4 at the moment as it assumes chain A and B
     Commented lines in the file are ignored are ignored
@@ -5175,7 +5172,7 @@ if __name__ == '__main__':
     #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )
     init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -write_pdb_link_records" )
     #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed" )
-    #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed -out:level 200" )
+    #init( extra_options="-include_sugars -override_rsd_type_limit -write_pdb_link_records -constant_seed -out:level 400" )
 
 ############################
 #### INITIALIZE ROSETTA ####

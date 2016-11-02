@@ -1,196 +1,216 @@
 #!/usr/bin/python
-__author__ = "morganlnance"
-
-'''
-Plans for this code:
-1) take in a low-energy native PDB structure that has been packed and minimized
-2) make the mutation(s) specified
-3) run a pack and minimization around the mutation site within 20 Angstroms
-5) dump the mutant pose in mut_structs
-'''
+__author__="morganlnance"
 
 
 
+#########################
+#### PARSE ARGUMENTS ####
+#########################
 
 import argparse
 
-# parse and store args
-parser = argparse.ArgumentParser(description="Use PyRosetta mutate the given Pose with mutations specified by a file")
-parser.add_argument("native_pdb_file", type=str, help="the filename of the native PDB structure")
-parser.add_argument("structure_directory", type=str, help="where do you want your decoys to be dumped? Each PDB will have its own directory there")
-parser.add_argument("mutations_file", help="give me a file containing all mutations you want to make.")
-parser.add_argument("utility_directory", type=str, help="where do the utility files live? Give me the directory.")
+# parse and store input arguments
+parser = argparse.ArgumentParser(description="Use PyRosetta to glycosylate a pose and find a low E structure")
+#parser.add_argument("argument_file", type=str, help="/path/to/the protocol argument file")
+parser.add_argument("native_pdb_file", type=str, help="the filename of the native PDB structure.")
+parser.add_argument("mutation_file", type=str, help="/path/to/the file that contains all the mutations you want to make.")
+parser.add_argument("utility_dir", type=str, help="where do your utility files live? Give me the directory.")
+parser.add_argument("structure_dir", type=str, help="where do you want to dump the decoys made during this protocol?")
+parser.add_argument("--verbose", "-v", action="store_true", default=False, help="do you want the program to print out pose scores during the protocol?")
+parser.add_argument("--zip_decoy", "-z", action="store_true", default=False, help="do you want to zip up the dumped decoy pdb?")
 input_args = parser.parse_args()
 
 
 
-###################################
-#### CHECK ALL INPUT ARGUMENTS ####
-###################################
+##########################
+#### CHECK ALL INPUTS ####
+##########################
 
+# check for validity of file paths
 import os, sys
 
-# check to see that all of the files exist
-# check the native file
-if not os.path.isfile( input_args.native_pdb_file ):
-    print "Your argument", input_args.native_pdb_file, "for native_pdb_file does not exist, exiting"
-    sys.exit()
-
-# check the mutations file
-if not os.path.isfile( input_args.mutations_file ):
-    print "Your argument", input_args.mutations_file, "for mutations_file does not exist. exiting"
-    sys.exit()
-
-# check the structure directory
-if not os.path.isdir( input_args.structure_directory ):
-    print "Your argument", input_args.structure_directory, "for structure_directory is not a directory, exiting"
-    sys.exit()
-else:
-    if input_args.structure_directory.endswith( '/' ):
-        main_structure_dir = input_args.structure_directory
-    else:
-        main_structure_dir = input_args.structure_directory + '/'
-
 # check the utility directory
-if not os.path.isdir( input_args.utility_directory ):
-    print "Your argument", input_args.utility_directory, "for utility_directory is not a directory, exiting"
+if not os.path.isdir( input_args.utility_dir ):
+    print "\nYour utility_dir argument( %s ) does not exist. Please check your input. Exiting." %input_args.utility_dir
     sys.exit()
 
 # add the utility directory to the system path for loading of modules
-sys.path.append( input_args.utility_directory )
-
-# get the full path to the original native PDB filename
-orig_pdb_filename_full_path = input_args.native_pdb_file
-orig_pdb_filename = orig_pdb_filename_full_path.split( '/' )[-1]
-orig_pdb_name = orig_pdb_filename.split( ".pdb" )[0]
-
-# make the needed mutant structure directory
-mut_structs_dir = main_structure_dir + "mutations_of_" + orig_pdb_name
-if not os.path.isdir( mut_structs_dir ):
-    os.mkdir( mut_structs_dir )
+sys.path.append( input_args.utility_dir )
 
 
-# relay information to user
-info_file_details = []
-info_file_details.append( "Native PDB filename:\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
-info_file_details.append( "Main structure directory:\t%s\n" %main_structure_dir )
-info_file_details.append( "Mut structure directory:\t%s\n" %mut_structs_dir )
-info_file = ''.join( info_file_details )
-print "\n", info_file, "\n"
+## check the validity of the passed arguments
+# make sure the structure_dir passed is valid
+if os.path.isdir( input_args.structure_dir ):
+    if not input_args.structure_dir.endswith( '/' ):
+        main_structure_dir = input_args.structure_dir + '/'
+    else:
+        main_structure_dir = input_args.structure_dir
+else:
+    print
+    print "It seems that the structure_dir argument you gave me ( %s ) does not exist. Please check your input or create this directory before running this protocol." %input_args.structure_dir
+    sys.exit()
 
-# write out the info file with the collected info from above
-info_filename = main_structure_dir + "protocol_run.info"
-with open( info_filename, "wb" ) as fh:
-    fh.write( "Info for this run of %s\n\n" %__file__ )
-    fh.write( info_file )
+# make sure the files passed actually exist
+if input_args.native_pdb_file is not None:
+    if not os.path.isfile( input_args.native_pdb_file ):
+        print "\nYour native_pdb_file argument ( %s ) does not exist. Please check your input. Exiting" %input_args.native_pdb_file
+        sys.exit()
+if input_args.mutation_file is not None:
+    if not os.path.isfile( input_args.mutation_file ):
+        print "\nYour mutation_file argument ( %s ) does not exist. Please check your input. Exiting" %input_args.mutation_file
+        sys.exit()
 
 
 
+##################################
+#### CREATE NECESSARY OBJECTS ####
+##################################
 
-################################
-#### INITIAL PROTOCOL SETUP ####
-################################
+# imports 
+from native_3ay4_glycan_modeling_protocol_functions import get_fa_scorefxn_with_given_weights, \
+    load_pose, initialize_rosetta, native_Fc_glycan_nums_except_core_GlcNAc, \
+    native_Fc_glycan_nums
+from rosetta import MoveMap, PyMOL_Mover
 
-# good to go, import needed functions
-from antibody_functions import load_pose, initialize_rosetta, \
-    read_3ay4_mutation_file, mutate_residue
-from rosetta import Pose, get_fa_scorefxn
+# utility directory function
+from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
 
 
-# initialize Rosetta ( comes from antibody_functions )
+# initialize Rosetta
 initialize_rosetta()
 
-# sets up the input native PDB as being the base pose
-native_pose = Pose()
-native_pose.assign( load_pose( orig_pdb_filename_full_path ) )
+# PyMOL_Mover
+pmm = PyMOL_Mover()
+pmm.keep_history( True )
 
-# make the necessary score function
-sf = get_fa_scorefxn()
+# load the input pose
+native_pose = load_pose( input_args.native_pdb_file )
+#native_pose.pdb_info().name( "native_pose" )
+#pmm.apply( native_pose )
 
 
 
-##################################
-#### MUTANT POSE CONSTRUCTION ####
-##################################
 
-# read in the mutations to be made from the mutations_file
-all_mutations = read_3ay4_mutation_file( input_args.mutations_file )
 
-# for each set of mutations, make and dump a mutant pose
-for mutations in all_mutations:
-    # get a fresh copy of the native Pose
-    mutant = Pose()
-    mutant.assign( native_pose )
+#########################
+#### JOB DISTRIBUTOR ####
+#########################
 
-    # split on '+' to ensure you are making each single point mutation on this Pose
-    mutations = mutations.split( '+' )
+# imports
+from antibody_functions import read_mutation_file
 
-    # make each single point mutation
-    for mutation_str in mutations:
-        # make the mutation depending on how the mutation was designated (with a chain id or not)
-        # here a chain id was designated
-        if len( mutation_str.split( '_' ) ) == 2:
-            # get the mutation and the chain id based on how the string should be structured
-            # mutation_chainid such as A123T_A
-            mutation = mutation_str.split( '_' )[ 0 ]
-            chain_id = mutation_str.split( '_' )[ 1 ]
+# get the list of mutations to make
+all_mutations = read_mutation_file( input_args.mutation_file )
 
-            # get the original amino acid, the PDB number, the new amino acid, and the chain id from the mutation
-            # the original amino acid is always the first letter
-            orig_AA = mutation[ 0 ].upper()
-            # the new amino acid is always at the end
-            new_AA = mutation[ -1 ].upper()
-            # the pdb res num is always in the middle
-            pdb_num = int( mutation[ 1 : -1 ] )
-            pose_num = native_pose.pdb_info().pdb2pose( chain_id, pdb_num )
+# create an appropriate decoy_name using the mutation_file name
+mutation_filename = input_args.mutation_file.split( '/' )[-1].split( '.' )[0]
+decoy_name = main_structure_dir + mutation_filename
 
-            # ensure the orginal amino acid specified is the same as the one already in the Pose
-            # if not, skip the mutation and print to screen
-            if orig_AA != native_pose.residue( pose_num ).name1():
-                print "Hold up! What you said was the original amino acid is actually incorrect!!"
-                print "You told me there was originally a", orig_AA, "at PDB position", pdb_num, "chain", chain_id, "but there actually was a", native_pose.residue( pose_num ).name1(), ". Check your input. Exiting."
-                pass
-            # if they're the same, continue
-            else:
-                mutant.assign( mutate_residue( pdb_num, new_AA, mutant, sf, pdb_num = True, pdb_chain = chain_id, pack_radius = 20 ) )
+sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44 } )
 
-        # else, no chain id. This is a symmetrical mutant on chain A and B
+
+
+##########################
+#### PYJOBDISTRIBUTOR ####
+##########################
+
+# imports
+#from rosetta import PyJobDistributor
+from antibody_functions import mutate_residue
+
+# create and use the PyJobDistributor object
+#jd = PyJobDistributor( decoy_name, 1, sf )
+#jd.native_pose = native_pose
+cur_decoy_num = 1
+
+#while not jd.job_complete:
+# name to use when dumping the decoy. Should include full path
+#working_pose.pdb_info().name( jd.current_name )
+
+for mutation_set in all_mutations:
+    # get a fresh pose object
+    working_pose = native_pose.clone()
+    working_pose.pdb_info().name( main_structure_dir + mutation_set + ".pdb" )
+
+    # make each mutation one at a time
+    mutations = mutation_set.split( '-' )
+    for mutation in mutations:
+        # if this mutation requires a specific chain
+        if '_' in mutation:
+            orig_residue = mutation[0]
+            pdb_num = int( mutation.split( '_' )[0][1 : -1] )
+            new_residue = mutation.split( '_' )[0][-1]
+            pdb_chain = mutation.split( '_' )[-1]
+            # mutate
+            working_pose.assign( mutate_residue( pdb_num, new_residue, working_pose, sf, 
+                                                 pdb_num = True, 
+                                                 pdb_chain = pdb_chain, 
+                                                 pack_radius = 10 ) )
+        # otherwise, this mutation is on both chain A and B
         else:
-            # get the mutation id based on how the string should be structured
-            # mutation such as A123T
-            mutation = mutation_str
+            orig_residue = mutation[0]
+            pdb_num = int( mutation[1 : -1] )
+            new_residue = mutation[-1]
+            # mutate chain A
+            working_pose.assign( mutate_residue( pdb_num, new_residue, working_pose, sf, 
+                                                 pdb_num = True, 
+                                                 pdb_chain = 'A', 
+                                                 pack_radius = 10 ) )
+            # mutate chain B
+            working_pose.assign( mutate_residue( pdb_num, new_residue, working_pose, sf, 
+                                                 pdb_num = True, 
+                                                 pdb_chain = 'B', 
+                                                 pack_radius = 10 ) )
 
-            # get the original amino acid, the PDB number, and the new amino acid id from the mutation
-            # the original amino acid is always the first letter
-            orig_AA = mutation[ 0 ].upper()
-            # the new amino acid is always at the end
-            new_AA = mutation[ -1 ].upper()
-            # the pdb res num is always in the middle
-            pdb_num = int( mutation[ 1 : -1 ] )
+    working_pose.dump_pdb( working_pose.pdb_info().name() )
 
-            # the pose_num is collected from chain A and chain B
-            pose_num1 = native_pose.pdb_info().pdb2pose( 'A', pdb_num )
-            pose_num2 = native_pose.pdb_info().pdb2pose( 'B', pdb_num )
+                
 
-            # ensure the orginal amino acid specified is the same as the two already in the Pose
-            # if not, skip the mutation and print to screen
-            if orig_AA != native_pose.residue( pose_num1 ).name1():
-                print "Hold up! What you said was the original amino acid is actually incorrect!!"
-                print "You told me there was originally a", orig_AA, "at PDB position", pdb_num, "chain A, but there actually was a", native_pose.residue( pose_num1 ).name1(), ". Check your input. Exiting."
-                pass
-            elif orig_AA != native_pose.residue( pose_num2 ).name1():
-                print "Hold up! What you said was the original amino acid is actually incorrect!!"
-                print "You told me there was originally a", orig_AA, "at PDB position", pdb_num, "chain B, but there actually was a", native_pose.residue( pose_num2 ).name1(), ". Check your input. Exiting."
-                pass
-            # if they're the same, continue
-            else:
-                mutant.assign( mutate_residue( pdb_num, new_AA, mutant, sf, pdb_num = True, pdb_chain = 'A', pack_radius = 20 ) )
-                mutant.assign( mutate_residue( pdb_num, new_AA, mutant, sf, pdb_num = True, pdb_chain = 'B', pack_radius = 20 ) )
+    '''
+    # collect additional metric data
+    try:
+        # all this is here until I update get_pose_metrics(_on_native)
+        from antibody_functions import hold_chain_and_res_designations_3ay4
+        from get_pose_metrics_on_native import main as get_pose_metrics_on_native
+        native_pose_info = hold_chain_and_res_designations_3ay4()
+        native_pose_info.native()
+        working_pose_info = hold_chain_and_res_designations_3ay4()
+        working_pose_info.native()
+        # metric calculations
+        metrics = get_pose_metrics_on_native( working_pose, 
+                                              working_pose_info, 
+                                              native_pose, 
+                                              native_pose_info, 
+                                              sf, 
+                                              2, # Fc-FcR interface JUMP_NUM
+                                              jd.current_num, 
+                                              GlycanModelProtocol.metrics_dump_dir, 
+                                              input_args.utility_dir, 
+                                              MC_acceptance_rate = GlycanModelProtocol.mc_acceptance, 
+                                              native_constraint_file = GlycanModelProtocol.constraint_file )
+    except:
+        metrics = ''
+        pass
 
-    # update the mutant's name
-    mutant_name = '+'.join( mutations )
-    mutant.pdb_info().name( mutant_name )
+    # add the metric data to the .fasc file
+    jd.additional_decoy_info = metrics
+    '''
 
-    # dump the mutant Pose
-    dump_name = mut_structs_dir + '/' + mutant_name + ".pdb"
-    mutant.dump_file( dump_name )
+    # dump the decoy
+    #jd.output_decoy( working_pose )
+    # zip up the decoy pose, if desired
+    #if input_args.zip_decoy:
+    #    os.popen( "gzip %s" %working_pose.pdb_info().name() )
+
+    # increment the decoy number counter
+    cur_decoy_num += 1
+
+    #for res_num in native_Fc_glycan_nums_except_core_GlcNAc:
+    #    print "Res num", res_num, "Reset phi:", GlycanModelProtocol.reset_pose.phi( res_num ), "end phi:", working_pose.phi( res_num )
+    #    print "Res num", res_num, "Reset psi:", GlycanModelProtocol.reset_pose.psi( res_num ), "end psi:", working_pose.psi( res_num )
+    #    print "Res num", res_num, "Reset omega:", GlycanModelProtocol.reset_pose.omega( res_num ), "end omega:", working_pose.omega( res_num )
+    #    print
+
+# move the lowest E pack and minimized native structure into the lowest_E_structs dir
+#fasc_filename = decoy_name + ".fasc"
+#lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, GlycanModelProtocol.lowest_E_structs_dir, 10 )

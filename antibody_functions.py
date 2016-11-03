@@ -5151,6 +5151,52 @@ def check_E_per_residue( sf, pose, energy_cutoff = 1.5, verbose = False ):
     return high_E_residues
 
 
+def compare_native_vs_low_E_vs_low_grmsd( sf, native, decoy ):
+    """
+    Uses Pandas to construct a DataFrame of residues between the two poses that show a difference in scores
+    :param sf: ScoreFunction
+    :param native: Pose
+    :param decoy: Pose
+    :return: DataFrame
+    """
+    # imports
+    import pandas as pd
+    from rosetta import score_type_from_name
+    from rosetta.core.scoring.sasa import per_res_sc_sasa
+
+
+    # score the poses to get access to their energy objects
+    sf( native )
+    sf( decoy )
+
+    # absolute per residue sidechain SASA
+    native_per_res_sc_sasa = per_res_sc_sasa( native )
+    decoy_per_res_sc_sasa = per_res_sc_sasa( decoy )
+
+    # instantiate the DataFrame object
+    df = pd.DataFrame()
+    residue_numbers = range( 1, native.n_residue() + 1 )
+    df[ "res_num" ] = residue_numbers
+
+    # get delta scores between native and the two passed decoys
+    # decoy
+    df[ "dfa_atr" ] = [ decoy.energies().residue_total_energies( res ).get( score_type_from_name( "fa_atr" ) ) - 
+                              native.energies().residue_total_energies( res ).get(score_type_from_name( "fa_atr" ) ) for res in residue_numbers ]
+    df[ "dfa_rep" ] = [ decoy.energies().residue_total_energies( res ).get( score_type_from_name( "fa_rep" ) ) - 
+                              native.energies().residue_total_energies( res ).get(score_type_from_name( "fa_rep" ) ) for res in residue_numbers ]
+    df[ "dfa_sol" ] = [ decoy.energies().residue_total_energies( res ).get( score_type_from_name( "fa_sol" ) ) - 
+                              native.energies().residue_total_energies( res ).get(score_type_from_name( "fa_sol" ) ) for res in residue_numbers ]
+    df[ "per_res_dsasa" ] = [ decoy_per_res_sc_sasa[ ii ] - native_per_res_sc_sasa[ ii ] for ii in residue_numbers ]
+
+    # set the residue numbers as the index
+    # there has to be a smarter way of doing this
+    df = df.set_index( "res_num" )
+
+    # return a DataFrame that excludes rows that are all zero
+    nonzero_df = df[(df.T != 0).any()]
+
+    return nonzero_df
+
 
 
 

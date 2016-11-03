@@ -2207,6 +2207,9 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = False
     # argument checks passed, now speak to the user
     if verbose:
         print "Making a pack rotamers mover"
+
+    # get a list of the residues in the protein
+    protein_residues = range( 1, pose.n_residue() + 1 )
         
     # make the beginning packer task
     # this results in a packer task where each residue is allowed to be packed ( except for the first and last resiudes? )
@@ -2214,37 +2217,33 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = False
     task.or_include_current( True )
     task.restrict_to_repacking()
 
-    # if <use_pack_radius> is True and a <residue_range> was given
-    if use_pack_radius is True and residue_range is not None:
+    # if <use_pack_radius> is True
+    if use_pack_radius is True:
         # get all residues within the <pack_radius> including the residues within the list
-        res_nums_inside_pack_radius = get_res_nums_within_radius_of_residue_list( residue_range, pose, pack_radius, include_res_nums = True )
+        res_nums_inside_pack_radius = get_res_nums_within_radius_of_residue_list( residue_range, pose, 
+                                                                                  radius = pack_radius, 
+                                                                                  include_res_nums = True )
 
         # get all residues outside the <pack_radius> using a set difference
-        all_residues_set = set( range( 1, pose.n_residue() + 1 ) )
-        res_nums_outside_pack_radius = list( all_residues_set - set( res_nums_inside_pack_radius ) )
+        res_nums_outside_pack_radius = list( set( protein_residues ) - set( res_nums_inside_pack_radius ) )
 
         # turn off repacking for the residues not in the <pack_radius>
-        for res_num in res_nums_outside_pack_radius:
-            task.nonconst_residue_task( res_num ).prevent_repacking()
+        [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in res_nums_outside_pack_radius ]
             
     # alternatively, if no <pack_radius> given, but a <residue_range> was given, prevent repacking for the other residues
     if use_pack_radius is False and residue_range is not None:
         # prevent repacking for every residue NOT given by the user through <residue_range>
-        # for each residue in the Pose
-        for res_num in range( 1, pose.n_residue() + 1 ):
-            # if the residue is not in the <residue_range>
-            if res_num not in residue_range:
-                # prevent it from being packed
-                task.nonconst_residue_task( res_num ).prevent_repacking()
+        [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in protein_residues if res_num not in residue_range ]
+
+    # otherwise, all residues should be packed, which is the default behavior of instantiating a packer task
+    # so don't need to prevent packing for any residues if residue_range was None
 
     # if specified, turn off packing for each branch point residue
     if pack_branch_points is False:
         if verbose:
             print "  Turning off packing for branch points"
         # prevent repacking for each residue that is a branch point
-        for res_num in range( 1, pose.n_residue() + 1 ):
-            if pose.residue( res_num ).is_branch_point():
-                task.nonconst_residue_task( res_num ).prevent_repacking()
+        [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in protein_residues if pose.residue( res_num ).is_branch_point() ]
                 
     # apply sugar branch point constraints to sf, if desired
     if apply_sf_sugar_constraints:
@@ -2256,7 +2255,7 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = False
     # update the user on the status of the task
     if verbose:
         # task.being_packed returns True if that residue is being packed in the task
-        num_packed = [ task.being_packed( res_num ) for res_num in range( 1, pose.n_residue() + 1 ) ].count( True )
+        num_packed = [ task.being_packed( res_num ) for res_num in protein_residues ].count( True )
         num_not_packed = pose.n_residue() - num_packed
         print "  Preventing", num_not_packed, "residues from repacking in this packer task"
         print "  Allowing", num_packed, "residues to be packed"
@@ -2314,12 +2313,10 @@ def make_min_mover( sf, input_pose, apply_sf_sugar_constraints = True, jumps = N
                 if 0 < ii <= pose.num_jump():
                     mm.set_jump( ii, True )
                 else:
-                    print
-                    print ii, "doesn't appear to be a valid Jump for your pose, exiting"
+                    print "\n%s doesn't appear to be a valid Jump for your pose, exiting" %ii
                     sys.exit()
         else:
-            print
-            print "You didn't give me a list for the jumps param - I need a list of valid jump numbers. Exiting"
+            print "\nYou didn't give me a list for the jumps param - I need a list of valid jump numbers. Exiting"
             sys.exit()
 
     # set backbone angles to be minimized for both protein and sugar residues
@@ -2330,14 +2327,11 @@ def make_min_mover( sf, input_pose, apply_sf_sugar_constraints = True, jumps = N
     if allow_sugar_chi:
         if verbose:
             print "  Turning on chi angle mobility for all residues"
-        for residue in pose:
-            mm.set_chi( residue.seqpos(), True )
+        [ mm.set_chi( residue.seqpos(), True ) for residue in pose ]
     else:
         if verbose:
             print "  Turning on chi angle mobility only for protein residues"
-        for residue in pose:
-            if not residue.is_carbohydrate():
-                mm.set_chi( residue.seqpos(), True )
+        [ mm.set_chi( residue.seqpos(), True ) for residue in pose if not residue.is_carbohydrate() ]
 
     # apply sugar branch point constraints to sf, if desired
     if apply_sf_sugar_constraints:

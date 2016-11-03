@@ -650,7 +650,7 @@ elif input_args.protocol_num == 23:
     # Protocol_23 creation and argument setting
     GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
                                            sf_in = sf, 
-                                           angle_max = 6.0 * 3,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
                                            dump_dir = input_args.structure_dir, 
                                            pmm = pmm )
     GlycanModelProtocol.trials = 200
@@ -663,15 +663,16 @@ elif input_args.protocol_num == 23:
     GlycanModelProtocol.set_native_core = False
     GlycanModelProtocol.set_native_core_omegas_to_stats = True
     GlycanModelProtocol.ramp_sf = True
-    GlycanModelProtocol.ramp_angle_max = False
+    GlycanModelProtocol.ramp_angle_max = True
+    GlycanModelProtocol.angle_min = 6.0 * 3
     GlycanModelProtocol.fa_atr_ramp_factor = 2.0
     GlycanModelProtocol.fa_rep_ramp_factor = 0.01
     GlycanModelProtocol.minimize_each_round = True
     GlycanModelProtocol.pack_after_x_rounds = 3
     GlycanModelProtocol.make_small_moves = True
     GlycanModelProtocol.make_shear_moves = False
-    # testing a specific constraint to the pocket Gal seems to be found in. Would this get rid of that funnel in the 7 range?
-    GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_two_res_pocket_AtomPair.cst"
+    # testing if the constraint is necessary
+    GlycanModelProtocol.constraint_file = None
     GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)

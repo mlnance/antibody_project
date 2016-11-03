@@ -645,7 +645,7 @@ elif input_args.protocol_num == 23:
             mm.set_branches( res_num, True )
 
     # create the desired scorefxn
-    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44 } )
 
     # Protocol_23 creation and argument setting
     GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 

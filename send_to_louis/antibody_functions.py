@@ -2153,7 +2153,7 @@ def get_atom_nums_within_radius( seq_pos, atom_num, input_pose, radius ):
 
 
 
-def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = False, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
+def make_pack_rotamers_mover( sf, input_pose, pack_branch_points = True, residue_range = None, use_pack_radius = False, pack_radius = PACK_RADIUS, verbose = False ):
     """
     Returns a standard pack_rotamers_mover restricted to repacking and allows for sampling of current residue conformations for the <pose>
     IMPORTANT: DON'T USE for a Pose you JUST mutated  --  it's not setup to handle mutations
@@ -2161,7 +2161,6 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = False
     If you have one or more residues of interest where you want to pack within a radius around each residue, set <use_pack_radius> to True, give a <pack_radius> (or use default), and set <residue_range> to the residue sequence positions of interest
     :param sf: ScoreFunction
     :param input_pose: Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond angle and distance constraints to the sf? ). Default = False
     :param pack_branch_points: bool( allow packing at branch points? ). Default = True
     :param residue_range: list( of int( valid residue sequence positions ) ) or a single int()
     :param use_pack_radius: bool( Do you want to pack residues within a certain <pack_radius> around residues specified in <residue_range>? ). Default = False
@@ -2245,13 +2244,6 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = False
         # prevent repacking for each residue that is a branch point
         [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in protein_residues if pose.residue( res_num ).is_branch_point() ]
                 
-    # apply sugar branch point constraints to sf, if desired
-    if apply_sf_sugar_constraints:
-        apply_sugar_constraints_to_sf( sf, pose )
-        # update user
-        if verbose:
-            print "  Applying sugar constraints to the ScoreFunction"
-
     # update the user on the status of the task
     if verbose:
         # task.being_packed returns True if that residue is being packed in the task
@@ -2267,7 +2259,7 @@ def make_pack_rotamers_mover( sf, input_pose, apply_sf_sugar_constraints = False
 
 
 
-def make_min_mover( sf, input_pose, apply_sf_sugar_constraints = True, jumps = None, allow_sugar_chi = False, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
+def make_min_mover( sf, input_pose, jumps = None, allow_sugar_chi = False, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
     """
     Returns a min_mover object suitable for glycosylated proteins (turns off carbohydrate chi for now)
     IMPORTANT: If using a specific type of minimization, <minimization_type>, it DOES NOT check beforehand if the type you gave is valid, so any string actually will work. It will break when used
@@ -2275,7 +2267,6 @@ def make_min_mover( sf, input_pose, apply_sf_sugar_constraints = True, jumps = N
     Prints error message and exits if there was a problem
     :param sf: ScoreFunction
     :param input_pose: Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param jumps: list( Jump numbers of Jump(s) to be minimized ). Default = None (ie. all Jumps) (Give empty list for no Jumps)
     :param allow_sugar_chi: bool( allow the chi angles of sugars to be minimized ). Default = False
     :param minimization_type: str( the type of minimization you want to use ). Default = "dfpmin_strong_wolfe"
@@ -2332,10 +2323,6 @@ def make_min_mover( sf, input_pose, apply_sf_sugar_constraints = True, jumps = N
         if verbose:
             print "  Turning on chi angle mobility only for protein residues"
         [ mm.set_chi( residue.seqpos(), True ) for residue in pose if not residue.is_carbohydrate() ]
-
-    # apply sugar branch point constraints to sf, if desired
-    if apply_sf_sugar_constraints:
-        apply_sugar_constraints_to_sf( sf, pose )
 
     # create a MinMover with options
     min_mover = MinMover( mm, sf, minimization_type, 0.01, True )
@@ -2491,7 +2478,7 @@ def make_movemap_for_range( seqpos_list, allow_bb_movement = True, allow_chi_mov
 
 
 # TODO: Do I actually need this function?
-def do_min_with_this_mm( mm, sf, pose, apply_sf_sugar_constraints = True, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
+def do_min_with_this_mm( mm, sf, pose, minimization_type = "dfpmin_strong_wolfe", verbose = False ):
     """
     Minimizes a given Pose using dfpmin_strong_wolfe and the user-supplied ScoreFunction <sf> and MoveMap <mm>
     IMPORTANT: If using a specific type of minimization, <minimization_type>, it DOES NOT check beforehand if the type you gave is valid, so any string actually will work. It will break when used
@@ -2499,17 +2486,12 @@ def do_min_with_this_mm( mm, sf, pose, apply_sf_sugar_constraints = True, minimi
     :param mm: finished MoveMap
     :param sf: ScoreFunction
     :param pose:  Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param minimization_type: str( the type of minimization you want to use ). Default = "dfpmin_strong_wolfe"
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: minimized Pose
     """
     from rosetta import MinMover
 
-
-    # apply sugar branch point constraints to sf, if desired
-    if apply_sf_sugar_constraints:
-        apply_sugar_constraints_to_sf( sf, pose )
 
     # create a MinMover with options
     min_mover = MinMover( mm, sf, minimization_type, 0.01, True )
@@ -2525,7 +2507,7 @@ def do_min_with_this_mm( mm, sf, pose, apply_sf_sugar_constraints = True, minimi
 
 
 
-def do_pack_min( sf, input_pose, apply_sf_sugar_constraints = True, residue_range = None, jumps = None, pack_branch_points = True, use_pack_radius = False, pack_radius = PACK_RADIUS, allow_sugar_chi = False, minimization_type = "dfpmin_strong_wolfe", verbose = False, pmm = None ):
+def do_pack_min( sf, input_pose, residue_range = None, jumps = None, pack_branch_points = True, use_pack_radius = False, pack_radius = PACK_RADIUS, allow_sugar_chi = False, minimization_type = "dfpmin_strong_wolfe", verbose = False, pmm = None ):
     """
     Makes and applies a packer task and basic min mover to <pose> using the supplied ScoreFunction <sf>
     IMPORTANT: If using a specific type of minimization, <minimization_type>, it DOES NOT check beforehand if the type you gave is valid, so any string actually will work. It will break when used
@@ -2536,7 +2518,6 @@ def do_pack_min( sf, input_pose, apply_sf_sugar_constraints = True, residue_rang
     If you have one or more residues of interest where you want to pack within a certain radius around each residue, set <use_pack_radius> to True, give a <pack_radius> (or use default value), and set <residue_range> to the residue sequence positions of interest
     :param sf: ScoreFunction
     :param input_pose: Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param residue_range: list( of int( valid residue sequence positions ) )
     :param jumps = list( valid Jump numbers to be minimized if not all Jumps should be minimized). Default = None (ie. all jumps minimized) (Give empty list for no Jumps)
     :param pack_branch_points: bool( allow packing at branch points? ). Default = True
@@ -2572,7 +2553,6 @@ def do_pack_min( sf, input_pose, apply_sf_sugar_constraints = True, residue_rang
     # make and apply the pack_rotamers_mover
     pack_rotamers_mover = make_pack_rotamers_mover( sf, 
                                                     pose, 
-                                                    apply_sf_sugar_constraints = apply_sf_sugar_constraints, 
                                                     pack_branch_points = pack_branch_points, 
                                                     residue_range = residue_range, 
                                                     use_pack_radius = use_pack_radius, 
@@ -2585,7 +2565,6 @@ def do_pack_min( sf, input_pose, apply_sf_sugar_constraints = True, residue_rang
     # make and apply the min_mover
     min_mover = make_min_mover( sf, 
                                 pose, 
-                                apply_sf_sugar_constraints = apply_sf_sugar_constraints, 
                                 jumps = jumps, 
                                 allow_sugar_chi = allow_sugar_chi,
                                 minimization_type = minimization_type, 
@@ -3015,12 +2994,11 @@ def compare_these_poses_by_score( sf, pose1, pose2, compare_using_this_scoretype
 
 
 # TODO-see how many inner and outer trials are actually necessary to hit a decent minimum
-def get_best_structure_based_on_score( sf, pose, apply_sf_sugar_constraints = True, outer_trials = 3, inner_trials = 3, compare_using_this_scoretype = None, dump_best_pose = False, dump_pose_name = None, dump_dir = None, verbose = False, pmm = None ):
+def get_best_structure_based_on_score( sf, pose, outer_trials = 3, inner_trials = 3, compare_using_this_scoretype = None, dump_best_pose = False, dump_pose_name = None, dump_dir = None, verbose = False, pmm = None ):
     """
     Packs and minimizes a <pose> <inner_trials> times, then uses the best Pose based on total score to pack and minimize again <outer_trials> times using the ScoreFunction <sf>
     :param sf: ScoreFunction
     :param pose: Pose
-    :param apply_sf_sugar_constraints: bool( add sugar bond anlge and distance constraints to the sf? ). Default = True
     :param outer_trials: int( number of times to run <inner_trials> ). Default = 3
     :param inner_trials: int( number of times to pack and minimize before calling that the temporary "best" structure ). Default = 3
     :param compare_using_this_scoretype: str( what specific ScoreType do you want to use for comparison? ). Default = None = total_energy
@@ -3053,10 +3031,6 @@ def get_best_structure_based_on_score( sf, pose, apply_sf_sugar_constraints = Tr
             print "Something was wrong with your PyMOL_Mover -- continuing without watching"
             pass
 
-    # apply sugar branch point constraints to sf, if desired
-    if apply_sf_sugar_constraints:
-        apply_sugar_constraints_to_sf( sf, pose )
-
     # make a dummy best pose - will be replaced as a new best pose is found
     best_pose = Pose()
     best_pose.assign( pose )
@@ -3086,7 +3060,7 @@ def get_best_structure_based_on_score( sf, pose, apply_sf_sugar_constraints = Tr
                 pmm.apply( temp_pose )
                 
             # pack and minimize
-            temp_pose.assign( do_pack_min( sf, temp_pose, apply_sf_sugar_constraints = apply_sf_sugar_constraints ) )
+            temp_pose.assign( do_pack_min( sf, temp_pose ) )
             if pmm is not None and pmm_worked:
                 pmm.apply( temp_pose )
             best_pose.assign( compare_these_poses_by_score( sf, best_pose, temp_pose, compare_using_this_scoretype, verbose = verbose ) )
@@ -3868,7 +3842,7 @@ def restore_original_fold_tree( pose, verbose = False ):
 #### MUTATIONAL WORKER FUNCTIONS ####
 #####################################
 
-def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb_chain = None, pack_radius = 5 ):
+def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb_chain = None, pack_radius = 5, do_pack = True, do_min = True ):
     """
     Mutate residue at position <pose_num> to <new_res_name>
     <new_res_name> can be a single-letter or three-letter residue code
@@ -3880,6 +3854,8 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
     :param pdb_num: bool( did you give me a PDB number instead? Set to True if so. Give me a <pdb_chain> too then ) Default = False (Pose number)
     :param pdb_chain: str( PDB chain id such as 'A' or 'X'. Must have set <pdb_num> to True as well
     :param pack_radius: int or float( how far out in Angstroms do you want to pack around the mutation site? ) Default = 5
+    :param do_pack: bool( do you want to pack around the mutation? ) Default = True
+    :param do_min: bool( do you want to minimize around the mutation? ) Default = True
     :return: mutated Pose
     """
     # imports
@@ -3949,27 +3925,29 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
     # replace the old residue in the pose
     pose.replace_residue( pose_num, new_residue, orient_backbone = True )
 
-    # get residue numbers (including mutation site) to be packed and minimized
-    res_nums_around_mutation_site = get_res_nums_within_radius( pose_num, pose, pack_radius, include_res_num = True )
+    if do_pack or do_min:
+        # get residue numbers (including mutation site) to be packed and minimized
+        res_nums_around_mutation_site = get_res_nums_within_radius( pose_num, pose, pack_radius, include_res_num = True )
 
-    # pack around mutation
-    pack_rotamers_mover = make_pack_rotamers_mover( sf, pose,
-                                                    apply_sf_sugar_constraints = False,
-                                                    pack_branch_points = True,
-                                                    residue_range = res_nums_around_mutation_site )
-    pack_rotamers_mover.apply( pose )
+    # pack around mutation, if desired
+    if do_pack:
+        pack_rotamers_mover = make_pack_rotamers_mover( sf, pose,
+                                                        pack_branch_points = True,
+                                                        residue_range = res_nums_around_mutation_site )
+        pack_rotamers_mover.apply( pose )
 
-    # minimize around mutation
-    min_mm = MoveMap()
-    for res_num in res_nums_around_mutation_site:
-        min_mm.set_bb( res_num, True )
-        min_mm.set_chi( res_num, True )
-    min_mover = MinMover( movemap_in = min_mm,
-                          scorefxn_in = sf,
-                          min_type_in = "dfpmin_strong_wolfe",
-                          tolerance_in = 0.01,
-                          use_nb_list_in = True )
-    min_mover.apply( pose )
+    # minimize around mutation, if desired
+    if do_min:
+        min_mm = MoveMap()
+        for res_num in res_nums_around_mutation_site:
+            min_mm.set_bb( res_num, True )
+            min_mm.set_chi( res_num, True )
+            min_mover = MinMover( movemap_in = min_mm,
+                                  scorefxn_in = sf,
+                                  min_type_in = "dfpmin_strong_wolfe",
+                                  tolerance_in = 0.01,
+                                  use_nb_list_in = True )
+        min_mover.apply( pose )
 
     return pose
 
@@ -5151,7 +5129,7 @@ def check_E_per_residue( sf, pose, energy_cutoff = 1.5, verbose = False ):
     return high_E_residues
 
 
-def compare_native_vs_low_E_vs_low_grmsd( sf, native, decoy ):
+def compare_native_vs_decoy_per_res( sf, native, decoy ):
     """
     Uses Pandas to construct a DataFrame of residues between the two poses that show a difference in scores
     :param sf: ScoreFunction

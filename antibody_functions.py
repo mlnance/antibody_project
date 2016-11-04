@@ -4875,12 +4875,13 @@ def calc_interface_sasa( pose, JUMP_NUM ):
 
 
 
-def analyze_interface( pose, JUMP_NUM, pack_separated = True ):
+def analyze_interface( pose, JUMP_NUM, pack_separated = True, verbose = False ):
     """
     Use rosetta.protocols.analysis.Interface Analyzer to compute various interface metrics
     :param pose: Pose
     :param JUMP_NUM: int( valid Jump number defining interface )
     :param pack_separated: bool( Do you want to pack the protein after you split them apart? ). Default = True
+    :param verbose: bool( if you want the function to print out the high-energy residues, set to True ). Default = False
     :return: float( interface_SASA value )
     """
     from rosetta.protocols.analysis import InterfaceAnalyzerMover as IAM
@@ -4908,7 +4909,8 @@ def analyze_interface( pose, JUMP_NUM, pack_separated = True ):
     IAmover.set_input_pose( pose )
     IAmover.set_pack_separated( pack_separated )
 
-    print "Analyzing interface..."
+    if verbose:
+        print "Analyzing interface..."
     IAmover.reset_status()
     IAmover.apply( pose )
 
@@ -4918,7 +4920,6 @@ def analyze_interface( pose, JUMP_NUM, pack_separated = True ):
     ##unsat_hbond =  IAmover.get_interface_delta_hbond_unsat()
     ##interface_dG = IAmover.get_interface_dG()  # I already calculate this with the fxn I wrote
     ##num_interface_residues = IAmover.get_num_interface_residues()
-
 
     return interface_dSASA
 

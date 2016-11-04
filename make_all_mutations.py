@@ -98,6 +98,7 @@ native_pose = load_pose( input_args.native_pdb_file )
 
 # imports
 from antibody_functions import read_mutation_file
+from rosetta.core.scoring import fa_rep
 
 # get the list of mutations to make
 all_mutations = read_mutation_file( input_args.mutation_file )
@@ -107,6 +108,7 @@ mutation_filename = input_args.mutation_file.split( '/' )[-1].split( '.' )[0]
 decoy_name = main_structure_dir + mutation_filename
 
 sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44 } )
+orig_fa_rep = sf.get_weight( fa_rep )
 
 
 
@@ -116,56 +118,155 @@ sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44 } )
 
 # imports
 #from rosetta import PyJobDistributor
-from antibody_functions import mutate_residue
 
 # create and use the PyJobDistributor object
 #jd = PyJobDistributor( decoy_name, 1, sf )
 #jd.native_pose = native_pose
-cur_decoy_num = 1
+#cur_decoy_num = 1
 
 #while not jd.job_complete:
 # name to use when dumping the decoy. Should include full path
 #working_pose.pdb_info().name( jd.current_name )
 
+
+
+# imports
+from antibody_functions import mutate_residue, calc_interface_sasa, \
+    get_interface_score
+from rosetta import standard_packer_task, RotamerTrialsMover
+from rosetta import MoveMap, MinMover, score_type_from_name, Pose
+# data
+mutation_names = []
+dtotal_scores = []
+nat_tot_score = sf( native_pose )
+dinterface_scores = []
+nat_intf_score = get_interface_score( 2, sf, native_pose )
+dintf_sasa = []
+nat_intf_sasa = calc_interface_sasa( native_pose, 2 ) 
+mutant_dict = {}
 for mutation_set in all_mutations:
     # get a fresh pose object
-    working_pose = native_pose.clone()
-    working_pose.pdb_info().name( main_structure_dir + mutation_set + ".pdb" )
+    mutant_pose = native_pose.clone()
+    mutant_pose.pdb_info().name( main_structure_dir + mutation_set + ".pdb" )
+    print "%s..." %mutation_set
+
 
     # make each mutation one at a time
+    ###########################
+    #### make the mutation ####
+    ###########################
     mutations = mutation_set.split( '-' )
     for mutation in mutations:
-        # if this mutation requires a specific chain
-        if '_' in mutation:
-            orig_residue = mutation[0]
-            pdb_num = int( mutation.split( '_' )[0][1 : -1] )
-            new_residue = mutation.split( '_' )[0][-1]
-            pdb_chain = mutation.split( '_' )[-1]
-            # mutate
-            working_pose.assign( mutate_residue( pdb_num, new_residue, working_pose, sf, 
-                                                 pdb_num = True, 
-                                                 pdb_chain = pdb_chain, 
-                                                 pack_radius = 10 ) )
-        # otherwise, this mutation is on both chain A and B
-        else:
-            orig_residue = mutation[0]
-            pdb_num = int( mutation[1 : -1] )
-            new_residue = mutation[-1]
-            # mutate chain A
-            working_pose.assign( mutate_residue( pdb_num, new_residue, working_pose, sf, 
-                                                 pdb_num = True, 
-                                                 pdb_chain = 'A', 
-                                                 pack_radius = 10 ) )
-            # mutate chain B
-            working_pose.assign( mutate_residue( pdb_num, new_residue, working_pose, sf, 
-                                                 pdb_num = True, 
-                                                 pdb_chain = 'B', 
-                                                 pack_radius = 10 ) )
+        try:
+            # if this mutation requires a specific chain
+            if '_' in mutation:
+                orig_residue = mutation[0]
+                pdb_num = int( mutation.split( '_' )[0][1 : -1] )
+                new_residue = mutation.split( '_' )[0][-1]
+                pdb_chain = mutation.split( '_' )[-1]
+                # mutate
+                mutant_pose.assign( mutate_residue( pdb_num, new_residue, mutant_pose, sf, 
+                                                    pdb_num = True, 
+                                                    pdb_chain = pdb_chain, 
+                                                    do_pack = False, 
+                                                    do_min = False ) )
+            # otherwise, this mutation is on both chain A and B
+            else:
+                orig_residue = mutation[0]
+                pdb_num = int( mutation[1 : -1] )
+                new_residue = mutation[-1]
+                # mutate chain A
+                mutant_pose.assign( mutate_residue( pdb_num, new_residue, mutant_pose, sf, 
+                                                    pdb_num = True, 
+                                                    pdb_chain = 'A',
+                                                    do_pack = False, 
+                                                    do_min = False ) )
+                # mutate chain B
+                mutant_pose.assign( mutate_residue( pdb_num, new_residue, mutant_pose, sf, 
+                                                    pdb_num = True, 
+                                                    pdb_chain = 'B', 
+                                                    do_pack = False, 
+                                                    do_min = False ) )
+        except:
+            continue
 
-    working_pose.dump_pdb( working_pose.pdb_info().name() )
+    ###########################
+    #### gradient pack/min ####
+    ###########################
+    min_pose = Pose()
+    for ii in range( 5 ):
+        working_pose = mutant_pose.clone()
+
+        for jj in range( 2 ):
+            # packing
+            task = standard_packer_task( working_pose )
+            task.or_include_current( True )
+            task.restrict_to_repacking()
+            rtm = RotamerTrialsMover( sf, task )
+            rtm.apply( working_pose )
+
+            # minimizing
+            mm = MoveMap()
+            mm.set_bb( True )
+            mm.set_chi( True )
+            min_mover = MinMover( movemap_in = mm,
+                                  scorefxn_in = sf,
+                                  min_type_in = "dfpmin_strong_wolfe", 
+                                  tolerance_in = 0.01,
+                                  use_nb_list_in = True )
+            min_mover.max_iter( 2500 )
+            min_mover.apply( working_pose )
+        '''
+        for jj in range( 3 ):
+            if jj == 0:
+                sf.set_weight( fa_rep, sf.get_weight( fa_rep ) * 0.1 )
+            elif jj == 1:
+                sf.set_weight( fa_rep, sf.get_weight( fa_rep ) * 0.33 )
+            else:
+                sf.set_weight( fa_rep, orig_fa_rep )
+            min_mover = MinMover( movemap_in = mm,
+                                  scorefxn_in = sf,
+                                  min_type_in = "dfpmin_strong_wolfe", 
+                                  tolerance_in = 0.01,
+                                  use_nb_list_in = True )
+            min_mover.max_iter( 2500 )
+            min_mover.apply( working_pose )
+            print sf( working_pose ), jj
+        '''
+        if sf( working_pose ) < sf( min_pose ):
+            min_pose.assign( working_pose )
+    min_pose.dump_pdb( mutant_pose.pdb_info().name() )
+    mutant_dict[ mutation_set ] = min_pose
+
+    ##############
+    #### data ####
+    ##############
+    mutation_names.append( mutation_set )
+    dtotal_scores.append( sf( min_pose ) - nat_tot_score )
+    dinterface_scores.append( get_interface_score( 2, sf, min_pose ) - nat_intf_score )
+    dintf_sasa.append( calc_interface_sasa( min_pose, 2 ) - nat_intf_sasa )
 
                 
+try:
+    import pandas as pd
+    pandas_on = True
+except ImportError:
+    pandas_on = False
+    pass
 
+if pandas_on:
+    df = pd.DataFrame()
+    df[ "mutations" ] = mutation_names
+    df[ "dtotal_score" ] = dtotal_scores
+    df[ "dintf_score" ] = dinterface_scores
+    df[ "dintf_sasa" ] = dintf_sasa
+else:
+    data_dict = {}
+    data_dict[ "mutations" ] = mutation_names
+    data_dict[ "dtotal_score" ] = dtotal_scores
+    data_dict[ "dintf_score" ] = dinterface_scores
+    data_dict[ "dintf_sasa" ] = dintf_sasa
+        
     '''
     # collect additional metric data
     try:
@@ -194,7 +295,6 @@ for mutation_set in all_mutations:
 
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics
-    '''
 
     # dump the decoy
     #jd.output_decoy( working_pose )
@@ -214,3 +314,4 @@ for mutation_set in all_mutations:
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 #fasc_filename = decoy_name + ".fasc"
 #lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, GlycanModelProtocol.lowest_E_structs_dir, 10 )
+'''

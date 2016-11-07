@@ -4882,7 +4882,7 @@ def analyze_interface( pose, JUMP_NUM, pack_separated = True, verbose = False ):
     :param JUMP_NUM: int( valid Jump number defining interface )
     :param pack_separated: bool( Do you want to pack the protein after you split them apart? ). Default = True
     :param verbose: bool( if you want the function to print out the high-energy residues, set to True ). Default = False
-    :return: float( interface_SASA value )
+    :return: InterfaceAnalyzerMover with data ready to be extracted from it
     """
     from rosetta.protocols.analysis import InterfaceAnalyzerMover as IAM
 
@@ -4901,8 +4901,8 @@ def analyze_interface( pose, JUMP_NUM, pack_separated = True, verbose = False ):
 
     # TODO-see what's worth calculating and then actually return the value
     # set what you want to calculate
-    ##IAmover.set_compute_interface_delta_hbond_unsat( True )
-    ##IAmover.set_compute_interface_sc( True )
+    IAmover.set_compute_interface_delta_hbond_unsat( True )
+    IAmover.set_compute_interface_sc( True )
     IAmover.set_compute_separated_sasa( True )
 
     # set the relevant options
@@ -4916,12 +4916,12 @@ def analyze_interface( pose, JUMP_NUM, pack_separated = True, verbose = False ):
 
     # retrieve data
     # TODO-retrieve new, relevant data
-    interface_dSASA = IAmover.get_interface_delta_sasa()
+    #interface_dSASA = IAmover.get_interface_delta_sasa()
     ##unsat_hbond =  IAmover.get_interface_delta_hbond_unsat()
-    ##interface_dG = IAmover.get_interface_dG()  # I already calculate this with the fxn I wrote
+    #interface_dG = IAmover.get_interface_dG()  # I already calculate this with the fxn I wrote
     ##num_interface_residues = IAmover.get_num_interface_residues()
 
-    return interface_dSASA
+    return IAmover
 
 
 
@@ -5175,6 +5175,24 @@ def compare_native_vs_decoy_per_res( sf, native, decoy ):
     nonzero_df = df[(df.T != 0).any()]
 
     return nonzero_df
+
+
+def get_pymol_res_selection( residues, input_pose ):
+    """
+    Using the list of Pose <residues> numbers, turn them into a string selection using pdb_info() from <input_pose>
+    :param residues: list( Pose residue numbers )
+    :param input_pose: Pose
+    :return: str( pymol selection of residues )
+    """
+    pymol_selection = "select resi "
+    for ii in range( len( residues ) ):
+        # for all residues except the last one
+        if ii != len( residues ) - 1:
+            pymol_selection += input_pose.pdb_info().pose2pdb( residues[ii] ).strip().split( ' ' )[0] + " and chain " + input_pose.pdb_info().pose2pdb( residues[ii] ).split( ' ' )[1] + " + resi "
+        else:
+            pymol_selection += input_pose.pdb_info().pose2pdb( residues[ii] ).strip().split( ' ' )[0] + " and chain " + input_pose.pdb_info().pose2pdb( residues[ii] ).split( ' ' )[1]
+
+    return pymol_selection
 
 
 

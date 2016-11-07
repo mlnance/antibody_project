@@ -3842,7 +3842,7 @@ def restore_original_fold_tree( pose, verbose = False ):
 #### MUTATIONAL WORKER FUNCTIONS ####
 #####################################
 
-def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb_chain = None, pack_radius = 5, do_pack = True, do_min = True ):
+def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb_chain = None, pack_radius = 5, do_pack = True, do_min = True, do_full_pack_min = False ):
     """
     Mutate residue at position <pose_num> to <new_res_name>
     <new_res_name> can be a single-letter or three-letter residue code
@@ -3856,6 +3856,7 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
     :param pack_radius: int or float( how far out in Angstroms do you want to pack around the mutation site? ) Default = 5
     :param do_pack: bool( do you want to pack around the mutation? ) Default = True
     :param do_min: bool( do you want to minimize around the mutation? ) Default = True
+    :param do_full_pack_min: bool( instead of doing a local pack and/or min, do you want to do it to the whole Pose instead? ) Default = False
     :return: mutated Pose
     """
     # imports
@@ -3925,9 +3926,15 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
     # replace the old residue in the pose
     pose.replace_residue( pose_num, new_residue, orient_backbone = True )
 
+    # if a pack and/or min is happening
     if do_pack or do_min:
-        # get residue numbers (including mutation site) to be packed and minimized
-        res_nums_around_mutation_site = get_res_nums_within_radius( pose_num, pose, pack_radius, include_res_num = True )
+        # if they don't want to do a full Pose pack and/or min
+        if not do_full_pack_min:
+            # get residue numbers (including mutation site) to be packed and minimized
+            res_nums_around_mutation_site = get_res_nums_within_radius( pose_num, pose, pack_radius, include_res_num = True )
+        # if a full pack and/or min is desired, make the residue range the full size of the pose
+        else:
+            res_nums_around_mutation_site = range( 1, pose.n_residue() + 1 )
 
     # pack around mutation, if desired
     if do_pack:
@@ -3939,14 +3946,16 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
     # minimize around mutation, if desired
     if do_min:
         min_mm = MoveMap()
+        # turn on packing for the bb and chi
         for res_num in res_nums_around_mutation_site:
             min_mm.set_bb( res_num, True )
             min_mm.set_chi( res_num, True )
-            min_mover = MinMover( movemap_in = min_mm,
-                                  scorefxn_in = sf,
-                                  min_type_in = "dfpmin_strong_wolfe",
-                                  tolerance_in = 0.01,
-                                  use_nb_list_in = True )
+        # create and apply the MinMover
+        min_mover = MinMover( movemap_in = min_mm,
+                              scorefxn_in = sf,
+                              min_type_in = "dfpmin_strong_wolfe",
+                              tolerance_in = 0.01,
+                              use_nb_list_in = True )
         min_mover.apply( pose )
 
     return pose
@@ -4240,6 +4249,7 @@ def read_mutation_file( mutation_filepath ):
     Return a list of mutations to be made by reading a mutation file designated by the <mutation_filepath>
     Assumes PDB numbering!!!
     Chain designations are separated by '_', multiple mutations are separated by '-'. See below for examples
+    Second column can be a ratio of binding constants, if known (i.e. the Shields paper). Some kind of ordered ranking system, basically
     Five possible formats for a mutation string
     1) Single point mutation on both sides (symmetrical)
        A123T (Ala at position 123 on chain A and B to Thr)
@@ -4257,6 +4267,7 @@ def read_mutation_file( mutation_filepath ):
     :param mutation_filepath: str( /path/to/file with mutation strings desired )
     :return: list( mutations to be made )
     """
+    # try to open the file
     try:
         f = open( mutation_filepath, "rb" )
         lines = f.readlines()
@@ -4264,17 +4275,58 @@ def read_mutation_file( mutation_filepath ):
         print "Something is wrong with your <mutation_filepath> ( %s ). Please check your input." %mutation_filepath
         raise
 
+
+    # using an object as to hold mutation names and ratios, if the ratios are in the file
+    data_holder = DataHolder()
+
     # for each line specifying a mutation
     all_mutations = []
+    mutation_to_ratio = {}
+    mutation_to_normalized_ratio = {}
     for line in lines:
         # strip off the carriage return
-        mutation = line.strip()
+        line = line.strip()
 
-        # skip over comments and blank lines
-        if mutation != '' and not mutation.startswith( '#' ):
+        # skip empty lines and commented out lines
+        if line != '' and not line.startswith( '#' ):
+            # the second column can contain information
+            mutation = line.split( ' ' )[0]
+            try:
+                ratio = line.split( ' ' )[1]
+            except IndexError:
+                ratio = None
+                pass
+
+            # add the mutation to the list
             all_mutations.append( mutation )
+            # add the ratio, if any, to the mutation_to_ratio dict
+            if ratio is not None:
+                mutation_to_ratio[ mutation ] = float( ratio )
+            else:
+                mutation_to_ratio[ mutation ] = ratio
 
-    return all_mutations
+    '''
+    # normalize the ratios given, if they were given
+    # the min, max, and mean should ignore None's
+    no_none_ratios = [ val for val in mutation_to_ratio.values() if val is not None ]
+    if len( no_none_ratios ) == 0 or len( no_none_ratios ) == 1:
+        mutat
+    min_ratio = min( no_none_ratios )
+    max_ratio = max( no_none_ratios )
+    mean_ratio = sum( no_none_ratios ) / len( no_none_ratios )
+    for mut_name, ratio in mutation_to_ratio.items():
+        if ratio is not None:
+            mutation_to_normalized_ratio[ mut_name ] = round( ( float( ratio ) - min_ratio ) / ( max_ratio - min_ratio ), 4 )
+        else:
+            mutation_to_normalized_ratio[ mut_name ] = None
+    '''
+    
+    # attach the data to the DataHolder object
+    data_holder.all_mutations = all_mutations
+    data_holder.mutation_to_ratio = mutation_to_ratio
+    #data_holder.mutation_to_normalized_ratio = mutation_to_normalized_ratio
+
+    return data_holder
 
 
 
@@ -4934,6 +4986,7 @@ def get_interface_score( JUMP_NUM, sf, pose ):
     :param pose: Pose
     :return: float( ddG interface score )
     """
+    # imports
     from rosetta import Pose
     from rosetta.numeric import xyzVector_Real
 
@@ -4946,8 +4999,8 @@ def get_interface_score( JUMP_NUM, sf, pose ):
     temp_pose.assign( pose )
     jump = temp_pose.jump( JUMP_NUM )
 
-    #TODO-get current xyz location and multiply by 500 or something instead
-    vec = xyzVector_Real( 1000, 1000, 1000 )
+    # multiply the jump's translation vector by 500
+    vec = jump.get_translation() * 500
     jump.set_translation( vec )
     temp_pose.set_jump( JUMP_NUM, jump )
 
@@ -5177,6 +5230,7 @@ def compare_native_vs_decoy_per_res( sf, native, decoy ):
     return nonzero_df
 
 
+
 def get_pymol_res_selection( residues, input_pose ):
     """
     Using the list of Pose <residues> numbers, turn them into a string selection using pdb_info() from <input_pose>
@@ -5193,6 +5247,19 @@ def get_pymol_res_selection( residues, input_pose ):
             pymol_selection += input_pose.pdb_info().pose2pdb( residues[ii] ).strip().split( ' ' )[0] + " and chain " + input_pose.pdb_info().pose2pdb( residues[ii] ).split( ' ' )[1]
 
     return pymol_selection
+
+
+
+def get_rank_order_of_list( input ):
+    """
+    Function retreived from http://codereview.stackexchange.com/questions/65031/creating-a-list-containing-the-rank-of-the-elements-in-the-original-list
+    """
+    indices = list(range(len(input)))
+    indices.sort(key=lambda x: input[x])
+    output = [0] * len(indices)
+    for i, x in enumerate(indices):
+        output[x] = i
+    return output
 
 
 

@@ -97,11 +97,12 @@ native_pose = load_pose( input_args.native_pdb_file )
 #########################
 
 # imports
-from antibody_functions import read_mutation_file
+from antibody_functions import read_mutation_file, get_rank_order_of_list
 from rosetta.core.scoring import fa_rep
 
 # get the list of mutations to make
-all_mutations = read_mutation_file( input_args.mutation_file )
+all_mutations_holder = read_mutation_file( input_args.mutation_file )
+all_mutations_to_ratio_dict = all_mutations_holder.mutation_to_ratio
 
 # create an appropriate decoy_name using the mutation_file name
 mutation_filename = input_args.mutation_file.split( '/' )[-1].split( '.' )[0]
@@ -135,7 +136,7 @@ from antibody_functions import mutate_residue, calc_interface_sasa, \
     get_interface_score
 from rosetta import standard_packer_task, RotamerTrialsMover
 from rosetta import MoveMap, MinMover, score_type_from_name, Pose
-# data
+# data holders
 mutation_names = []
 dtotal_scores = []
 nat_tot_score = sf( native_pose )
@@ -143,8 +144,13 @@ dinterface_scores = []
 nat_intf_score = get_interface_score( 2, sf, native_pose )
 dintf_sasa = []
 nat_intf_sasa = calc_interface_sasa( native_pose, 2 ) 
+binding_ratios = []
+# True if dintf_score is negative if ratio > 1 and False if dintf_score is positive if ratio > 1 (or vice versa)
+hits = []
+
+# to hold all of the mutants to look at later
 mutant_dict = {}
-for mutation_set in all_mutations:
+for mutation_set, ratio in all_mutations_to_ratio_dict.items():
     # get a fresh pose object
     mutant_pose = native_pose.clone()
     mutant_pose.pdb_info().name( main_structure_dir + mutation_set + ".pdb" )
@@ -178,7 +184,7 @@ for mutation_set in all_mutations:
                 # mutate chain A
                 mutant_pose.assign( mutate_residue( pdb_num, new_residue, mutant_pose, sf, 
                                                     pdb_num = True, 
-                                                    pdb_chain = 'A',
+                                                   pdb_chain = 'A',
                                                     do_pack = False, 
                                                     do_min = False ) )
                 # mutate chain B
@@ -194,10 +200,10 @@ for mutation_set in all_mutations:
     #### gradient pack/min ####
     ###########################
     min_pose = Pose()
-    for ii in range( 5 ):
+    for ii in range( 1 ):
         working_pose = mutant_pose.clone()
 
-        for jj in range( 2 ):
+        for jj in range( 1 ):
             # packing
             task = standard_packer_task( working_pose )
             task.or_include_current( True )
@@ -236,6 +242,7 @@ for mutation_set in all_mutations:
         if sf( working_pose ) < sf( min_pose ):
             min_pose.assign( working_pose )
     min_pose.dump_pdb( mutant_pose.pdb_info().name() )
+    min_pose.pdb_info().name( mutation_set )
     mutant_dict[ mutation_set ] = min_pose
 
     ##############
@@ -243,10 +250,49 @@ for mutation_set in all_mutations:
     ##############
     mutation_names.append( mutation_set )
     dtotal_scores.append( sf( min_pose ) - nat_tot_score )
-    dinterface_scores.append( get_interface_score( 2, sf, min_pose ) - nat_intf_score )
+    dintf_score = get_interface_score( 2, sf, min_pose ) - nat_intf_score
+    dinterface_scores.append( dintf_score )
     dintf_sasa.append( calc_interface_sasa( min_pose, 2 ) - nat_intf_sasa )
+    if ratio is not None:
+        binding_ratios.append( ratio )
+    else:
+        binding_ratios.append( None )
+    if ratio is not None:
+        # if the ratio is higher than one and the dintf_score is negative, we got it
+        if ratio > 1 and dintf_score < 0:
+            hits.append( True )
+        # if the ratio is higher than one and the dintf_score is positive, we missed it
+        elif ratio > 1 and dintf_score > 0:
+            hits.append( False )
+        # if the ratio is less than one and the dintf_score is negative, we missed it
+        elif ratio < 1 and dintf_score < 0:
+            hits.append( False )
+        # if the ratio is less than one and the dintf_score is positive, we got it
+        elif ratio < 1 and dintf_score > 0:
+            hits.append( True )
+        elif ratio == 1:
+            hits.append( None )
+    else:
+        hits.append( None )
 
-                
+# normalize the dinterface_scores and binding_ratios
+#normalized_dinterface_scores = [ ( score - min( dinterface_scores ) ) / ( max( dinterface_scores ) - min( dinterface_scores ) ) for score in dinterface_scores ]
+# need the opposite order of normalized_dinterface_scores because a value of 0 should correspond to a bad mut (and the reverse) which won't happen with regular normalization since the "good" mutations result in a negative dintf_score, ie a normalized value closer to 0
+#normalized_reverse_dinterface_scores = [ 1 - score for score in normalized_dinterface_scores ]
+#normalized_binding_ratios = [ ( score - min( binding_ratios ) ) / ( max( binding_ratios ) - min( binding_ratios ) ) if score is not None else None for score in binding_ratios ]
+# now get the rank order of both lists because it is essentially impossible for the normalized values to line up perfectly
+# won't work right if there is a None in the binding_ratios!
+rank_order_dinterface_scores = get_rank_order_of_list( dinterface_scores )
+rank_order_binding_ratios = get_rank_order_of_list( binding_ratios )
+# reverse the rank order for dinterface_scores. Adding 1 because reversing it would make it go from 0 to n-1 even though it started at 1 to n
+reversed_rank_order_dinterface_scores = [ ( max( rank_order_dinterface_scores ) - score ) + 1 for score in rank_order_dinterface_scores ]
+# should probably normalize again
+#normalized_rank_order_dinterface_scores = [ ( score - min( rank_order_dinterface_scores ) ) / ( max( rank_order_dinterface_scores ) - min( rank_order_dinterface_scores ) ) for score in rank_order_dinterface_scores ]
+#normalized_rank_order_binding_ratios = [ ( score - min( rank_order_binding_ratios ) ) / ( max( rank_order_binding_ratios ) - min( rank_order_binding_ratios ) ) if score is not None else None for score in rank_order_binding_ratios ]
+# reverse the normalization of the dintf_score because a low dintf should correspond to a high binding ratio
+#reversed_normalized_rank_order_dinterface_scores = [ 1 - score for score in normalized_rank_order_dinterface_scores ]
+
+
 try:
     import pandas as pd
     pandas_on = True
@@ -260,12 +306,21 @@ if pandas_on:
     df[ "dtotal_score" ] = dtotal_scores
     df[ "dintf_score" ] = dinterface_scores
     df[ "dintf_sasa" ] = dintf_sasa
+    df[ "binding_ratio" ] = binding_ratios
+    df[ "rank_dintf_score" ] = reversed_rank_order_dinterface_scores
+    df[ "rank_binding_ratio" ] = rank_order_binding_ratios
+    df[ "hits" ] = hits
+    df = df.sort_values( "dintf_score" )
 else:
     data_dict = {}
     data_dict[ "mutations" ] = mutation_names
     data_dict[ "dtotal_score" ] = dtotal_scores
     data_dict[ "dintf_score" ] = dinterface_scores
     data_dict[ "dintf_sasa" ] = dintf_sasa
+    data_dict[ "binding_ratio" ] = binding_ratios
+    data_dict[ "rank_dintf_score" ] = reversed_rank_order_dinterface_scores
+    data_dict[ "rank_binding_ratio" ] = rank_order_binding_ratios
+    data_dict[ "hits" ] = hits
         
     '''
     # collect additional metric data

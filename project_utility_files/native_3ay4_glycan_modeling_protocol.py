@@ -392,7 +392,7 @@ class Model3ay4Glycan:
         # reset the torsions for the core GlcNAcs to values seen in IgG Fcs, if desired
         # hardcoded for now as this is not something that would be done in a real protocol
         if self.set_native_core_omegas_to_stats:
-            from rosetta.core.id import omega2_dihedral
+            from rosetta.core.id import omega_dihedral, omega2_dihedral
             from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
             from rosetta.numeric.random import gaussian
             from native_3ay4_glycan_modeling_protocol_functions import calc_mean_degrees, calc_stddev_degrees
@@ -435,10 +435,10 @@ class Model3ay4Glycan:
 
             # reset the omega1 and omega2 torsions of residues 216 and 440 (core GlcNAc to ASN-69)
             # 216
-            working_pose.set_omega( 216, new_omega1_216 )
+            set_glycosidic_torsion( omega1_dihedral, working_pose, 216, new_omega1_216 )
             set_glycosidic_torsion( omega2_dihedral, working_pose, 216, new_omega2_216 )
             # 440
-            working_pose.set_omega( 440, new_omega1_440 )
+            set_glycosidic_torsion( omega1_dihedral, working_pose, 440, new_omega1_440 )
             set_glycosidic_torsion( omega2_dihedral, working_pose, 440, new_omega2_440 )
 
             if self.verbose:

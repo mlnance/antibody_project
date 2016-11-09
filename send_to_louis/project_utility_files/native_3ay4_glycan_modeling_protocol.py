@@ -435,10 +435,10 @@ class Model3ay4Glycan:
 
             # reset the omega1 and omega2 torsions of residues 216 and 440 (core GlcNAc to ASN-69)
             # 216
-            set_glycosidic_torsion( omega1_dihedral, working_pose, 216, new_omega1_216 )
+            set_glycosidic_torsion( omega_dihedral, working_pose, 216, new_omega1_216 )
             set_glycosidic_torsion( omega2_dihedral, working_pose, 216, new_omega2_216 )
             # 440
-            set_glycosidic_torsion( omega1_dihedral, working_pose, 440, new_omega1_440 )
+            set_glycosidic_torsion( omega_dihedral, working_pose, 440, new_omega1_440 )
             set_glycosidic_torsion( omega2_dihedral, working_pose, 440, new_omega2_440 )
 
             if self.verbose:

@@ -3,7 +3,11 @@ __author__="morganlnance"
 
 
 import matplotlib
-matplotlib.use( "TKAgg" )
+try:
+    # this might only be a Mac thing
+    matplotlib.use( "TKAgg" )
+except:
+    pass
 import matplotlib.pyplot as plt
 from omega1_and_omega2_data_N_linked_GlcNAc import omega1_data, \
     omega2_data

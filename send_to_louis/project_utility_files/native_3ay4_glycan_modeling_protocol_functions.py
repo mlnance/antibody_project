@@ -290,7 +290,7 @@ def SugarSmallMover( mm, nmoves, angle_max, input_pose, move_all_torsions = True
     # imports
     from random import choice
     from rosetta.basic import periodic_range
-    from rosetta.numeric.random import rg
+    from rosetta.numeric.random import uniform
     from rosetta.core.id import MainchainTorsionType, phi_dihedral, psi_dihedral, omega_dihedral
     from rosetta.core.pose.carbohydrates import get_glycosidic_torsion, set_glycosidic_torsion, \
         get_reference_atoms
@@ -344,8 +344,8 @@ def SugarSmallMover( mm, nmoves, angle_max, input_pose, move_all_torsions = True
                     small_angle = big_angle / 2.0
 
             # perturb this torsion randomly
-            # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
-            new_torsion_value = periodic_range( old_torsion_value - small_angle + rg().uniform() * big_angle, 360.0 )
+            # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move, took out .rg()
+            new_torsion_value = periodic_range( old_torsion_value - small_angle + uniform() * big_angle, 360.0 )
 
             # set the new torsion
             set_glycosidic_torsion( moveable_torsion, pose, res_num, new_torsion_value )
@@ -539,7 +539,7 @@ def spin_carbs_connected_to_prot( mm, input_pose, spin_using_ideal_omegas = True
         get_reference_atoms, set_glycosidic_torsion
     from rosetta.core.id import omega_dihedral, omega2_dihedral
     from rosetta.basic import periodic_range
-    from rosetta.numeric.random import rg
+    from rosetta.numeric.random import uniform
 
 
     # copy the input pose
@@ -570,20 +570,20 @@ def spin_carbs_connected_to_prot( mm, input_pose, spin_using_ideal_omegas = True
             # get a base omega value to start at
             new_omega = choice( possible_omega_values )
             if not spin_using_ideal_omegas:
-                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
+                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move, took out .rg()
                 # small_angle = 15 meaning the max you can move your angle in one direction ( + or - )
                 # big_angle = 30 meaning the entire range available from your current ( + and - small_angle )
-                new_omega = periodic_range( new_omega - 15.0 + rg().uniform() * 30.0, 360.0 )
+                new_omega = periodic_range( new_omega - 15.0 + uniform() * 30.0, 360.0 )
             set_glycosidic_torsion( omega_dihedral, pose, glyc_res_num, new_omega )
         # if an omega2 exists
         if bool( len( get_reference_atoms( omega2_dihedral, pose, glyc_res_num ) ) ):
             # get a base omega value to start at
             new_omega2 = choice( possible_omega_values )
             if not spin_using_ideal_omegas:
-                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
+                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move, took out .rg()
                 # small_angle = 15 meaning the max you can move your angle in one direction ( + or - )
                 # big_angle = 30 meaning the entire range available from your current ( + and - small_angle )
-                new_omega2 = periodic_range( new_omega2 - 15.0 + rg().uniform() * 30.0, 360.0 )
+                new_omega2 = periodic_range( new_omega2 - 15.0 + uniform() * 30.0, 360.0 )
             set_glycosidic_torsion( omega2_dihedral, pose, glyc_res_num, new_omega2 )
 
     return pose

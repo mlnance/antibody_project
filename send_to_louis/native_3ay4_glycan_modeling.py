@@ -811,6 +811,101 @@ elif input_args.protocol_num == 26:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
+    GlycanModelProtocol.make_movie = True
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
+elif input_args.protocol_num == 27:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_27 version
+    ##########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
+    ##########################################################################################
+    mm = MoveMap()
+    for res_num in native_Fc_glycan_nums:
+        mm.set_bb( res_num, True )
+        mm.set_chi( res_num, True )
+        if native_pose.residue( res_num ).is_branch_point():
+            mm.set_branches( res_num, True )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+
+    # Protocol_27 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.trials = 300
+    GlycanModelProtocol.moves_per_trial = 1
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = False
+    GlycanModelProtocol.spin_using_ideal_omegas = False
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = False
+    # default.table now includes IgG1 Fc stats, so this shouldn't need to be used
+    GlycanModelProtocol.set_native_core_omegas_to_stats = False
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.ramp_angle_max = True
+    GlycanModelProtocol.angle_min = 6.0 * 3
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.01
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.pack_after_x_rounds = 3
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
+    GlycanModelProtocol.verbose = input_args.verbose
+    GlycanModelProtocol.make_movie = True
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
+### PURELY FOR TESTING HOW MANY MOVES NEED TO HAPPEN BEFORE THE TOTAL E FLATTENS ####
+elif input_args.protocol_num == 100:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_100 version
+    ##########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
+    ##########################################################################################
+    mm = MoveMap()
+    for res_num in native_Fc_glycan_nums:
+        mm.set_bb( res_num, True )
+        mm.set_chi( res_num, True )
+        if native_pose.residue( res_num ).is_branch_point():
+            mm.set_branches( res_num, True )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+
+    # Protocol_100 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.trials = 1000
+    GlycanModelProtocol.moves_per_trial = 1
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = False
+    GlycanModelProtocol.spin_using_ideal_omegas = False
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = False
+    # default.table now includes IgG1 Fc stats, so this shouldn't need to be used
+    GlycanModelProtocol.set_native_core_omegas_to_stats = False
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.ramp_angle_max = True
+    GlycanModelProtocol.angle_min = 6.0 * 3
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.01
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.pack_after_x_rounds = 3
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
+    GlycanModelProtocol.verbose = input_args.verbose
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -836,6 +931,8 @@ from rosetta import PyJobDistributor
 jd = PyJobDistributor( decoy_name, input_args.nstruct, sf )
 jd.native_pose = native_pose
 cur_decoy_num = 1
+Fc_glycan_rmsd_lowest_seen = None
+protocol_movie_poses = []
 
 # run the appropriate protocol
 print "Running Protocol %s in a PyJobDistributor..." %input_args.protocol_num
@@ -877,14 +974,33 @@ while not jd.job_complete:
     # add the metric data to the .fasc file
     jd.additional_decoy_info = metrics
 
+    # extra work
+    # check out the movie poses and keep track of those corresponding to the structure with the lowest rmsd
+    if GlycanModelProtocol.make_movie:
+        # hacky way of pulling out Fc_glycan_rmsd from the extra metrics I calculate
+        # the number following Fc_glycan_rmsd: in the metrics string is the actual Fc_glycan_rmsd
+        metrics_split = metrics.split( ' ' )
+        Fc_glycan_rmsd = float( metrics_split[ metrics_split.index( "Fc_glycan_rmsd:" ) + 1 ] )
+        # if the Fc_glycan_rmsd for this decoy is the lowest seen, store the Fc_glycan_rmsd and keep its movie_poses
+        # update the Fc_glycan_lowest_seen if this is the first decoy done
+        if Fc_glycan_rmsd_lowest_seen is None:
+            Fc_glycan_rmsd_lowest_seen = Fc_glycan_rmsd
+            # grab the poses associated with this decoy's movie
+            protocol_movie_poses = GlycanModelProtocol.movie_poses
+        # if this decoy is lower in Fc_glycan_rmsd than the lowest seen, update it
+        elif Fc_glycan_rmsd < Fc_glycan_rmsd_lowest_seen:
+            Fc_glycan_rmsd_lowest_seen = Fc_glycan_rmsd
+            # grab the poses associated with this decoy's movie
+            protocol_movie_poses = GlycanModelProtocol.movie_poses    
+
+    # increment the decoy number counter
+    cur_decoy_num += 1
+
     # dump the decoy
     jd.output_decoy( working_pose )
     # zip up the decoy pose, if desired
     if input_args.zip_decoy:
         os.popen( "gzip %s" %working_pose.pdb_info().name() )
-
-    # increment the decoy number counter
-    cur_decoy_num += 1
 
     #for res_num in native_Fc_glycan_nums_except_core_GlcNAc:
     #    print "Res num", res_num, "Reset phi:", GlycanModelProtocol.reset_pose.phi( res_num ), "end phi:", working_pose.phi( res_num )
@@ -892,6 +1008,12 @@ while not jd.job_complete:
     #    print "Res num", res_num, "Reset omega:", GlycanModelProtocol.reset_pose.omega( res_num ), "end omega:", working_pose.omega( res_num )
     #    print
 
+
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 fasc_filename = decoy_name + ".fasc"
 lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, GlycanModelProtocol.lowest_E_structs_dir, 10 )
+
+# dump the movie poses, if desired
+if GlycanModelProtocol.make_movie:
+    for pose in protocol_movie_poses:
+        pose.dump_file( GlycanModelProtocol.movie_poses_dir + pose.pdb_info().name() )

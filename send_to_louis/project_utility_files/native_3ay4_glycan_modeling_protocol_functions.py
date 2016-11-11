@@ -729,3 +729,51 @@ def calc_stddev_degrees( data ):
     '''
 
     return stddev
+
+
+def make_RotamerTrialsMover( moveable_residues, sf, input_pose, pack_radius = 8 ):
+    """
+    Given a list of <moveable_residues>, get all additional residues within <pack_radius> Angstroms around them in <input_pose> and return a RotamerTrialsMover that will pack these residues
+    :param moveable_residues: list( Pose numbers )
+    :param sf: ScoreFunction
+    :param input_pose: Pose
+    :param pack_radius: int( or float( radius in Angstroms to pack around the <moveable_residues>. Uses nbr_atom to determine residues in proximity ) ) Default = 8
+    :return: RotamerTrialsMover
+    """
+    # imports
+    from rosetta import standard_packer_task, RotamerTrialsMover
+
+
+    # copy over the input_pose
+    pose = input_pose.clone()
+
+    # make the PackRotamersMover from the passed MoveMap
+    # default of standard_packer_task is to set packing for residues to True
+    task = standard_packer_task( pose )
+    task.or_include_current( True )
+    task.restrict_to_repacking()
+
+    # get all the protein residues within 8A of the moveable_residues
+    # this uses the nbr_atom to determine if a residue is nearby or not, hence why I'm using a big distance like 8A by default
+    # nbr_atom seems to be basically the same as C4 in sugars
+    # this should include the Tyr if core GlcNAc is moveable in 3ay4
+    nearby_protein_residues = get_res_nums_within_radius_of_residue_list( moveable_residues, pose, 
+                                                                          radius = pack_radius, 
+                                                                          include_res_nums = False )
+
+    # create a list of residue numbers that can be packed
+    # meaning, the moveable carbohydrate residues and the residues around them
+    packable_residues = moveable_residues
+    packable_residues.extend( nearby_protein_residues )
+    packable_residues = set( packable_residues )
+
+    # turn off packing for all residues that are NOT_packable_residues
+    # this is a new set with elements in pose.n_residue() but not in packable_residues ( disjoint, s - t )
+    # meaning, all residue numbers in pose.n_residue() that are not packable need to be NOT packed
+    NOT_packable_residues = list( set( range( 1, pose.n_residue() + 1 ) ) - packable_residues )
+    [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in NOT_packable_residues ]
+
+    # make the pack_rotamers_mover
+    pack_rotamers_mover = RotamerTrialsMover( sf, task )
+
+    return pack_rotamers_mover

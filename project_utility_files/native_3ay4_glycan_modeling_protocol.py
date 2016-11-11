@@ -78,8 +78,6 @@ class Model3ay4Glycan:
         self.mc = None  # MonteCarlo object
         self.mc_acceptance = None
         self.min_mover = None
-        self.pack_rotamers_mover = None
-        self.packer_task = None
         self.native_pose = None
         self.reset_pose = None
         self.pmm_name = None
@@ -296,13 +294,13 @@ class Model3ay4Glycan:
         #################
         from os import popen
         from random import choice
-        from rosetta import MinMover, MonteCarlo, standard_packer_task, RotamerTrialsMover, PyMOL_Mover
+        from rosetta import MinMover, MonteCarlo, PyMOL_Mover
         from rosetta.core.scoring import fa_atr, fa_rep
         #from antibody_functions import native_Fc_glycan_nums_except_core_GlcNAc  # shouldn't need this as a MoveMap is passed to create this class
         from native_3ay4_glycan_modeling_protocol_functions import native_3ay4_Fc_glycan_LCM_reset, \
             add_constraints_to_pose, get_ramp_score_weight, get_ramp_angle_max, \
             native_3ay4_Fc_glycan_random_reset, get_res_nums_within_radius_of_residue_list, \
-            SugarSmallMover
+            SugarSmallMover, make_RotamerTrialsMover
 
 
         ##########################
@@ -555,48 +553,6 @@ class Model3ay4Glycan:
                                            use_nb_list_in = True )
 
 
-        ######################################
-        #### PACK ROTAMERS MOVER CREATION ####
-        ######################################
-        # make the PackerRotamersMover from the passed MoveMap
-        # if desired
-        if self.pack_after_x_rounds > 0:
-            # if needed
-            if self.pack_rotamers_mover is None:
-                # make the packer task
-                # default of standard_packer_task is to set packing for residues to True
-                task = standard_packer_task( working_pose )
-                task.or_include_current( True )
-                task.restrict_to_repacking()
-
-                # get all the protein residues within 8A of the moveable_residues
-                # this uses the nbr_atom to determine if a residue is nearby or not, hence why I'm using a big distance like 8A
-                # nbr_atom seems to be basically the same as C4 in sugars
-                # this should include the Tyr if core GlcNAc is moveable in 3ay4
-                nearby_protein_residues = get_res_nums_within_radius_of_residue_list( moveable_residues, working_pose, 
-                                                                                      radius = 8, 
-                                                                                      include_res_nums = False )
-
-                # create a list of residue numbers that can be packed
-                # meaning, the moveable carbohydrate residues and the residues around them
-                packable_residues = moveable_residues
-                packable_residues.extend( nearby_protein_residues )
-                packable_residues = set( packable_residues )
-
-                # turn off packing for all residues that are NOT_packable_residues
-                # this is a new set with elements in pose.n_residue() but not in packable_residues ( disjoint, s - t )
-                # meaning, all residue numbers in pose.n_residue() that are not packable need to be NOT packed
-                NOT_packable_residues = list( set( range( 1, working_pose.n_residue() + 1 ) ) - packable_residues )
-                [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in NOT_packable_residues ]
-
-                # make the pack_rotamers_mover
-                pack_rotamers_mover = RotamerTrialsMover( self.sf, task )
-
-                # attach the task and the mover to the protocol object
-                self.packer_task = task
-                self.pack_rotamers_mover = pack_rotamers_mover
-
-
         ####################################
         #### MAKE THE MONTECARLO OBJECT ####
         ####################################
@@ -693,7 +649,11 @@ class Model3ay4Glycan:
             # pack the sugars and surrounding residues, if desired
             if self.pack_after_x_rounds > 0:
                 if trial_num % self.pack_after_x_rounds == 0:
-                    self.pack_rotamers_mover.apply( working_pose )
+                    # have to make the packer task each time because the residues surrounding the sugars
+                    # will likely change after each move
+                    rotamer_trials_mover = make_RotamerTrialsMover( moveable_residues, self.sf, working_pose, 
+                                                                    pack_radius = 8 )
+                    rotamer_trials_mover.apply( working_pose )
                     if self.verbose:
                         print "score after local pack:", self.watch_sf( working_pose )
 
@@ -702,6 +662,8 @@ class Model3ay4Glycan:
             #### MINIMIZE #####
             ###################
             # minimize the backbone of the sugars, if desired
+            # does NOT do anything to any surrounding resiudes
+            # TODO: is that what I want?
             if self.minimize_each_round:
                 self.min_mover.apply( working_pose )
                 if self.verbose:

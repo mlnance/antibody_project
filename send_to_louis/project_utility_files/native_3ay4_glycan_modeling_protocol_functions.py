@@ -371,7 +371,7 @@ def get_ramp_score_weight( current_weight, target_weight, current_step, total_st
     # need to be able to do this a minimum of 10 times, otherwise the math will break
     if total_steps < 10:
         print
-        print "You need to run a loop at least more than 10 times - otherwise the math in here won't work"
+        print "You need to run a loop at least more than 10 times - otherwise the math for ramping the sf won't work"
         sys.exit()
 
     # adjust the total_steps so that it's actually 10% less than what it actually is
@@ -415,7 +415,7 @@ def get_ramp_angle_max( current_angle_max, target_angle_max, current_step, total
     # need to be able to do this a minimum of 10 times, otherwise the math will break
     if total_steps < 10:
         print
-        print "You need to run a loop at least more than 10 times - otherwise the math in here won't work"
+        print "You need to run a loop at least more than 10 times - otherwise the math for ramping the angle_max won't work"
         sys.exit()
 
     # adjust the total_steps so that it's actually 10% less than what it actually is

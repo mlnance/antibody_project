@@ -545,9 +545,9 @@ elif input_args.protocol_num == 20:
 
 elif input_args.protocol_num == 21:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_21 version
-    ##########################################################################################
-    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
-    ##########################################################################################
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
@@ -589,9 +589,9 @@ elif input_args.protocol_num == 21:
 
 elif input_args.protocol_num == 22:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_22 version
-    ##########################################################################################
-    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
-    ##########################################################################################
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
@@ -634,9 +634,9 @@ elif input_args.protocol_num == 22:
 
 elif input_args.protocol_num == 23:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_23 version
-    ##########################################################################################
-    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
-    ##########################################################################################
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
@@ -680,9 +680,9 @@ elif input_args.protocol_num == 23:
 
 elif input_args.protocol_num == 24:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_24 version
-    ##########################################################################################
-    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
-    ##########################################################################################
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
@@ -726,9 +726,9 @@ elif input_args.protocol_num == 24:
 
 elif input_args.protocol_num == 25:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_25 version
-    ##########################################################################################
-    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
-    ##########################################################################################
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
@@ -771,9 +771,9 @@ elif input_args.protocol_num == 25:
 
 elif input_args.protocol_num == 26:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_26 version
-    ##########################################################################################
-    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
-    ##########################################################################################
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
@@ -818,9 +818,9 @@ elif input_args.protocol_num == 26:
 
 elif input_args.protocol_num == 27:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_27 version
-    ##########################################################################################
-    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
-    ##########################################################################################
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
@@ -866,9 +866,9 @@ elif input_args.protocol_num == 27:
 ### PURELY FOR TESTING HOW MANY MOVES NEED TO HAPPEN BEFORE THE TOTAL E FLATTENS ####
 elif input_args.protocol_num == 100:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_100 version
-    ##########################################################################################
-    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG FC DATA ####
-    ##########################################################################################
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
@@ -930,9 +930,9 @@ from rosetta import PyJobDistributor
 # create and use the PyJobDistributor object
 jd = PyJobDistributor( decoy_name, input_args.nstruct, sf )
 jd.native_pose = native_pose
-cur_decoy_num = 1
 Fc_glycan_rmsd_lowest_seen = None
 protocol_movie_poses = []
+protocol_movie_decoy_num = 0
 
 # run the appropriate protocol
 print "Running Protocol %s in a PyJobDistributor..." %input_args.protocol_num
@@ -940,7 +940,7 @@ while not jd.job_complete:
     # get a fresh pose object
     working_pose = native_pose.clone()
     # name to use specifically in PyMOL
-    GlycanModelProtocol.pmm_name = "p%s_decoy%s" %( input_args.protocol_num, cur_decoy_num ) 
+    GlycanModelProtocol.pmm_name = "p%s_decoy%s" %( input_args.protocol_num, jd.current_num ) 
     # name to use when dumping the decoy. Should include full path
     working_pose.pdb_info().name( jd.current_name )
     # apply the protocol
@@ -985,16 +985,15 @@ while not jd.job_complete:
         # update the Fc_glycan_lowest_seen if this is the first decoy done
         if Fc_glycan_rmsd_lowest_seen is None:
             Fc_glycan_rmsd_lowest_seen = Fc_glycan_rmsd
+            protocol_movie_decoy_num = jd.current_num
             # grab the poses associated with this decoy's movie
             protocol_movie_poses = GlycanModelProtocol.movie_poses
         # if this decoy is lower in Fc_glycan_rmsd than the lowest seen, update it
         elif Fc_glycan_rmsd < Fc_glycan_rmsd_lowest_seen:
             Fc_glycan_rmsd_lowest_seen = Fc_glycan_rmsd
+            protocol_movie_decoy_num = jd.current_num
             # grab the poses associated with this decoy's movie
             protocol_movie_poses = GlycanModelProtocol.movie_poses    
-
-    # increment the decoy number counter
-    cur_decoy_num += 1
 
     # dump the decoy
     jd.output_decoy( working_pose )
@@ -1015,5 +1014,8 @@ lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, GlycanModelPro
 
 # dump the movie poses, if desired
 if GlycanModelProtocol.make_movie:
+    # make a directory in the movie_poses_dir using the decoy number
+    movie_dir = GlycanModelProtocol.movie_poses_dir + "decoy_%s_movie/" %protocol_movie_decoy_num
+    os.mkdir( movie_dir )
     for pose in protocol_movie_poses:
-        pose.dump_file( GlycanModelProtocol.movie_poses_dir + pose.pdb_info().name() )
+        pose.dump_file( movie_dir + pose.pdb_info().name() )

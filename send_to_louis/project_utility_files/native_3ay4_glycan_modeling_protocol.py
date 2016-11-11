@@ -27,9 +27,10 @@ class Model3ay4Glycan:
         try:
             # pandas isn't on Jazz
             import pandas as pd
+            self.df = pd.DataFrame()
         except:
+            self.df = None
             pass
-        self.df = pd.DataFrame()
         self.trial_nums = []
         self.energies = []
 
@@ -751,7 +752,9 @@ class Model3ay4Glycan:
         self.mc_acceptance = mc_acceptance
 
         # for watching energy during a protocol
-        #self.df[ "trial_num" ] = self.trial_nums
-        #self.df[ "total_score" ] = self.energies
+        if self.df is not None:
+            pass
+            #self.df[ "trial_num" ] = self.trial_nums
+            #self.df[ "total_score" ] = self.energies
 
         return working_pose

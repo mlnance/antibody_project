@@ -11,6 +11,7 @@ The intent for this file is to hold all of the single-call functions for each pr
 import sys, os
 
 
+
 class Model3ay4Glycan:
     #def __init__( self, mm_in, sf_in, argument_file = None, pmm = None ):
     #:param argument_file: str( /path/to/file that contains needed setter arguments for this protocol class
@@ -23,6 +24,16 @@ class Model3ay4Glycan:
         :param dump_dir: str( /path/to/structure dump directory )
         :param pmm: PyMOL_Mover
         '''
+        try:
+            # pandas isn't on Jazz
+            import pandas as pd
+        except:
+            pass
+        self.df = pd.DataFrame()
+        self.trial_nums = []
+        self.energies = []
+
+
         # default arguments
         self.name = "Model3ay4Glycan"
 
@@ -34,6 +45,8 @@ class Model3ay4Glycan:
         self.dump_dir = dump_dir
         self.watch_sf = sf_in.clone()  # used when looking for convergence and verbose print outs
         self.pmm = pmm
+        if self.pmm is not None:
+            pmm.keep_history( True )
 
         # default arguments
         #self.glyco_file = None  # not used for native protocol right now
@@ -75,8 +88,11 @@ class Model3ay4Glycan:
         self.dump_reset_pose = False
         self.zip_dump_poses = False
 
-        # "optional" arguments
+        # watch and listen arguments
         self.verbose = False
+        self.make_movie = False
+        self.movie_poses = []
+        self.movie_poses_dir = None
 
 
         '''
@@ -279,7 +295,7 @@ class Model3ay4Glycan:
         #################
         from os import popen
         from random import choice
-        from rosetta import MinMover, MonteCarlo, standard_packer_task, RotamerTrialsMover
+        from rosetta import MinMover, MonteCarlo, standard_packer_task, RotamerTrialsMover, PyMOL_Mover
         from rosetta.core.scoring import fa_atr, fa_rep
         #from antibody_functions import native_Fc_glycan_nums_except_core_GlcNAc  # shouldn't need this as a MoveMap is passed to create this class
         from native_3ay4_glycan_modeling_protocol_functions import native_3ay4_Fc_glycan_LCM_reset, \
@@ -288,14 +304,34 @@ class Model3ay4Glycan:
             SugarSmallMover
 
 
-        ########################################
-        #### COPY POSES AND MAKE VISUALIZER ####
-        ########################################
+        ##########################
+        #### COPY INPUT POSES ####
+        ##########################
         # get the working and native pose (for this particular script, they are the same thing)
-        native_pose = pose.clone()
-        working_pose = pose.clone()
+        from rosetta import Pose
+        self.native_pose = Pose()
+        self.native_pose.assign( pose )
+        #self.native_pose = pose.clone()
+        working_pose = Pose()
+        working_pose.assign( pose )
+        #working_pose = pose.clone()
         self.decoy_name = working_pose.pdb_info().name()
-        self.native_pose = native_pose.clone()
+
+
+        #######################################
+        #### PREPARE FOR MOVIE, IF DESIRED ####
+        #######################################
+        # create a movie_poses_dir, if desired
+        if self.make_movie:
+            # each apply should have an empty self.movie_poses list
+            self.movie_poses = []
+            # make the directory, if needed
+            self.movie_poses_dir = self.dump_dir + "movie_poses_dir/"
+            if not os.path.isdir( self.movie_poses_dir ):
+                try:
+                    os.mkdir( self.movie_poses_dir )
+                except:
+                    pass
 
 
         ###############################
@@ -354,8 +390,8 @@ class Model3ay4Glycan:
         # reset the native omega torsion, if desired
         # hardcoded for now as this is not something that would be done in a real protocol
         if self.set_native_omega:
-            working_pose.set_omega( 221, native_pose.omega( 221 ) )
-            working_pose.set_omega( 445, native_pose.omega( 445 ) )
+            working_pose.set_omega( 221, self.native_pose.omega( 221 ) )
+            working_pose.set_omega( 445, self.native_pose.omega( 445 ) )
             if self.verbose:
                 print "score of omega branch reset:", self.watch_sf( working_pose )
 
@@ -371,24 +407,27 @@ class Model3ay4Glycan:
 
             # reset the phi, psi, omega, and omega2 torsions of residues 216 and 440 (core GlcNAc to ASN-69)
             # 216
-            working_pose.set_phi( 216, native_pose.phi( 216 ) )
-            working_pose.set_psi( 216, native_pose.psi( 216 ) )
-            working_pose.set_omega( 216, native_pose.omega( 216 ) )
+            working_pose.set_phi( 216, self.native_pose.phi( 216 ) )
+            working_pose.set_psi( 216, self.native_pose.psi( 216 ) )
+            working_pose.set_omega( 216, self.native_pose.omega( 216 ) )
             set_glycosidic_torsion( omega2_dihedral, working_pose, 216, 
-                                    get_glycosidic_torsion( omega2_dihedral, native_pose, 216 ) )
+                                    get_glycosidic_torsion( omega2_dihedral, self.native_pose, 216 ) )
             # 440
-            working_pose.set_phi( 440, native_pose.phi( 440 ) )
-            working_pose.set_psi( 440, native_pose.psi( 440 ) )
-            working_pose.set_omega( 440, native_pose.omega( 440 ) )
+            working_pose.set_phi( 440, self.native_pose.phi( 440 ) )
+            working_pose.set_psi( 440, self.native_pose.psi( 440 ) )
+            working_pose.set_omega( 440, self.native_pose.omega( 440 ) )
             set_glycosidic_torsion( omega2_dihedral, working_pose, 440, 
-                                    get_glycosidic_torsion( omega2_dihedral, native_pose, 440 ) )
+                                    get_glycosidic_torsion( omega2_dihedral, self.native_pose, 440 ) )
             if self.verbose:
                 print "score of core GlcNAc reset:", self.watch_sf( working_pose )
 
 
-        ###################################################
-        #### HARDCODED CORE RESET TO IgG FC STATISTICS ####
-        ###################################################
+        # no longer needed because I changed the default.table to store these data
+        # thus, I am letting the LCM choose from IgG1 Fc stats to reset GlcNAc core omega1 and omega2
+        '''
+        ####################################################
+        #### HARDCODED CORE RESET TO IgG1 Fc STATISTICS ####
+        ####################################################
         # reset the torsions for the core GlcNAcs to values seen in IgG Fcs, if desired
         # hardcoded for now as this is not something that would be done in a real protocol
         if self.set_native_core_omegas_to_stats:
@@ -426,6 +465,7 @@ class Model3ay4Glycan:
             # standard deviation
             omega1_stddev = calc_stddev_degrees( omega1_data )
             omega2_stddev = calc_stddev_degrees( omega2_data )
+
             # 216
             new_omega1_216 = base_omega1 + ( omega1_stddev * gaussian() )
             new_omega2_216 = base_omega2 + ( omega2_stddev * gaussian() )
@@ -443,6 +483,7 @@ class Model3ay4Glycan:
 
             if self.verbose:
                 print "score of core GlcNAc reset using IgG Fc statistics:", self.watch_sf( working_pose )
+        '''
 
 
         ############################################
@@ -471,6 +512,16 @@ class Model3ay4Glycan:
             if self.zip_dump_poses:
                 os.popen( "gzip %s" %reset_name )
 
+        # add the reset pose to the list of poses for the movie, if desired
+        if self.make_movie:
+            # change the name to just "protocol_X_decoy_Y_0.pdb" without path location
+            # state 0 is the reset_pose for when making a movie
+            orig_name = self.reset_pose.pdb_info().name()
+            reset_name = self.reset_pose.pdb_info().name().split( '/' )[-1].split( ".pdb" )[0] + "_0.pdb"
+            self.reset_pose.pdb_info().name( reset_name )
+            self.movie_poses.append( self.reset_pose.clone() )
+            self.reset_pose.pdb_info().name( orig_name )
+
 
         #########################
         #### ADD CONSTRAINTS ####
@@ -498,6 +549,7 @@ class Model3ay4Glycan:
                 self.min_mover = MinMover( movemap_in = self.mm, 
                                            scorefxn_in = self.sf,
                                            min_type_in = "dfpmin_strong_wolfe",
+                                           #min_type_in = "lbfgs_armijo_nonmonotone",
                                            tolerance_in = 0.01,
                                            use_nb_list_in = True )
 
@@ -550,6 +602,8 @@ class Model3ay4Glycan:
         # create the MonteCarlo object, if needed
         if self.mc is None:
             self.mc = MonteCarlo( working_pose, self.sf, self.kT )
+        self.mc.reset_counters()
+        self.mc.reset( working_pose )
 
 
         ########################################
@@ -558,7 +612,9 @@ class Model3ay4Glycan:
         # for as many trials as specified
         num_mc_accepts = 0
         num_mc_checks = 0
-        mc_acceptance = -1
+        mc_acceptance = -1  # -1 so that it will play nice in the metrics file
+        movie_num = 1
+        # trial_num must be 1 to N because decoy 0 will be the reset_pose when creating a movie
         for trial_num in range( 1, self.trials + 1 ):
             # print current score
             if self.verbose:
@@ -656,6 +712,20 @@ class Model3ay4Glycan:
             ###############################
             # accept or reject the total move using the MonteCarlo object
             if self.mc.boltzmann( working_pose ):
+                # for watching energy during a protocol
+                #self.trial_nums.append( trial_num )
+                #self.energies.append( self.watch_sf( working_pose ) )
+
+                # add the accepted-move pose to the list of poses for the movie, if desired
+                if self.make_movie:
+                    # change the name to just "protocol_X_decoy_Y_Z.pdb" without path location
+                    # X is protocol number, Y is decoy number, Z is movie number
+                    # ex name) protocol_10_decoy_5_23.pdb
+                    working_pose.pdb_info().name( self.decoy_name.split( '/' )[-1].split( ".pdb" )[0] + "_%s.pdb" %movie_num )
+                    self.movie_poses.append( working_pose.clone() )
+                    working_pose.pdb_info().name( self.decoy_name )
+                    movie_num += 1
+
                 # up the counters and send to pymol
                 num_mc_accepts += 1
                 try:
@@ -679,5 +749,9 @@ class Model3ay4Glycan:
 
         # add any relevant data to the class object
         self.mc_acceptance = mc_acceptance
+
+        # for watching energy during a protocol
+        #self.df[ "trial_num" ] = self.trial_nums
+        #self.df[ "total_score" ] = self.energies
 
         return working_pose

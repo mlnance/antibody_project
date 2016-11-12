@@ -307,13 +307,8 @@ class Model3ay4Glycan:
         #### COPY INPUT POSES ####
         ##########################
         # get the working and native pose (for this particular script, they are the same thing)
-        from rosetta import Pose
-        self.native_pose = Pose()
-        self.native_pose.assign( pose )
-        #self.native_pose = pose.clone()
-        working_pose = Pose()
-        working_pose.assign( pose )
-        #working_pose = pose.clone()
+        self.native_pose = pose.clone()
+        working_pose = pose.clone()
         self.decoy_name = working_pose.pdb_info().name()
 
 

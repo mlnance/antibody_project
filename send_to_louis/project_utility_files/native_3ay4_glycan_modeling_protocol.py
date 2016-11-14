@@ -299,8 +299,8 @@ class Model3ay4Glycan:
         #from antibody_functions import native_Fc_glycan_nums_except_core_GlcNAc  # shouldn't need this as a MoveMap is passed to create this class
         from native_3ay4_glycan_modeling_protocol_functions import native_3ay4_Fc_glycan_LCM_reset, \
             add_constraints_to_pose, get_ramp_score_weight, get_ramp_angle_max, \
-            native_3ay4_Fc_glycan_random_reset, get_res_nums_within_radius_of_residue_list, \
-            SugarSmallMover, make_RotamerTrialsMover
+            native_3ay4_Fc_glycan_random_reset, SugarSmallMover, \
+            make_RotamerTrialsMover
 
 
         ##########################

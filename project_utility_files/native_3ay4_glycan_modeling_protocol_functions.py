@@ -442,86 +442,55 @@ def get_ramp_angle_max( current_angle_max, target_angle_max, current_step, total
 
 
 
-def get_res_nums_within_radius( res_num_in, input_pose, radius, include_res_num = False ):
+def get_res_nums_within_radius( residues, input_pose, radius, include_passed_res_nums = False, sort_return_list = False ):
     """
-    Use the nbr_atom_xyz to find residue numbers within <radius> of <pose_num> in <pose>
-    :param res_num_in: int( Pose residue number )
-    :param input_pose: Pose
-    :param radius: int or float( radius around <pose_num> to use to select resiudes )
-    :param include_res_num: bool( do you want to include <res_num> in the return list? ) Default = False
-    :return: list( Pose residue numbers within <radius> of <pose_num>
-    """
-    # clone the <input_pose>
-    pose = input_pose.clone()
-
-    # container for the centers of each residue in pose
-    centers_of_res = []
-
-    # fill up the centers container
-    for res_num in range( 1, pose.n_residue() + 1 ):
-        center = pose.residue( res_num ).nbr_atom_xyz()
-        centers_of_res.append( center )
-
-    # container for residues inside the <radius>
-    res_nums_in_radius = []
-
-    # nbr_xyz of the residue of interest
-    res_num_xyz = pose.residue( res_num_in ).nbr_atom_xyz()
-
-    for res_num in range( 1, pose.n_residue() + 1 ):
-        # this will get the xyz of the residue of interest, but it will be removed from the final list if desired
-        # (since it will be added as 0 will always be less than <radius>)
-        # get the center of the residue
-        center = pose.residue( res_num ).nbr_atom_xyz()
-
-        # keep the residue number if the nbr_atom_xyz is less than <radius>
-        if center.distance( res_num_xyz ) <= radius:
-            res_nums_in_radius.append( res_num )
-
-    # if the user didn't want the residue of interest in the return list, remove it
-    if not include_res_num:
-        res_nums_in_radius.remove( res_num_in )
-
-    return res_nums_in_radius
-
-
-
-def get_res_nums_within_radius_of_residue_list( residues, input_pose, radius, include_res_nums = False ):
-    """
-    Find all residue numbers around the list of <residues> given in <input_pose> within <radius> Angstroms.
-    Set <include_residues> if you want to include the list of passed <residues> in the return list of residue numbers.
-    :param residues: list( Pose residue numbers )
+    Find all residue numbers around a single <residues> or a list of <residues> given in <input_pose> within <radius> Angstroms.
+    Set <include_residues> if you want to include the single or list of passed <residues> in the return list of residue numbers. Best for packing cases
+    :param residues: int( or list( Pose residue numbers or single number ) )
     :param input_pose: Pose
     :param radius: int() or float( radius in Angstroms )
-    :param include_res_nums: bool( do you want to include the passed <residues> in the return list of resiude numbers? ) Default = False
+    :param include_passed_res_nums: bool( do you want to include the passed <residues> in the return list of resiude numbers? ) Default = False
+    :param sort_return_list: bool( do you want to sort the return residue list? ) Default = False
     :return: list( residues around passed <residues> list within <radius> Angstroms
     """
-    # argument check: ensure passed <residues> argument is a list
+    # argument check: ensure passed <residues> argument is a list or an integer
     if type( residues ) != list:
-        print "\nArgument error. You're supposed to past me a list of residue numbers for the <residues> argument. Returning None."
-        return None
+        if type( residues ) != int:
+            print "\nArgument error. You're supposed to past me a list of residue numbers for the <residues> argument, or just a single integer residue number. Returning None."
+            return None
+        else:
+            # if they didn't give a list and instead passed a single integer, make that integer a list
+            residues = [ residues ]
 
-    # use get_res_nums_within_radius to get all residue numbers
-    residues_within_radius = []
-    for res_num in residues:
-        residues_within_radius.extend( get_res_nums_within_radius( res_num, input_pose, radius, include_res_num = include_res_nums ) )
+    # copy the input_pose
+    pose = input_pose.clone()
 
+    # get a list of the xyz coordinates of the nbr_atom in all <residues>
+    xyz_of_residues = [ pose.residue( res_num ).nbr_atom_xyz() for res_num in residues ]
+            
+    # iter only once over each residue in the pose and get distance between that residue and all the residues in <residues>
+    res_nums_within_radius = []
+    for res_num in range( 1, pose.n_residue() + 1 ):
+        # nbr_atom_xyz of every other residue in the pose
+        if res_num not in residues:
+            center = pose.residue( res_num ).nbr_atom_xyz()
+            # check this residue's nbr_atom_xyz against all the residues passed
+            for xyz in xyz_of_residues:
+                # keep the residue number if the nbr_atom_xyz is less than or equal to <radius>
+                if center.distance( xyz ) <= radius:
+                    res_nums_within_radius.append( res_num )
+                    break
 
-    # get the set of the list and sort the residue numbers
-    set_of_residues_within_radius = [ res for res in set( residues_within_radius ) ]
-
-    # it is possible that there are still residues from <residues> in the list, so remove them one by one if desired
-    if not include_res_nums:
-        for res in residues:
-            try:
-                set_of_residues_within_radius.remove( res )
-            except ValueError:
-                pass
+    # since we skipped residues that were given, add them to the list if desired
+    # ie. if include_passed_res_nums is True, add <residues> to res_nums_within_radius
+    if include_passed_res_nums:
+        res_nums_within_radius.extend( residues )
 
     # sort
-    set_of_residues_within_radius.sort()
+    if sort_return_list:
+        res_nums_within_radius.sort()
 
-    return set_of_residues_within_radius
+    return res_nums_within_radius
 
 
 
@@ -731,7 +700,7 @@ def calc_stddev_degrees( data ):
     return stddev
 
 
-def make_RotamerTrialsMover( moveable_residues, sf, input_pose, pack_radius = 8 ):
+def make_RotamerTrialsMover( moveable_residues, sf, input_pose, pack_radius = None ):
     """
     Given a list of <moveable_residues>, get all additional residues within <pack_radius> Angstroms around them in <input_pose> and return a RotamerTrialsMover that will pack these residues
     :param moveable_residues: list( Pose numbers )
@@ -753,25 +722,28 @@ def make_RotamerTrialsMover( moveable_residues, sf, input_pose, pack_radius = 8 
     task.or_include_current( True )
     task.restrict_to_repacking()
 
-    # get all the protein residues within 8A of the moveable_residues
-    # this uses the nbr_atom to determine if a residue is nearby or not, hence why I'm using a big distance like 8A by default
-    # nbr_atom seems to be basically the same as C4 in sugars
-    # this should include the Tyr if core GlcNAc is moveable in 3ay4
-    nearby_protein_residues = get_res_nums_within_radius_of_residue_list( moveable_residues, pose, 
-                                                                          radius = pack_radius, 
-                                                                          include_res_nums = False )
+    # if a pack_radius was not given, then everything gets packed. So the task does not need to be adjusted as the default option is packing True for all
+    # otherwise, if a pack_radius was given, turn off repacking for residues outside the pack_radius
+    if pack_radius is not None:
+        # get all the protein residues within pack_radius of the moveable_residues
+        # this uses the nbr_atom to determine if a residue is nearby or not, hence why I'm using a big distance like 8A by default
+        # nbr_atom seems to be basically the same as C4 in sugars
+        # this should include the Tyr if core GlcNAc is moveable in 3ay4
+        nearby_protein_residues = get_res_nums_within_radius( moveable_residues, pose, 
+                                                              radius = pack_radius, 
+                                                              include_passed_res_nums = False )
 
-    # create a list of residue numbers that can be packed
-    # meaning, the moveable carbohydrate residues and the residues around them
-    packable_residues = moveable_residues
-    packable_residues.extend( nearby_protein_residues )
-    packable_residues = set( packable_residues )
+        # create a list of residue numbers that can be packed
+        # meaning, the moveable carbohydrate residues and the residues around them
+        packable_residues = moveable_residues
+        packable_residues.extend( nearby_protein_residues )
+        packable_residues = set( packable_residues )
 
-    # turn off packing for all residues that are NOT_packable_residues
-    # this is a new set with elements in pose.n_residue() but not in packable_residues ( disjoint, s - t )
-    # meaning, all residue numbers in pose.n_residue() that are not packable need to be NOT packed
-    NOT_packable_residues = list( set( range( 1, pose.n_residue() + 1 ) ) - packable_residues )
-    [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in NOT_packable_residues ]
+        # turn off packing for all residues that are NOT_packable_residues
+        # this is a new set with elements in pose.n_residue() but not in packable_residues ( disjoint, s - t )
+        # meaning, all residue numbers in pose.n_residue() that are not packable need to be NOT packed
+        NOT_packable_residues = list( set( range( 1, pose.n_residue() + 1 ) ) - packable_residues )
+        [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in NOT_packable_residues ]
 
     # make the pack_rotamers_mover
     pack_rotamers_mover = RotamerTrialsMover( sf, task )

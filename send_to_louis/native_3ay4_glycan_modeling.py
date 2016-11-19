@@ -799,7 +799,8 @@ elif input_args.protocol_num == 26:
     GlycanModelProtocol.spin_using_ideal_omegas = False
     GlycanModelProtocol.set_native_omega = False
     GlycanModelProtocol.set_native_core = False
-    GlycanModelProtocol.set_native_core_omegas_to_stats = True
+    # default.table now includes IgG1 Fc stats, so this shouldn't need to be used
+    GlycanModelProtocol.set_native_core_omegas_to_stats = False
     GlycanModelProtocol.ramp_sf = True
     GlycanModelProtocol.ramp_angle_max = True
     GlycanModelProtocol.angle_min = 6.0 * 3
@@ -837,7 +838,9 @@ elif input_args.protocol_num == 27:
                                            angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
                                            dump_dir = input_args.structure_dir, 
                                            pmm = pmm )
-    GlycanModelProtocol.trials = 300
+    # this is almost the same as 26 but trying out the new gradient-based protocol
+    GlycanModelProtocol.outer_trials = 3
+    GlycanModelProtocol.inner_trials = 100
     GlycanModelProtocol.moves_per_trial = 1
     GlycanModelProtocol.LCM_reset = True
     GlycanModelProtocol.use_population_ideal_LCM_reset = False
@@ -1019,3 +1022,5 @@ if GlycanModelProtocol.make_movie:
     os.mkdir( movie_dir )
     for pose in protocol_movie_poses:
         pose.dump_file( movie_dir + pose.pdb_info().name() )
+
+sys.exit()

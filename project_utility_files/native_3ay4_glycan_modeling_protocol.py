@@ -41,7 +41,6 @@ class Model3ay4Glycan:
         # required arguments
         self.mm = mm_in
         self.sf = sf_in
-        self.angle_max_in = angle_max
         self.angle_max = angle_max
         self.dump_dir = dump_dir
         self.watch_sf = sf_in.clone()  # used when looking for convergence and verbose print outs
@@ -51,7 +50,8 @@ class Model3ay4Glycan:
 
         # default arguments
         #self.glyco_file = None  # not used for native protocol right now
-        self.trials = 50
+        self.outer_trials = 2
+        self.inner_trials = 50
         self.moves_per_trial = 1
         #self.light_reset = False  # not used at the moment
         self.random_reset = False
@@ -77,7 +77,6 @@ class Model3ay4Glycan:
         self.kT = 0.8
         self.mc = None  # MonteCarlo object
         self.mc_acceptance = None
-        self.min_mover = None
         self.native_pose = None
         self.reset_pose = None
         self.pmm_name = None
@@ -132,7 +131,7 @@ class Model3ay4Glycan:
                         sys.exit()
                 elif arg == "trials":
                     try:
-                        self.trials = int( trials )
+                        self.inner_trials = int( trials )
                     except ValueError:
                         print "\nDid you give me a number for your trials argument in your argument_file?\n"
                         sys.exit()
@@ -237,12 +236,13 @@ class Model3ay4Glycan:
         info_file_details.append( "Protocol Number Used:\t\t\t%s\n" %protocol_num )
         info_file_details.append( "Native PDB filename:\t\t\t%s\n" %pose.pdb_info().name().split( '/' )[-1] )
         #info_file_details.append( "Sugar filename:\t\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
-        info_file_details.append( "Number of SugarSmallMove trials:\t%s\n" %self.trials )
+        info_file_details.append( "Number of Protocol outer trials:\t%s\n" %self.outer_trials )
+        info_file_details.append( "Number of Protocol inner trials:\t%s\n" %self.inner_trials )
         info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %self.moves_per_trial )
         if self.ramp_angle_max:
-            angle_max_txt = "%s (meaning a max of +/- %s to either side of current which ramps down to %s throughout protocol)" %( self.angle_max_in, self.angle_max_in/2, self.angle_min/2 )
+            angle_max_txt = "%s (meaning a max of +/- %s to either side of current which ramps down to %s throughout protocol)" %( self.angle_max, self.angle_max/2, self.angle_min/2 )
         else:
-            angle_max_txt = "%s (meaning a max of +/- %s to either side of current)" %( self.angle_max_in, self.angle_max_in/2 )
+            angle_max_txt = "%s (meaning a max of +/- %s to either side of current)" %( self.angle_max, self.angle_max/2 )
         info_file_details.append( "Angle max (arc range available):\t%s\n" %angle_max_txt )
         #info_file_details.append( "Light reset of Fc glycan?:\t\t%s\n" %self.light_reset )
         info_file_details.append( "Random reset of Fc glycan?:\t\t%s\n" %self.random_reset )
@@ -294,13 +294,13 @@ class Model3ay4Glycan:
         #################
         from os import popen
         from random import choice
-        from rosetta import MinMover, MonteCarlo, PyMOL_Mover
+        from rosetta import MoveMap, MinMover, MonteCarlo, PyMOL_Mover
         from rosetta.core.scoring import fa_atr, fa_rep
         #from antibody_functions import native_Fc_glycan_nums_except_core_GlcNAc  # shouldn't need this as a MoveMap is passed to create this class
         from native_3ay4_glycan_modeling_protocol_functions import native_3ay4_Fc_glycan_LCM_reset, \
             add_constraints_to_pose, get_ramp_score_weight, get_ramp_angle_max, \
             native_3ay4_Fc_glycan_random_reset, SugarSmallMover, \
-            make_RotamerTrialsMover
+            make_RotamerTrialsMover, get_res_nums_within_radius
 
 
         ##########################
@@ -528,34 +528,30 @@ class Model3ay4Glycan:
                 # add atom_pair_constraint to the ScoreFunction, if needed
                 self.sf.set_weight_if_zero( atom_pair_constraint, 1.0 )
             except:
-                print "\nThere was something wrong with your constraint file. Are you sure it exists? Are you sure you used the correct names for the constraints?\n"
+                print "\nThere was something wrong with your constraint file. Are you sure it exists? Are you sure you used the correct names for the constraints? Check on %s\n" %self.constraint_file
                 sys.exit()
-
-
-        ############################
-        #### MIN MOVER CREATION ####
-        ############################
-        # make the MinMover from the passed MoveMap
-        # if desired
-        if self.minimize_each_round:
-            # if needed
-            if self.min_mover is None:
-                self.min_mover = MinMover( movemap_in = self.mm, 
-                                           scorefxn_in = self.sf,
-                                           min_type_in = "dfpmin_strong_wolfe",
-                                           #min_type_in = "lbfgs_armijo_nonmonotone",
-                                           tolerance_in = 0.01,
-                                           use_nb_list_in = True )
 
 
         ####################################
         #### MAKE THE MONTECARLO OBJECT ####
         ####################################
-        # create the MonteCarlo object, if needed
+        # create the MonteCarlo object
         if self.mc is None:
             self.mc = MonteCarlo( working_pose, self.sf, self.kT )
         self.mc.reset_counters()
         self.mc.reset( working_pose )
+
+
+        #############################
+        #### PREPARE FOR RAMPING ####
+        #############################
+        # store the original fa_atr and fa_rep
+        # this will be accessed as the outer_trials pass and the sf gets re-ramped
+        FA_ATR_ORIG = self.sf.get_weight( fa_atr )
+        FA_REP_ORIG = self.sf.get_weight( fa_rep )
+        # set the local angle_max to the passed angle_max value
+        # this will be adjusted if ramp_angle_max is True
+        angle_max = self.angle_max
 
 
         ########################################
@@ -566,152 +562,200 @@ class Model3ay4Glycan:
         num_mc_checks = 0
         mc_acceptance = -1  # -1 so that it will play nice in the metrics file
         movie_num = 1
-        # trial_num must be 1 to N because decoy 0 will be the reset_pose when creating a movie
-        for trial_num in range( 1, self.trials + 1 ):
-            # print current score
-            if self.verbose:
-                print "\nstarting score:", self.watch_sf( working_pose )
+        # for each set of outer trials
+        for outer_trial in range( self.outer_trials ):
+            # reset the MonteCarlo object with the working_pose before each chunk of inner_trials
+            self.mc.reset_counters()
+            self.mc.clear_poses()
+            self.mc.reset( working_pose )
+            # whether ramp_sf is True or False, this should reset the MC to the latest pose with the passed sf weights
+            self.mc.reset_scorefxn( working_pose, self.sf )
 
-            ####################################
-            #### RAMP WITH ANGLE MAX UPDATE ####
-            ####################################
-            if self.ramp_angle_max:
-                # skip ramping on the first trial because the passed angle_max should be the angle_max used
-                if trial_num !=1:
-                    # by the end of the protocol our angle_max should be angle_min
-                    # angle_min is 6.0 by default which is the angle_max for loop residues in the BackboneMover
-                    self.angle_max = get_ramp_angle_max( current_angle_max = self.angle_max, 
-                                                         target_angle_max = self.angle_min, 
-                                                         current_step = trial_num, 
-                                                         total_steps = self.trials )
-
-
-            #########################################
-            #### RAMP WITH SCORE FUNCTION UPDATE ####
-            #########################################
-            if self.ramp_sf:
-                # if this is the first move, adjust the fa_atr and fa_rep terms by the corresponding factors
-                if trial_num == 1:
-                    # store the original fa_atr and fa_rep
-                    FA_ATR_ORIG = self.sf.get_weight( fa_atr )
-                    FA_REP_ORIG = self.sf.get_weight( fa_rep )
-                    # adjust the fa_atr weight by the passed fa_atr_ramp_factor
-                    FA_ATR_NEW = FA_ATR_ORIG * self.fa_atr_ramp_factor
-                    self.sf.set_weight( fa_atr, FA_ATR_NEW )
-                    # adjust the fa_rep weight by the passed fa_rep_ramp_factor
-                    FA_REP_NEW = FA_REP_ORIG * self.fa_rep_ramp_factor
-                    self.sf.set_weight( fa_rep, FA_REP_NEW )
-
-                # else, adjust the score weight
-                else:
-                    # ramp up or down the appropriate scoring terms
-                    self.sf.set_weight( fa_atr, get_ramp_score_weight( current_weight = self.sf.get_weight( fa_atr ), 
-                                                                       target_weight = FA_ATR_ORIG, 
-                                                                       current_step = trial_num, 
-                                                                       total_steps = self.trials ) )
-                    self.sf.set_weight( fa_rep, get_ramp_score_weight( current_weight = self.sf.get_weight( fa_rep ), 
-                                                                       target_weight = FA_REP_ORIG, 
-                                                                       current_step = trial_num, 
-                                                                       total_steps = self.trials ) )
-                # DEBUG
-                #print "\n".join( [ "%s %s" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) for score_type in self.sf.get_nonzero_weighted_scoretypes() ] )
-                # give ramped sf back to MC and MinMover
-                # this is because PyRosetta apparently doesn't do the whole pointer thing with the sf
-                self.mc.score_function( self.sf )
-                self.min_mover.score_function( self.sf )
-
-
-            ##########################
-            #### MAKE SUGAR MOVES ####
-            ##########################
-            # make as many moves per trial as desired
-            # SugarSmallMover
-            if self.make_small_moves:
-                working_pose.assign( SugarSmallMover( self.mm, self.moves_per_trial, self.angle_max, working_pose, 
-                                                      move_all_torsions = self.move_all_torsions ) )
-            # SugarShearMover
-            elif self.make_shear_moves:
-                pass
-
-            # relay score information
-            if self.verbose:
-                print "score after sugar moves:", self.watch_sf( working_pose )
-
-
-            ##############
-            #### PACK ####
-            ##############
-            # pack the sugars and surrounding residues, if desired
-            if self.pack_after_x_rounds > 0:
-                if trial_num % self.pack_after_x_rounds == 0:
-                    # have to make the packer task each time because the residues surrounding the sugars
-                    # will likely change after each move
-                    rotamer_trials_mover = make_RotamerTrialsMover( moveable_residues, self.sf, working_pose, 
-                                                                    pack_radius = 8 )
-                    rotamer_trials_mover.apply( working_pose )
-                    if self.verbose:
-                        print "score after local pack:", self.watch_sf( working_pose )
-
-
-            ###################
-            #### MINIMIZE #####
-            ###################
-            # minimize the backbone of the sugars, if desired
-            # does NOT do anything to any surrounding resiudes
-            # TODO: is that what I want?
-            if self.minimize_each_round:
-                self.min_mover.apply( working_pose )
+            # inner_trial must be 1 to N because decoy 0 will be the reset_pose when creating a movie
+            for inner_trial in range( 1, self.inner_trials + 1 ):
+                print outer_trial, inner_trial
+                # print current score
                 if self.verbose:
-                    print "score after min:", self.watch_sf( working_pose )
+                    print "\nstarting score:", self.watch_sf( working_pose )
 
-
-            ###############################
-            #### ACCEPT OR REJECT MOVE ####
-            ###############################
-            # accept or reject the total move using the MonteCarlo object
-            if self.mc.boltzmann( working_pose ):
-                # for watching energy during a protocol
-                #self.trial_nums.append( trial_num )
-                #self.energies.append( self.watch_sf( working_pose ) )
-
-                # add the accepted-move pose to the list of poses for the movie, if desired
-                if self.make_movie:
-                    # change the name to just "protocol_X_decoy_Y_Z.pdb" without path location
-                    # X is protocol number, Y is decoy number, Z is movie number
-                    # ex name) protocol_10_decoy_5_23.pdb
-                    working_pose.pdb_info().name( self.decoy_name.split( '/' )[-1].split( ".pdb" )[0] + "_%s.pdb" %movie_num )
-                    self.movie_poses.append( working_pose.clone() )
-                    working_pose.pdb_info().name( self.decoy_name )
-                    movie_num += 1
-
-                # up the counters and send to pymol
-                num_mc_accepts += 1
-                try:
-                    if self.pmm_name is not None:
-                        working_pose.pdb_info().name( self.pmm_name )
-                        self.pmm.apply( working_pose )
-                        working_pose.pdb_info().name( self.decoy_name )
+            	####################################
+            	#### RAMP WITH ANGLE MAX UPDATE ####
+            	####################################
+                if self.ramp_angle_max:
+                    # the last ~10% of moves in the inner_trials will be the angle_min
+                    # the first move should use the passed angle_max
+                    if inner_trial == 1:
+                        angle_max = self.angle_max
+                    # otherwise, adjust the angle_max according to which inner_trial number we are on
                     else:
-                        self.pmm.apply( working_pose )
-                except:
+                        # by the end of the protocol our angle_max should be angle_min
+                        # angle_min is 6.0 by default which is the angle_max for loop residues in the BackboneMover
+                        angle_max = get_ramp_angle_max( current_angle_max = angle_max, 
+                                                        target_angle_max = self.angle_min, 
+                                                        current_step = inner_trial, 
+                                                        total_steps = self.inner_trials )
+
+
+            	#########################################
+            	#### RAMP WITH SCORE FUNCTION UPDATE ####
+            	#########################################
+                if self.ramp_sf:
+                    # if this is the first move, adjust the fa_atr and fa_rep terms by the corresponding factors
+                    # after the first move, we will ramp the score up or down accordingly back to the original value
+                    # the last ~10% of moves in the inner_trials will be the original values
+                    if inner_trial == 1:
+                        # adjust the fa_atr weight by the passed fa_atr_ramp_factor
+                        FA_ATR_NEW = FA_ATR_ORIG * self.fa_atr_ramp_factor
+                        self.sf.set_weight( fa_atr, FA_ATR_NEW )
+                        # adjust the fa_rep weight by the passed fa_rep_ramp_factor
+                        FA_REP_NEW = FA_REP_ORIG * self.fa_rep_ramp_factor
+                        self.sf.set_weight( fa_rep, FA_REP_NEW )
+                    # else, adjust the score weight based on the current inner_trial step
+                    else:
+                        # ramp up or down the appropriate scoring terms
+                        self.sf.set_weight( fa_atr, get_ramp_score_weight( current_weight = self.sf.get_weight( fa_atr ), 
+                                                                           target_weight = FA_ATR_ORIG, 
+                                                                           current_step = inner_trial, 
+                                                                           total_steps = self.inner_trials ) )
+                        self.sf.set_weight( fa_rep, get_ramp_score_weight( current_weight = self.sf.get_weight( fa_rep ), 
+                                                                           target_weight = FA_REP_ORIG, 
+                                                                           current_step = inner_trial, 
+                                                                           total_steps = self.inner_trials ) )
+                    # DEBUG
+                    #print "\n".join( [ "%s %s" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) for score_type in self.sf.get_nonzero_weighted_scoretypes() ] )
+                    # give ramped sf back to MonteCarlo object
+                    # this is because PyRosetta apparently doesn't do the whole pointer thing with the sf
+                    self.mc.score_function( self.sf )
+
+
+            	##########################
+            	#### MAKE SUGAR MOVES ####
+            	##########################
+                # make as many moves per trial as desired
+                # SugarSmallMover
+                if self.make_small_moves:
+                    working_pose.assign( SugarSmallMover( self.mm, self.moves_per_trial, angle_max, working_pose, 
+                                                          move_all_torsions = self.move_all_torsions ) )
+                # SugarShearMover
+                elif self.make_shear_moves:
                     pass
-            num_mc_checks += 1
 
-            # print out the MC acceptance rate every 3 trials and on the last trial
-            mc_acceptance = round( ( float( num_mc_accepts ) / float( num_mc_checks ) * 100 ), 2 )
-            if self.verbose:
-                if trial_num % 3 == 0 or trial_num == self.trials:
-                    print "Moves made so far:", num_mc_checks,
-                    print "  Moves accepted:", num_mc_accepts,
-                    print "  Acceptance rate:", mc_acceptance
+                # relay score information
+                if self.verbose:
+                    print "score after sugar moves:", self.watch_sf( working_pose )
 
+
+                ##################################
+                #### PREPARE FOR PACK AND MIN ####
+                ##################################
+                # if you aren't going to pack, then the pack_and_min_residues will mirror the moveable_residues
+                # if you are packing this round, then you need residues surrounding the moveable_residues as well
+                pack_and_min_residues = [ res_num for res_num in moveable_residues ]
+                # if you aren't going to pack, then the minimizer's MoveMap should only include the moveable_residues (bb and chi)
+                # if you are packing this round, then the MoveMap has bb and chi for moveable_residues and chi for surrounding_residues
+                # default MoveMap creation has everything set to False, so set the appropriate residues to True
+                min_mm = MoveMap()
+                for moveable_res in pack_and_min_residues:
+                    min_mm.set_bb( moveable_res, True )
+                    min_mm.set_chi( moveable_res, True )
+                # check if we are packing, adjust the pack_and_min_residues and min_mm accordingly
+                if self.pack_after_x_rounds > 0:
+                    if inner_trial % self.pack_after_x_rounds == 0:
+                        # this function I wrote uses the nbr_atom to calculate distances, which is about the C4 atom
+                        # 10A should be enough to include Tyr296 if the fucose is in the pose
+                        surrounding_residues = get_res_nums_within_radius( moveable_residues, working_pose, 
+                                                                           radius = 10, 
+                                                                           include_passed_res_nums = False )
+                        # add the surrounding_residues to the list of residues that will be packed and minimized
+                        pack_and_min_residues.extend( surrounding_residues )
+                        # set chi to True in the min_mm
+                        for surrounding_res in surrounding_residues:
+                            min_mm.set_chi( surrounding_res, True )
+
+
+            	##############
+            	#### PACK ####
+            	##############
+                # pack the sugars and surrounding residues, if desired
+                if self.pack_after_x_rounds > 0:
+                    if inner_trial % self.pack_after_x_rounds == 0:
+                        # have to make the packer task each time because the residues surrounding the sugars
+                        # will likely change after each move, thus need to make a new RotamerTrialsMover
+                        # pack_radius of None means that only the residues specified will be packed
+                        rotamer_trials_mover = make_RotamerTrialsMover( pack_and_min_residues, self.sf, working_pose, 
+                                                                        pack_radius = None )
+                        rotamer_trials_mover.apply( working_pose )
+                        if self.verbose:
+                            print "score after local pack:", self.watch_sf( working_pose )
+
+
+            	###################
+                #### MINIMIZE #####
+            	###################
+                # make the MinMover from the pack_and_min_residues, if desired
+                # if a pack was just done, this will include moveable_residues (bb and chi) and the surrounding_residues (chi)
+                # if a pack was not just done, this will only include the moveable_residues (bb and chi)
+                if self.minimize_each_round:
+                    # make and apply the min_mover
+                    min_mover = MinMover( movemap_in = min_mm, 
+                                          scorefxn_in = self.sf,
+                                          min_type_in = "dfpmin_strong_wolfe",
+                                          #min_type_in = "lbfgs_armijo_nonmonotone",
+                                          tolerance_in = 0.01,
+                                          use_nb_list_in = True )
+                    min_mover.apply( working_pose )
+                    if self.verbose:
+                        print "score after min:", self.watch_sf( working_pose )
+
+
+            	###############################
+            	#### ACCEPT OR REJECT MOVE ####
+            	###############################
+                # accept or reject the total move using the MonteCarlo object
+                if self.mc.boltzmann( working_pose ):
+                    # for watching energy during a protocol
+                    #self.inner_trials.append( inner_trial )
+                    #self.energies.append( self.watch_sf( working_pose ) )
+
+                    # add the accepted-move pose to the list of poses for the movie, if desired
+                    if self.make_movie:
+                        # change the name to just "protocol_X_decoy_Y_Z.pdb" without path location
+                        # X is protocol number, Y is decoy number, Z is movie number
+                        # ex name) protocol_10_decoy_5_23.pdb
+                        working_pose.pdb_info().name( self.decoy_name.split( '/' )[-1].split( ".pdb" )[0] + "_%s.pdb" %movie_num )
+                        self.movie_poses.append( working_pose.clone() )
+                        working_pose.pdb_info().name( self.decoy_name )
+                        movie_num += 1
+
+                    # up the counters and send to pymol
+                    num_mc_accepts += 1
+                    try:
+                        if self.pmm_name is not None:
+                            working_pose.pdb_info().name( self.pmm_name )
+                            self.pmm.apply( working_pose )
+                            working_pose.pdb_info().name( self.decoy_name )
+                        else:
+                            self.pmm.apply( working_pose )
+                    except:
+                        pass
+                num_mc_checks += 1
+
+                # print out the MC acceptance rate every 3 trials and on the last trial
+                mc_acceptance = round( ( float( num_mc_accepts ) / float( num_mc_checks ) * 100 ), 2 )
+                if self.verbose:
+                    if inner_trial % 3 == 0 or inner_trial == self.inner_trials:
+                        print "Moves made so far:", num_mc_checks,
+                        print "  Moves accepted:", num_mc_accepts,
+                        print "  Acceptance rate:", mc_acceptance
+
+        # finished outer_trials and inner_trials
         # add any relevant data to the class object
         self.mc_acceptance = mc_acceptance
 
         # for watching energy during a protocol
         if self.df is not None:
             pass
-            #self.df[ "trial_num" ] = self.trial_nums
+            #self.df[ "inner_trial" ] = self.inner_trials
             #self.df[ "total_score" ] = self.energies
 
         return working_pose

@@ -573,7 +573,6 @@ class Model3ay4Glycan:
 
             # inner_trial must be 1 to N because decoy 0 will be the reset_pose when creating a movie
             for inner_trial in range( 1, self.inner_trials + 1 ):
-                print outer_trial, inner_trial
                 # print current score
                 if self.verbose:
                     print "\nstarting score:", self.watch_sf( working_pose )

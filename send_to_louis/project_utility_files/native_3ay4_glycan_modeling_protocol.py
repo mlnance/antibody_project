@@ -73,6 +73,7 @@ class Model3ay4Glycan:
         self.make_small_moves = True
         self.make_shear_moves = False
         self.move_all_torsions = True
+        self.moveable_residues = []  # gets filled when .apply() is called
         self.constraint_file = None
         self.kT = 0.8
         self.mc = None  # MonteCarlo object
@@ -333,7 +334,7 @@ class Model3ay4Glycan:
         ###############################
         # get the moveable residues from passed MoveMap
         # moveable means the BackBone in the MoveMap was set to True and it is a carbohydrate
-        moveable_residues = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) if self.mm.get_bb( res_num ) and working_pose.residue( res_num ).is_carbohydrate() ]
+        self.moveable_residues = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) if self.mm.get_bb( res_num ) and working_pose.residue( res_num ).is_carbohydrate() ]
 
 
         ###################
@@ -509,6 +510,7 @@ class Model3ay4Glycan:
         # add the reset pose to the list of poses for the movie, if desired
         if self.make_movie:
             # change the name to just "protocol_X_decoy_Y_0.pdb" without path location
+            # X is protocol number, Y is decoy number, 0 for the movie number
             # state 0 is the reset_pose for when making a movie
             orig_name = self.reset_pose.pdb_info().name()
             reset_name = self.reset_pose.pdb_info().name().split( '/' )[-1].split( ".pdb" )[0] + "_0.pdb"
@@ -538,8 +540,11 @@ class Model3ay4Glycan:
         # create the MonteCarlo object
         if self.mc is None:
             self.mc = MonteCarlo( working_pose, self.sf, self.kT )
+        # reset everything just to be safe since MonteCarlo is a mess
         self.mc.reset_counters()
+        self.mc.clear_poses()
         self.mc.reset( working_pose )
+        self.mc.reset_scorefxn( working_pose, self.sf )
 
 
         #############################
@@ -560,7 +565,7 @@ class Model3ay4Glycan:
         # for as many trials as specified
         num_mc_accepts = 0
         num_mc_checks = 0
-        mc_acceptance = -1  # -1 so that it will play nice in the metrics file
+        mc_acceptance = -1  # -1 so that it will play nice in the metrics file if the number doesn't get updated somehow
         movie_num = 1
         # for each set of outer trials
         for outer_trial in range( self.outer_trials ):
@@ -647,11 +652,11 @@ class Model3ay4Glycan:
                 ##################################
                 #### PREPARE FOR PACK AND MIN ####
                 ##################################
-                # if you aren't going to pack, then the pack_and_min_residues will mirror the moveable_residues
-                # if you are packing this round, then you need residues surrounding the moveable_residues as well
-                pack_and_min_residues = [ res_num for res_num in moveable_residues ]
-                # if you aren't going to pack, then the minimizer's MoveMap should only include the moveable_residues (bb and chi)
-                # if you are packing this round, then the MoveMap has bb and chi for moveable_residues and chi for surrounding_residues
+                # if you aren't going to pack this round, then the pack_and_min_residues will mirror the self.moveable_residues
+                # if you are packing this round, then you need residues surrounding the self.moveable_residues as well
+                pack_and_min_residues = [ res_num for res_num in self.moveable_residues ]
+                # if you aren't going to pack this round, then the minimizer's MoveMap should only include the self.moveable_residues (bb and chi)
+                # if you are packing this round, then the MoveMap has bb and chi for self.moveable_residues and chi for surrounding_residues
                 # default MoveMap creation has everything set to False, so set the appropriate residues to True
                 min_mm = MoveMap()
                 for moveable_res in pack_and_min_residues:
@@ -662,7 +667,7 @@ class Model3ay4Glycan:
                     if inner_trial % self.pack_after_x_rounds == 0:
                         # this function I wrote uses the nbr_atom to calculate distances, which is about the C4 atom
                         # 10A should be enough to include Tyr296 if the fucose is in the pose
-                        surrounding_residues = get_res_nums_within_radius( moveable_residues, working_pose, 
+                        surrounding_residues = get_res_nums_within_radius( self.moveable_residues, working_pose, 
                                                                            radius = 10, 
                                                                            include_passed_res_nums = False )
                         # add the surrounding_residues to the list of residues that will be packed and minimized
@@ -692,8 +697,8 @@ class Model3ay4Glycan:
                 #### MINIMIZE #####
             	###################
                 # make the MinMover from the pack_and_min_residues, if desired
-                # if a pack was just done, this will include moveable_residues (bb and chi) and the surrounding_residues (chi)
-                # if a pack was not just done, this will only include the moveable_residues (bb and chi)
+                # if a pack was not just done, this will only include the self.moveable_residues (bb and chi)
+                # if a pack was just done, this will include self.moveable_residues (bb and chi) and the surrounding_residues (chi)
                 if self.minimize_each_round:
                     # make and apply the min_mover
                     min_mover = MinMover( movemap_in = min_mm, 

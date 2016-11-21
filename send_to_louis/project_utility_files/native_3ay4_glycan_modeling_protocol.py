@@ -568,7 +568,7 @@ class Model3ay4Glycan:
         mc_acceptance = -1  # -1 so that it will play nice in the metrics file if the number doesn't get updated somehow
         movie_num = 1
         # for each set of outer trials
-        for outer_trial in range( self.outer_trials ):
+        for outer_trial in range( 1, self.outer_trials + 1 ):
             # reset the MonteCarlo object with the working_pose before each chunk of inner_trials
             self.mc.reset_counters()
             self.mc.clear_poses()

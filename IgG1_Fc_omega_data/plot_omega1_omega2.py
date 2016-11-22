@@ -21,5 +21,6 @@ plt.ylabel( "omega2" )
 plt.grid( True )
 plt.plot( [ 0 for x in range( 360 + 1 ) ], range( -180, 180 + 1 ), color="black" )
 plt.plot( range( -180, 180 + 1 ), [ 0 for x in range( 360 + 1 ) ], color="black" )
+plt.title( "Compiled IgG Fc statistics for ASN-GlcNAc omegas" )
 
 plt.show()

@@ -41,34 +41,36 @@ def main( fasc_file, low_e_dir, return_this_many_structures ):
     dump_dir = low_e_dir + pdb_name + '/'
     if not os.path.isdir( dump_dir ):
         os.mkdir( dump_dir )
+
+    # make a directory for the top X pdbs in the low_e_dir
+    all_lowest_E_structs = low_e_dir + "all_lowest_E_%s" %pdb_name + '/'
+    if not os.path.isdir( all_lowest_E_structs ):
+        os.mkdir( all_lowest_E_structs )
         
-    # write the top x structures into a file in the dump_dir
-    lowest_x_file_name = dump_dir + "lowest_" + str( return_this_many_structures ) + "_total_score"
+    # write the top x structures into a file in the all_lowest_E_structs
+    lowest_x_file_name = all_lowest_E_structs + "lowest_" + str( return_this_many_structures ) + "_total_score"
     with open( lowest_x_file_name, 'wb' ) as fh:
         for f_name in fasc_files:
             line = f_name + "\n"
             fh.write( line )
             
-    # get and write the lowest energy structure into a file in the dump_dir
+    # get and write the lowest energy structure into a file in the all_lowest_E_structs
     lowest_e_file = read_fasc( fasc_file, 1 )[0]
-    lowest_e_file_name = dump_dir + "lowest_e_total_score"
+    lowest_e_file_name = all_lowest_E_structs + "lowest_e_total_score"
     with open( lowest_e_file_name, 'wb' ) as fh:
         fh.write( lowest_e_file + "\n" )
         
-    # copy the lowest energy structure file into all_lowest_E_structs dir in the low_e_dir
-    all_lowest_E_structs = low_e_dir + "all_lowest_E_structs" + '/'
-    if not os.path.isdir( all_lowest_E_structs ):
-        os.mkdir( all_lowest_E_structs )
-    os.chdir( all_lowest_E_structs )
-    cmd = "cp %s %s" %( lowest_e_file, all_lowest_E_structs )
+    # copy the lowest energy structure file into dump_dir in the low_e_dir
+    os.chdir( dump_dir )
+    cmd = "cp %s %s" %( lowest_e_file, dump_dir )
     os.popen( cmd )
     os.chdir( working_dir )
     
     # for each file name given, move it to the specified directory
-    os.chdir( dump_dir )
+    os.chdir( all_lowest_E_structs )
     for f in fasc_files:
         # copy over the files
-        cmd = "cp %s %s" %( f, dump_dir )
+        cmd = "cp %s %s" %( f, all_lowest_E_structs )
         os.popen( cmd )
     os.chdir( working_dir )
     

@@ -220,71 +220,71 @@ while not jd.job_complete:
                 # just skip mutations that don't work for whatever reason
                 continue
 
-        ###########################
-    	#### GRADIENT PACK/MIN ####
-    	###########################
-        # collect all non-branch point residue numbers
-        moveable_residues = [ res_num for res_num in range( 1, mutant_pose.n_residue() + 1 ) if mutant_pose.residue( res_num ).is_branch_point() == False ]
+    ###########################
+    #### GRADIENT PACK/MIN ####
+    ###########################
+    # collect all non-branch point residue numbers
+    moveable_residues = [ res_num for res_num in range( 1, mutant_pose.n_residue() + 1 ) if mutant_pose.residue( res_num ).is_branch_point() == False ]
 
-        # pack all residues except for branch point residues
-        pack_rotamers_mover = make_RotamerTrialsMover( moveable_residues = moveable_residues,
-                                                       sf = sf,
-                                                       input_pose = mutant_pose,
-                                                       pack_radius = None )
-        pack_rotamers_mover.apply( mutant_pose )
+    # pack all residues except for branch point residues
+    pack_rotamers_mover = make_RotamerTrialsMover( moveable_residues = moveable_residues,
+                                                   sf = sf,
+                                                   input_pose = mutant_pose,
+                                                   pack_radius = None )
+    pack_rotamers_mover.apply( mutant_pose )
 
-        # we packed the side chains, so minimize them (only residues marked by moveable_residues)
-        # keep the backbone the same as the crystal because 1) we can, 2) it's easier, 3) we want to see what mutations do to packing more so
-        mm = MoveMap()
-        mm.set_bb( False )
-        for res_num in moveable_residues:
-            mm.set_chi( res_num, True )
-        # gradient min of mutant_pose
-        for jj in range( 3 ):
-            if jj == 0:
-                sf.set_weight( fa_rep, orig_fa_rep * 0.1 )
-            elif jj == 1:
-                sf.set_weight( fa_rep, orig_fa_rep * 0.33 )
-            elif jj == 2:
-                sf.set_weight( fa_rep, orig_fa_rep )
-            min_mover = MinMover( movemap_in = mm,
-                                  scorefxn_in = sf,
-                                  min_type_in = "lbfgs_armijo_nonmonotone",
-                                  tolerance_in = 0.001,
-                                  use_nb_list_in = True )
-            min_mover.max_iter( 2500 )
-            min_mover.apply( mutant_pose )
-            print "mutant_pose", sf( mutant_pose ), jj
+    # we packed the side chains, so minimize them (only residues marked by moveable_residues)
+    # keep the backbone the same as the crystal because 1) we can, 2) it's easier, 3) we want to see what mutations do to packing more so
+    mm = MoveMap()
+    mm.set_bb( False )
+    for res_num in moveable_residues:
+        mm.set_chi( res_num, True )
+    # gradient min of mutant_pose
+    for jj in range( 3 ):
+        if jj == 0:
+            sf.set_weight( fa_rep, orig_fa_rep * 0.1 )
+        elif jj == 1:
+            sf.set_weight( fa_rep, orig_fa_rep * 0.33 )
+        elif jj == 2:
+            sf.set_weight( fa_rep, orig_fa_rep )
+        min_mover = MinMover( movemap_in = mm,
+                              scorefxn_in = sf,
+                              min_type_in = "lbfgs_armijo_nonmonotone",
+                              tolerance_in = 0.001,
+                              use_nb_list_in = True )
+        min_mover.max_iter( 2500 )
+        min_mover.apply( mutant_pose )
+        print "mutant_pose", sf( mutant_pose ), jj
 
-        # collect additional metric data
-        try:
-            # all this is here until I update get_pose_metrics(_on_native)
-            from antibody_functions import hold_chain_and_res_designations_3ay4
-            from get_pose_metrics_on_native import main as get_pose_metrics_on_native
-            low_E_native_pose_info = hold_chain_and_res_designations_3ay4()
-            low_E_native_pose_info.native()
-            working_pose_info = hold_chain_and_res_designations_3ay4()
-            working_pose_info.native()
-            # metric calculations
-            metrics = get_pose_metrics_on_native( working_pose, 
-                                                  working_pose_info, 
-                                                  low_E_native_pose, 
-                                                  low_E_native_pose_info, 
-                                                  sf, 
-                                                  2, # Fc-FcR interface JUMP_NUM
-                                                  jd.current_num, 
-                                                  metrics_dump_dir, 
-                                                  input_args.utility_dir, 
-                                                  MC_acceptance_rate = None, 
-                                                  native_constraint_file = None )
-        except:
-            metrics = ''
-            pass
+    # collect additional metric data
+    try:
+        # all this is here until I update get_pose_metrics(_on_native)
+        from antibody_functions import hold_chain_and_res_designations_3ay4
+        from get_pose_metrics_on_native import main as get_pose_metrics_on_native
+        low_E_native_pose_info = hold_chain_and_res_designations_3ay4()
+        low_E_native_pose_info.native()
+        mutant_pose_info = hold_chain_and_res_designations_3ay4()
+        mutant_pose_info.native()
+        # metric calculations
+        metrics = get_pose_metrics_on_native( mutant_pose, 
+                                              mutant_pose_info, 
+                                              low_E_native_pose, 
+                                              low_E_native_pose_info, 
+                                              sf, 
+                                              2, # Fc-FcR interface JUMP_NUM
+                                              jd.current_num, 
+                                              metrics_dump_dir, 
+                                              input_args.utility_dir, 
+                                              MC_acceptance_rate = None, 
+                                              native_constraint_file = None )
+    except:
+        metrics = ''
+        pass
 
-        # add the metric data to the .fasc file
-        jd.additional_decoy_info = metrics
+    # add the metric data to the .fasc file
+    jd.additional_decoy_info = metrics
 
-        jd.output_decoy( mutant_pose )
+    jd.output_decoy( mutant_pose )
 
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 fasc_filename = decoy_name + ".fasc"

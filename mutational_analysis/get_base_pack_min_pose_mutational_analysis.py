@@ -1,13 +1,6 @@
 #!/usr/bin/python
 __author__ = "morganlnance"
 
-'''
-Plans for this code:
-1) take in a native PDB structure
-2) run single pack and minimization with base_nstruct=1000, dumping the structures into base_structs
-3) take lowest E from (2) and turn it into lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb, and dump into into lowest_E_structs dir
-'''
-
 
 
 import argparse

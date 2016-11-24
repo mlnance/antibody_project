@@ -1,0 +1,27 @@
+# numbers in the right column are the ratio of binding mutant / binding native. So >1 means improved
+# reduced binding to all FcgR
+E233P 0.04
+P238A 0.07
+D265A 0.09
+A327Q 0.06
+P329A 0.21
+
+# reduced binding to FcgRII and FcgRIII
+D270A 0.14
+Q295A 0.25
+A327S 0.06
+
+# improved binding to FcgRII and reduced binding to FcgRIII
+H268A 0.54
+R301A 0.22
+K322A 0.62
+
+# no effect on FcgRII and reduced binding to FcgRIII
+S239A 0.26
+E269A 0.45
+E293A 0.31
+Y296F 0.55
+V303A 0.33
+A327G 0.36
+K338A 0.15
+D376A 0.55

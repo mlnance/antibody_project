@@ -1,0 +1,8 @@
+# improved binding to FcgRIIIa
+D280N 1.16
+E333Q 1.05
+E333D 1.26
+K334Q 1.23
+K334N 1.11
+K334E 1.30
+K334V 1.34

@@ -1,0 +1,12 @@
+# numbers in the right column are the ratio of binding mutant / binding native. So >1 means improved
+# improved binding to FcgRII and FcgRIII
+T256A 1.32
+K290A 1.31
+
+# reduced binding to FcgRII and improved binding to FcgRIII
+S298A 1.34
+
+# no effect on FcgRII and improved binding to FcgRIII
+E333A 1.27
+K334A 1.39
+A339T 1.34

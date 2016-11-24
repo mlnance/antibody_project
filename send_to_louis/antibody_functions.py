@@ -4977,18 +4977,22 @@ def analyze_interface( pose, JUMP_NUM, pack_separated = True, verbose = False ):
 
 
 
-def get_interface_score( JUMP_NUM, sf, pose ):
+def get_interface_score( JUMP_NUM, sf, pose, watch = False ):
     """
     Given a jump number that defines the interface, calculates Rosetta's ddG interface
     Splits apart the two domains defined by the <JUMP_NUM>, scores it, then subtracts that from the total score of the <pose>  -  result is the interface score
     :param JUMP_NUM: int( valid Jump number of the interface )
     :param sf: ScoreFunction
     :param pose: Pose
+    :param watch: bool( do you want to debug this in PyMol? ) Default = False
     :return: float( ddG interface score )
     """
     # imports
     from rosetta import Pose
     from rosetta.numeric import xyzVector_Real
+    if watch:
+        from rosetta import PyMOL_Mover
+        pmm = PyMOL_Mover()
 
 
     # get start score
@@ -4998,11 +5002,17 @@ def get_interface_score( JUMP_NUM, sf, pose ):
     temp_pose = Pose()
     temp_pose.assign( pose )
     jump = temp_pose.jump( JUMP_NUM )
+    if watch:
+        temp_pose.pdb_info().name( "temp_pose" )
+        pmm.apply( temp_pose )
 
     # multiply the jump's translation vector by 500
     vec = jump.get_translation() * 500
     jump.set_translation( vec )
     temp_pose.set_jump( JUMP_NUM, jump )
+    if watch:
+        temp_pose.pdb_info().name( "split_pose" )
+        pmm.apply( temp_pose )
 
     # get and return interface score
     split_apart_score = sf( temp_pose )
@@ -5258,8 +5268,67 @@ def get_rank_order_of_list( input ):
     indices.sort(key=lambda x: input[x])
     output = [0] * len(indices)
     for i, x in enumerate(indices):
-        output[x] = i
+        # i'm adding a plus one because this ranks from 0 - n-1, I want 1 - n
+        # also added the float() part
+        output[x] = float( i + 1 )
     return output
+
+
+
+def make_RotamerTrialsMover( moveable_residues, sf, input_pose, pack_radius = None ):
+    """
+    Given a list of <moveable_residues>, get all additional residues within <pack_radius> Angstroms around them in <input_pose> and return a RotamerTrialsMover that will pack these residues
+    If no <pack_radius> is given, then only residues in <moveable_residues> will be allowed to pack
+    :param moveable_residues: list( Pose numbers )
+    :param sf: ScoreFunction
+    :param input_pose: Pose
+    :param pack_radius: int( or float( radius in Angstroms to pack around the <moveable_residues>. Uses nbr_atom to determine residues in proximity ) ) Default = None which means that only residues in <moveable_residues> get packed
+    :return: RotamerTrialsMover
+    """
+    # imports
+    from rosetta import standard_packer_task, RotamerTrialsMover
+
+
+    # copy over the input_pose
+    pose = input_pose.clone()
+
+    # make the PackRotamersMover from the passed MoveMap
+    # default of standard_packer_task is to set packing for residues to True
+    task = standard_packer_task( pose )
+    task.or_include_current( True )
+    task.restrict_to_repacking()
+
+    # if a pack_radius was not given, then everything gets packed. So the task does not need to be adjusted as the default option is packing True for all
+    # otherwise, if a pack_radius was given, turn off repacking for residues outside the pack_radius
+    if pack_radius is not None:
+        # get all the protein residues within pack_radius of the moveable_residues
+        # inclue_passed_res_nums means that the function will return a list of residues that includes all numbers in moveable_residues
+        # I am adding them in myself for clarity, so this setting is set to off
+        nearby_protein_residues = get_res_nums_within_radius( moveable_residues, pose, 
+                                                              radius = pack_radius, 
+                                                              include_passed_res_nums = False )
+
+        # create a list of residue numbers that can be packed
+        # meaning, the moveable carbohydrate residues and the residues around them
+        packable_residues = [ res_num for res_num in moveable_residues ]
+        packable_residues.extend( nearby_protein_residues )
+        packable_residues = list( set( packable_residues ) )
+
+        # turn off packing for all residues that are NOT packable
+        # i.e. for all residues in the pose, turn OFF packing if they are NOT in the packable_residues list
+        [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in range( 1, pose.n_residue() + 1 ) if res_num not in packable_residues ]
+
+    # otherwise, only residues specified by moveable_residues should be allowed to be packed
+    else:
+        # turn off repacking for all residues in the pose that are NOT in moveable_residues
+        # no pack_radius was given, so all residues not specified in moveable_residues should not be packed
+        [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in range( 1, pose.n_residue() + 1 ) if res_num not in moveable_residues ]
+
+    # make the pack_rotamers_mover with the given ScoreFunction and created task
+    pack_rotamers_mover = RotamerTrialsMover( sf, task )
+
+    return pack_rotamers_mover
+
 
 
 

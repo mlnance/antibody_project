@@ -91,9 +91,16 @@ orig_pdb_filename_full_path = input_args.native_pdb_file
 orig_pdb_filename = orig_pdb_filename_full_path.split( '/' )[-1]
 orig_pdb_name = orig_pdb_filename.split( ".pdb" )[0]
 
-# this is where packed and minimized versions of the native will be dumped
+# this is where the double pack and minimized versions of the native will be dumped
 structure_dir = base_structs_dir
-decoy_pdb_name = structure_dir + '/' + orig_pdb_name
+decoy_pdb_name = structure_dir + orig_pdb_name
+
+# this is where the single pack and minimized decoy will be dumped (the predecessor to double)
+# see long comment in jd code for clarification
+round1_structure_dir = base_structs_dir + "/round1_decoys/"
+if not os.path.isdir( round1_structure_dir ):
+    os.mkdir( round1_structure_dir )
+round1_decoy_pdb_name = round1_structure_dir + orig_pdb_name
 
 # sets up the input native PDB as being the base pose
 native_pose = Pose()
@@ -162,37 +169,54 @@ while not jd.job_complete:
     # collect all non-branch point residue numbers
     moveable_residues = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) if working_pose.residue( res_num ).is_branch_point() == False ]
 
-    # pack all residues except for branch point residues
-    pack_rotamers_mover = make_RotamerTrialsMover( moveable_residues = moveable_residues, 
-                                                   sf = sf,
-                                                   input_pose = working_pose,
-                                                   pack_radius = None )
-    pack_rotamers_mover.apply( working_pose )
-    pmm.apply( working_pose )
 
-    # we packed the side chains, so minimize them (only residues marked by moveable_residues)
-    # keep the backbone the same as the crystal because 1) we can, 2) it's easier, 3) we want to see what mutations do to packing more so
-    mm = MoveMap()
-    mm.set_bb( False )
-    for res_num in moveable_residues:
-        mm.set_chi( res_num, True )
-    # gradient min of native input_pose
-    for jj in range( 3 ):
-        if jj == 0:
-            sf.set_weight( fa_rep, orig_fa_rep * 0.1 )
-        elif jj == 1:
-            sf.set_weight( fa_rep, orig_fa_rep * 0.33 )
-        elif jj == 2:
-            sf.set_weight( fa_rep, orig_fa_rep )
-        min_mover = MinMover( movemap_in = mm,
-                              scorefxn_in = sf,
-                              min_type_in = "lbfgs_armijo_nonmonotone",
-                              tolerance_in = 0.001,
-                              use_nb_list_in = True )
-        min_mover.max_iter( 2500 )
-        min_mover.apply( working_pose )
-        print "working_pose", sf( working_pose ), jj
+    # running this twice because the mutational analysis SHOULDN'T have to adjust the native input pose each time it gets run.
+    # this means I need to dump two decoys per turn. The first pack/min round dumps the decoy that would be used as the native
+    # for each call of the mutation script. This is because the lowE "native" would get mutated then pack/min in this way again
+    # meaning, at the end of the day, it got pack/min twice. So as a far comparison, a base lowE native decoy with no mutations
+    # should have been pack/min twice. For good measure, I don't want things that were sent on different paths/seeds, so the
+    # starting native will be the first round dump of the double pack/min decoy that got the lowest score. Therefore, dump
+    # round 1 decoy into one directory and dump round 2 decoy into the main structure dir. Only the final round 2 decoy will
+    # have a fasc file, which is fine
+
+    
+    for ii in range( 2 ):
+        # pack all residues except for branch point residues
+        pack_rotamers_mover = make_RotamerTrialsMover( moveable_residues = moveable_residues, 
+                                                       sf = sf,
+                                                       input_pose = working_pose,
+                                                       pack_radius = None )
+        pack_rotamers_mover.apply( working_pose )
         pmm.apply( working_pose )
+
+        # we packed the side chains, so minimize them (only residues marked by moveable_residues)
+        # keep the backbone the same as the crystal because 1) we can, 2) it's easier, 3) we want to see what mutations do to packing more so
+        mm = MoveMap()
+        mm.set_bb( False )
+        for res_num in moveable_residues:
+            mm.set_chi( res_num, True )
+        # gradient min of native input_pose
+        for jj in range( 3 ):
+            if jj == 0:
+                sf.set_weight( fa_rep, orig_fa_rep * 0.1 )
+            elif jj == 1:
+                sf.set_weight( fa_rep, orig_fa_rep * 0.33 )
+            elif jj == 2:
+                sf.set_weight( fa_rep, orig_fa_rep )
+            min_mover = MinMover( movemap_in = mm,
+                                  scorefxn_in = sf,
+                                  min_type_in = "lbfgs_armijo_nonmonotone",
+                                  tolerance_in = 0.001,
+                                  use_nb_list_in = True )
+            min_mover.max_iter( 2500 )
+            min_mover.apply( working_pose )
+            print "working_pose", sf( working_pose ), jj
+            pmm.apply( working_pose )
+
+        # dump the round1 decoy into the appropriate directory
+        if ii == 0:
+            dump_name = round1_structure_dir + jd.current_name.split( '/' )[-1]
+            working_pose.dump_file( dump_name )
 
     # inform user of decoy number
     print "\tFinished with decoy %s" %str( jd.current_num )

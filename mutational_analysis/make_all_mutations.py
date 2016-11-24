@@ -37,6 +37,7 @@ if not os.path.isdir( input_args.utility_dir ):
 
 # add the utility directory to the system path for loading of modules
 sys.path.append( input_args.utility_dir )
+sys.path.append( os.getcwd() )
 
 
 ## check the validity of the passed arguments

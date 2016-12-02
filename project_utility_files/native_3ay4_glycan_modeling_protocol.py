@@ -686,9 +686,14 @@ class Model3ay4Glycan:
                                                                            include_passed_res_nums = False )
                         # add the surrounding_residues to the list of residues that will be packed and minimized
                         pack_and_min_residues.extend( surrounding_residues )
-                        # set chi to True in the min_mm
+                        # set chi to True in the min_mm if the residue is not a branch point
+                        # skipping surrounding carbohydrate residues (FcR glycan) because PyR3 treats the bb
+                        # as chi for some reason (setting chi min to True for glycan moves more than the side
+                        # chains. This is a bug. Just ignoring the bug for now)
                         for surrounding_res in surrounding_residues:
-                            min_mm.set_chi( surrounding_res, True )
+                            if not working_pose.residue( surrounding_res ).is_branch_point():
+                                if not working_pose.residue( surrounding_res ).is_carbohydrate():
+                                    min_mm.set_chi( surrounding_res, True )
 
 
             	##############

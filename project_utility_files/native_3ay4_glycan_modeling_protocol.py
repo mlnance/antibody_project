@@ -24,16 +24,16 @@ class Model3ay4Glycan:
         :param dump_dir: str( /path/to/structure dump directory )
         :param pmm: PyMOL_Mover
         '''
+        # pandas isn't on Jazz, so use the csv module if you can't use pandas
+        # this is for watching energy per trial number
         try:
-            # pandas isn't on Jazz
             import pandas as pd
             self.df = pd.DataFrame()
+            self.pandas = True
         except:
             self.df = None
+            self.pandas = False
             pass
-        self.trial_nums = []
-        self.energies = []
-
 
         # default arguments
         self.name = "Model3ay4Glycan"
@@ -89,6 +89,8 @@ class Model3ay4Glycan:
 
         # watch and listen arguments
         self.verbose = False
+        self.watch_E_vs_trial = False
+        self.lowest_score_seen = None
         self.make_movie = False
         self.movie_poses = []
         self.movie_poses_dir = None
@@ -297,12 +299,17 @@ class Model3ay4Glycan:
         from random import choice
         from rosetta import MoveMap, MinMover, MonteCarlo, PyMOL_Mover
         from rosetta.core.scoring import fa_atr, fa_rep
-        #from antibody_functions import native_Fc_glycan_nums_except_core_GlcNAc  # shouldn't need this as a MoveMap is passed to create this class
         from native_3ay4_glycan_modeling_protocol_functions import native_3ay4_Fc_glycan_LCM_reset, \
             add_constraints_to_pose, get_ramp_score_weight, get_ramp_angle_max, \
             native_3ay4_Fc_glycan_random_reset, SugarSmallMover, \
             make_RotamerTrialsMover, get_res_nums_within_radius
 
+
+        # for watching the energy per trial
+        if self.watch_E_vs_trial:
+            self.trial_nums = []
+            self.energies = []
+            self.lowest_seen_energies = []
 
         ##########################
         #### COPY INPUT POSES ####
@@ -518,6 +525,13 @@ class Model3ay4Glycan:
             self.movie_poses.append( self.reset_pose.clone() )
             self.reset_pose.pdb_info().name( orig_name )
 
+        # append all the information to the lists
+        if self.watch_E_vs_trial:
+            # 0th trial is the reset pose
+            self.trial_nums.append( 0 )
+            self.energies.append( self.watch_sf( working_pose ) )
+            self.lowest_seen_energies.append( self.watch_sf( working_pose ) )
+
 
         #########################
         #### ADD CONSTRAINTS ####
@@ -717,10 +731,6 @@ class Model3ay4Glycan:
             	###############################
                 # accept or reject the total move using the MonteCarlo object
                 if self.mc.boltzmann( working_pose ):
-                    # for watching energy during a protocol
-                    #self.inner_trials.append( inner_trial )
-                    #self.energies.append( self.watch_sf( working_pose ) )
-
                     # add the accepted-move pose to the list of poses for the movie, if desired
                     if self.make_movie:
                         # change the name to just "protocol_X_decoy_Y_Z.pdb" without path location
@@ -730,7 +740,6 @@ class Model3ay4Glycan:
                         self.movie_poses.append( working_pose.clone() )
                         working_pose.pdb_info().name( self.decoy_name )
                         movie_num += 1
-
                     # up the counters and send to pymol
                     num_mc_accepts += 1
                     try:
@@ -743,6 +752,22 @@ class Model3ay4Glycan:
                     except:
                         pass
                 num_mc_checks += 1
+
+                # for watching energy during a protocol
+                if self.watch_E_vs_trial:
+                    # collect the lowest-scoring decoy seen using the watch_sf
+                    # can't use the mc.lowest_score() because that uses the ramped sf, so the score is variable
+                    # if this is the first trial done, update the lowest_score_seen to the value
+                    # of the decoy after making the first move
+                    if self.lowest_score_seen is None:
+                        self.lowest_score_seen = self.watch_sf( working_pose )
+                    # otherwise, update the lowest_score_seen if the current working_pose has a lower score
+                    elif self.watch_sf( working_pose ) < self.lowest_score_seen:
+                        self.lowest_score_seen = self.watch_sf( working_pose )
+                    # append all the information to the lists
+                    self.trial_nums.append( inner_trial + self.inner_trials * ( outer_trial - 1 ) )
+                    self.energies.append( self.watch_sf( working_pose ) )
+                    self.lowest_seen_energies.append( self.lowest_score_seen )
 
                 # print out the MC acceptance rate every 3 trials and on the last trial
                 mc_acceptance = round( ( float( num_mc_accepts ) / float( num_mc_checks ) * 100 ), 2 )
@@ -757,9 +782,21 @@ class Model3ay4Glycan:
         self.mc_acceptance = mc_acceptance
 
         # for watching energy during a protocol
-        if self.df is not None:
-            pass
-            #self.df[ "inner_trial" ] = self.inner_trials
-            #self.df[ "total_score" ] = self.energies
+        if self.watch_E_vs_trial:
+            E_vs_trial_filename = self.dump_dir + self.decoy_name.split( '/' )[-1].split( ".pdb" )[0] + "_E_vs_trial.csv"
+            # use a pandas DataFrame, if possible
+            if self.pandas:
+                self.df[ "trial_nums" ] = self.trial_nums
+                self.df[ "total_score" ] = self.energies
+                self.df[ "lowest_score" ] = self.lowest_seen_energies
+                self.df.to_csv( E_vs_trial_filename )
+            # otherwise I'm on jazz and can't use a DataFrame, so use a csv file instead
+            else:
+                import csv
+                data_rows = zip( self.trial_nums, self.energies, self.lowest_seen_energies )
+                with open( E_vs_trial_filename, "wb" ) as fh:
+                    csvwriter = csv.writer( fh )
+                    csvwriter.writerow( [ "trial_num", "score", "lowest_score" ] )
+                    [ csvwriter.writerow( row ) for row in data_rows ]
 
         return working_pose

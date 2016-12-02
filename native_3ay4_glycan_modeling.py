@@ -861,7 +861,7 @@ elif input_args.protocol_num == 27:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_movie = True
+    GlycanModelProtocol.make_movie = False
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
@@ -888,7 +888,8 @@ elif input_args.protocol_num == 100:
                                            angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
                                            dump_dir = input_args.structure_dir, 
                                            pmm = pmm )
-    GlycanModelProtocol.trials = 1000
+    GlycanModelProtocol.outer_trials = 1
+    GlycanModelProtocol.inner_trials = 1000000
     GlycanModelProtocol.moves_per_trial = 1
     GlycanModelProtocol.LCM_reset = True
     GlycanModelProtocol.use_population_ideal_LCM_reset = False
@@ -909,6 +910,8 @@ elif input_args.protocol_num == 100:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
+    GlycanModelProtocol.make_movie = False
+    GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )

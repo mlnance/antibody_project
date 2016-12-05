@@ -91,6 +91,7 @@ class Model3ay4Glycan:
         self.verbose = False
         self.watch_E_vs_trial = False
         self.lowest_score_seen = None
+        self.lowest_score_pose_seen = None
         self.make_movie = False
         self.movie_poses = []
         self.movie_poses_dir = None
@@ -426,6 +427,7 @@ class Model3ay4Glycan:
 
         # no longer needed because I changed the default.table to store these data
         # thus, I am letting the LCM choose from IgG1 Fc stats to reset GlcNAc core omega1 and omega2
+        # commented, not deleted, so that I may reference it and how it was structured to work
         '''
         ####################################################
         #### HARDCODED CORE RESET TO IgG1 Fc STATISTICS ####
@@ -530,7 +532,10 @@ class Model3ay4Glycan:
             # 0th trial is the reset pose
             self.trial_nums.append( 0 )
             self.energies.append( self.watch_sf( working_pose ) )
+            # the lowest seen pose and energy will be that of the reset pose to start
             self.lowest_seen_energies.append( self.watch_sf( working_pose ) )
+            self.lowest_score_seen = self.watch_sf( working_pose )
+            self.lowest_score_pose_seen = working_pose.clone()
 
 
         #########################
@@ -723,7 +728,7 @@ class Model3ay4Glycan:
                     min_mover = MinMover( movemap_in = min_mm, 
                                           scorefxn_in = self.sf,
                                           min_type_in = "dfpmin_strong_wolfe",
-                                          #min_type_in = "lbfgs_armijo_nonmonotone",
+                                          #min_type_in = "lbfgs_armijo_nonmonotone", will move to this because this is Rosetta standard
                                           tolerance_in = 0.01,
                                           use_nb_list_in = True )
                     min_mover.apply( working_pose )
@@ -762,13 +767,10 @@ class Model3ay4Glycan:
                 if self.watch_E_vs_trial:
                     # collect the lowest-scoring decoy seen using the watch_sf
                     # can't use the mc.lowest_score() because that uses the ramped sf, so the score is variable
-                    # if this is the first trial done, update the lowest_score_seen to the value
-                    # of the decoy after making the first move
-                    if self.lowest_score_seen is None:
+                    # update the lowest_score_seen if the current working_pose has a lower score
+                    if self.watch_sf( working_pose ) < self.lowest_score_seen:
                         self.lowest_score_seen = self.watch_sf( working_pose )
-                    # otherwise, update the lowest_score_seen if the current working_pose has a lower score
-                    elif self.watch_sf( working_pose ) < self.lowest_score_seen:
-                        self.lowest_score_seen = self.watch_sf( working_pose )
+                        self.lowest_score_pose_seen = working_pose.clone()
                     # append all the information to the lists
                     self.trial_nums.append( inner_trial + self.inner_trials * ( outer_trial - 1 ) )
                     self.energies.append( self.watch_sf( working_pose ) )

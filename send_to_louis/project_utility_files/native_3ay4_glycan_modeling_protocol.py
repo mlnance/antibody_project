@@ -682,7 +682,8 @@ class Model3ay4Glycan:
                 min_mm = MoveMap()
                 for res_num in pack_and_min_residues:
                     min_mm.set_bb( res_num, True )
-                    min_mm.set_chi( res_num, True )
+                    # minimizing the chi of carbohydrates is really weird as it moves the whole residue
+                    #min_mm.set_chi( res_num, True )
                 # check if we are packing, adjust the pack_and_min_residues and min_mm accordingly
                 if self.pack_after_x_rounds > 0:
                     if inner_trial % self.pack_after_x_rounds == 0:
@@ -730,8 +731,8 @@ class Model3ay4Glycan:
                     # make and apply the min_mover
                     min_mover = MinMover( movemap_in = min_mm, 
                                           scorefxn_in = self.sf,
-                                          min_type_in = "dfpmin_strong_wolfe",
-                                          #min_type_in = "lbfgs_armijo_nonmonotone", # will move to this because this is Rosetta standard
+                                          #min_type_in = "dfpmin_strong_wolfe",
+                                          min_type_in = "lbfgs_armijo_nonmonotone", # will move to this because this is Rosetta standard
                                           tolerance_in = 0.01,
                                           use_nb_list_in = True )
                     min_mover.apply( working_pose )

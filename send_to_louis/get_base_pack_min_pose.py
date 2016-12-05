@@ -1,13 +1,6 @@
 #!/usr/bin/python
 __author__ = "morganlnance"
 
-'''
-Plans for this code:
-1) take in a native PDB structure
-2) run single pack and minimization with base_nstruct=1000, dumping the structures into base_structs
-3) take lowest E from (2) and turn it into lowest_E_single_pack_and_min_only_native_crystal_struct_3ay4_Fc_FcgRIII.pdb, and dump into into lowest_E_structs dir
-'''
-
 
 
 import argparse
@@ -18,8 +11,6 @@ parser.add_argument("native_pdb_file", type=str, help="the filename of the nativ
 parser.add_argument("structure_directory", type=str, help="where do you want your decoys to be dumped? Each PDB will have its own directory there")
 parser.add_argument("utility_directory", type=str, help="where do the utility files live? Give me the directory.")
 parser.add_argument("base_nstruct", type=int, help="how many decoy structures do you want to create to get a base native structure?")
-parser.add_argument("--scorefxn_file", default=None, type=str, help="/path/to/the .sf scorefxn space-delimited file that tells me which scoring weights beyond the norm you want to use")
-parser.add_argument("--fa_intra_rep", action="store_true", help="do you want to set fa_intra_rep to 0.440 in the sf?")
 input_args = parser.parse_args()
 
 
@@ -82,12 +73,11 @@ except:
 # good to go, import needed functions
 from rosetta import Pose, get_fa_scorefxn, PyJobDistributor, \
     PyMOL_Mover, MoveMap, MinMover
-from rosetta.core.scoring import score_type_from_name
+from rosetta.core.scoring import fa_rep, fa_intra_rep
 
 from antibody_functions import load_pose, \
-    initialize_rosetta, apply_sugar_constraints_to_sf, \
-    make_pack_rotamers_mover, make_fa_scorefxn_from_file, \
-    hold_chain_and_res_designations_3ay4
+    initialize_rosetta, make_pack_rotamers_mover, \
+    hold_chain_and_res_designations_3ay4, make_RotamerTrialsMover
 
 from file_mover_based_on_fasc import main as get_lowest_E_from_fasc
 from get_pose_metrics_on_native import main as get_pose_metrics_on_native
@@ -101,12 +91,9 @@ orig_pdb_filename_full_path = input_args.native_pdb_file
 orig_pdb_filename = orig_pdb_filename_full_path.split( '/' )[-1]
 orig_pdb_name = orig_pdb_filename.split( ".pdb" )[0]
 
-# make the directory for the native PDB in the base_structs_dir
-# this is where packed and minimized versions of the native will lie
-structure_dir = base_structs_dir + orig_pdb_name
-if not os.path.isdir( structure_dir ):
-    os.mkdir( structure_dir )
-decoy_pdb_name = structure_dir + '/' + orig_pdb_name
+# this is where the double pack and minimized versions of the native will be dumped
+structure_dir = base_structs_dir
+decoy_pdb_name = structure_dir + orig_pdb_name
 
 # sets up the input native PDB as being the base pose
 native_pose = Pose()
@@ -118,16 +105,10 @@ native_pose_info = hold_chain_and_res_designations_3ay4()
 native_pose_info.native()
 
 
-# use the scorefxn_file to set up additional weights
-if input_args.scorefxn_file is not None:
-    sf = make_fa_scorefxn_from_file( input_args.scorefxn_file )
-# else create a fa_scorefxn
-else:
-    sf = get_fa_scorefxn()
-
-# fa_intra_rep should always 0.440 since that's what I've been using
-if input_args.fa_intra_rep:
-    sf.set_weight( score_type_from_name( "fa_intra_rep" ), 0.440 )
+# fa_intra_rep should always 0.440 since that's what I've been using for sugars
+sf = get_fa_scorefxn()
+sf.set_weight( fa_intra_rep, 0.440 )
+orig_fa_rep = sf.get_weight( fa_rep )
 
 
 # pymol stuff
@@ -140,8 +121,6 @@ pmm.apply( native_pose )
 info_file_details = []
 info_file_details.append( "Native PDB filename:\t\t\t%s\n" %input_args.native_pdb_file.split( '/' )[-1] )
 info_file_details.append( "Creating this many decoys:\t\t%s\n" %str( input_args.base_nstruct ) )
-info_file_details.append( "ScoreFunction file used?:\t\t%s\n" %str( input_args.scorefxn_file ).split( '/' )[-1] )
-info_file_details.append( "Set fa_intra_rep to 0.44?:\t\t%s\n" %str( input_args.fa_intra_rep ) )
 info_file_details.append( "Main structure directory:\t\t%s\n" %main_structure_dir )
 info_file_details.append( "Base structure directory:\t\t%s\n" %base_structs_dir )
 info_file_details.append( "Lowest E structure directory:\t\t%s\n" %lowest_E_structs_dir )
@@ -168,46 +147,51 @@ jd.native_pose = native_pose
 
 # make base_nstruct of the native doing one pack and minimization to get a standard low E structure
 print "Making a low E base pose by packing and minimizing the passed native pose..."
-decoy_num = 1
 while not jd.job_complete:
-    # make a working pose
-    working_pose = Pose()
-    working_pose.assign( native_pose )
-    working_pose.pdb_info().name( "base_%s" %str( decoy_num ) )
+    # make a working pose by cloning a fresh native_pose
+    working_pose = native_pose.clone()
+    working_pose.pdb_info().name( "base_%s" %str( jd.current_num ) )
     pmm.apply( working_pose )
 
     # instantiate the 3ay4 information holder class object
-    working_pose_info = hold_chain_and_res_designations_3ay4()
-
+    # this is for calculating metrics
     # see antibody_functions for more information on this hard-coded function
+    working_pose_info = hold_chain_and_res_designations_3ay4()
     working_pose_info.native()
 
+    # collect all non-branch point residue numbers
+    moveable_residues = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) if working_pose.residue( res_num ).is_branch_point() == False ]
 
     for ii in range( 2 ):
-        # pack
-        pack_rotamers_mover = make_pack_rotamers_mover( sf, working_pose,
-                                                        apply_sf_sugar_constraints = False,
-                                                        pack_branch_points = True )
+        # pack all residues except for branch point residues
+        pack_rotamers_mover = make_RotamerTrialsMover( moveable_residues = moveable_residues, 
+                                                       sf = sf,
+                                                       input_pose = working_pose,
+                                                       pack_radius = None )
         pack_rotamers_mover.apply( working_pose )
+        pmm.apply( working_pose )
 
-        # minimize
+        # we packed the side chains, so minimize them (only residues marked by moveable_residues)
+        # keep the backbone the same as the crystal because 1) we can, 2) it's easier, 3) we want to see what mutations do to packing more so
         mm = MoveMap()
-        mm.set_bb( True )
-        mm.set_chi( True )
-        mm.set_branches( True )
+        mm.set_bb( False )
+        for res_num in moveable_residues:
+            # minimizing chi of sugars is really weird...it moves the whole residue
+            if not working_pose.residue( res_num ).is_carbohydrate():
+                mm.set_chi( res_num, True )
 
+        # minimize the chi's that were just packed now
         min_mover = MinMover( movemap_in = mm,
                               scorefxn_in = sf,
-                              min_type_in = "dfpmin_strong_wolfe",
+                              min_type_in = "lbfgs_armijo_nonmonotone",
                               tolerance_in = 0.01,
                               use_nb_list_in = True )
         min_mover.apply( working_pose )
-
-    pmm.apply( working_pose )
+        print "working_pose", sf( working_pose )
+        pmm.apply( working_pose )
 
     # inform user of decoy number
-    print "\tFinished with decoy %s" %str( decoy_num )
-    decoy_num += 1
+    print "\tFinished with decoy %s" %str( jd.current_num )
 
     # collect additional metric data
     try:
@@ -232,4 +216,4 @@ while not jd.job_complete:
     
 # move the lowest E pack and minimized native structure into the lowest_E_structs dir
 fasc_filename = decoy_pdb_name + ".fasc"
-lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 5 )
+lowest_E_native_filename = get_lowest_E_from_fasc( fasc_filename, lowest_E_structs_dir, 10 )

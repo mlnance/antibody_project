@@ -657,8 +657,10 @@ class Model3ay4Glycan:
                 # make as many moves per trial as desired
                 # SugarSmallMover
                 if self.make_small_moves:
-                    working_pose.assign( SugarSmallMover( self.mm, self.moves_per_trial, angle_max, working_pose, 
-                                                          move_all_torsions = self.move_all_torsions ) )
+                    SSmM = SugarSmallMover( self.mm, self.moves_per_trial, angle_max, working_pose, 
+                                            move_all_torsions = self.move_all_torsions )
+                    working_pose.assign( SSmM.apply( working_pose ) )
+
                 # SugarShearMover
                 elif self.make_shear_moves:
                     pass
@@ -671,22 +673,22 @@ class Model3ay4Glycan:
                 ##################################
                 #### PREPARE FOR PACK AND MIN ####
                 ##################################
-                # if you aren't going to pack this round, then the pack_and_min_residues will mirror the self.moveable_residues
-                # if you are packing this round, then you need residues surrounding the self.moveable_residues as well
-                pack_and_min_residues = [ res_num for res_num in self.moveable_residues ]
+                # if you aren't going to pack this round, then the pack_and_min_residues will mirror the residues that were just moved
+                # if you are packing this round, then you need residues surrounding as well
+                pack_and_min_residues = [ res_num for res_num in SSmM.moved_residues ]
                 # if you aren't going to pack this round, then the minimizer's MoveMap should only include the self.moveable_residues (bb and chi)
                 # if you are packing this round, then the MoveMap has bb and chi for self.moveable_residues and chi for surrounding_residues
                 # default MoveMap creation has everything set to False, so set the appropriate residues to True
                 min_mm = MoveMap()
-                for moveable_res in pack_and_min_residues:
-                    min_mm.set_bb( moveable_res, True )
-                    min_mm.set_chi( moveable_res, True )
+                for res_num in pack_and_min_residues:
+                    min_mm.set_bb( res_num, True )
+                    min_mm.set_chi( res_num, True )
                 # check if we are packing, adjust the pack_and_min_residues and min_mm accordingly
                 if self.pack_after_x_rounds > 0:
                     if inner_trial % self.pack_after_x_rounds == 0:
                         # this function I wrote uses the nbr_atom to calculate distances, which is about the C4 atom
                         # 10A should be enough to include Tyr296 if the fucose is in the pose
-                        surrounding_residues = get_res_nums_within_radius( self.moveable_residues, working_pose, 
+                        surrounding_residues = get_res_nums_within_radius( pack_and_min_residues, working_pose, 
                                                                            radius = 10, 
                                                                            include_passed_res_nums = False )
                         # add the surrounding_residues to the list of residues that will be packed and minimized
@@ -694,7 +696,8 @@ class Model3ay4Glycan:
                         # set chi to True in the min_mm if the residue is not a branch point
                         # skipping surrounding carbohydrate residues (FcR glycan) because PyR3 treats the bb
                         # as chi for some reason (setting chi min to True for glycan moves more than the side
-                        # chains. This is a bug. Just ignoring the bug for now)
+                        # chains. This is a bug. Just ignoring the bug for now) keeping the carb chi in for
+                        # consistency though until I figure out what to do
                         for surrounding_res in surrounding_residues:
                             if not working_pose.residue( surrounding_res ).is_branch_point():
                                 if not working_pose.residue( surrounding_res ).is_carbohydrate():
@@ -728,7 +731,7 @@ class Model3ay4Glycan:
                     min_mover = MinMover( movemap_in = min_mm, 
                                           scorefxn_in = self.sf,
                                           min_type_in = "dfpmin_strong_wolfe",
-                                          #min_type_in = "lbfgs_armijo_nonmonotone", will move to this because this is Rosetta standard
+                                          #min_type_in = "lbfgs_armijo_nonmonotone", # will move to this because this is Rosetta standard
                                           tolerance_in = 0.01,
                                           use_nb_list_in = True )
                     min_mover.apply( working_pose )

@@ -49,11 +49,11 @@ native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 ###################
 
 def initialize_rosetta( constant_seed = False, debug = False ):
-    """
+    '''
     Initialize Rosetta and mute basic, core, and protocols.
     If constant_seed == True, use default constant seed 1111111
     If debug == True, use default constant seed and do not mute Rosetta
-    """
+    '''
     # imports
     from rosetta import init
 
@@ -72,11 +72,11 @@ def initialize_rosetta( constant_seed = False, debug = False ):
 
 
 def load_pose( pose_filename ):
-    """
+    '''
     Load pose from a filename
     :param pose_filename: str( /path/to/pose/filename )
     :return: a Rosetta Pose
-    """
+    '''
     # imports
     from rosetta import Pose, pose_from_file, FoldTree
 
@@ -100,14 +100,14 @@ def load_pose( pose_filename ):
 
 
 def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
-    """
+    '''
     Return an sf from get_fa_scoretype but with adjusted weights <scoretypes> with given <weights>
     If <input_scoretype> is not already part of the <sf>, this function will add it to <sf> with a weight of <weight>, and then get the score
     Will exit if the string( <input_scoretype> ) is not a valid ScoreType
     :param weights_dict: dict( ScoreType or str of ScoreType name : int( or float( weight ) ) )
     :param verbose: bool( print the final weights of the returned ScoreFunction? ) Default = False
     "return: ScoreFunction( fa_scorefxn with adjusted weights of given scoretypes )
-    """
+    '''
     # imports
     import sys
     from rosetta import get_fa_scorefxn, score_type_from_name
@@ -272,90 +272,136 @@ def add_constraints_to_pose( constraint_file, input_pose ):
 
 
 
-def SugarSmallMover( mm, nmoves, angle_max, input_pose, move_all_torsions = True, use_sugar_bb_angle_max = False ):
-    """
-    Randomly resets the phi, psi, and omega values of <nmoves> residues found in the <mm> MoveMap that are carbohydrates and have their BB freedom turned on
-    Math works out to where the max motion to either direction or starting position is angle_max/2 ( old_value +/- angle_max/2 )
-    Emulates the SmallMover but with the additional omega mover
-    Can either move all torsions found on the chosen residue (Default action), or can set move_all_torsions to False and will instead pick one of the available torsions of that residue to perturb
-    use_sugar_bb_angle_max means to use an angle max for phi and psi (and omega that Jason told me) that comes from the sugar_bb graph (just eyeballed)
-    :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be moved )
-    :param nmoves: int( how many moves should be allowed in one call to the SugarSmallMover? )
-    :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
-    :param input_pose: Pose
-    :param move_all_torsions: bool( do you want to move all BackBone torsions of the residues at the same time? If not, a single torsion will be randomly chosen and perturbed ) Default = True
-    :param use_sugar_bb_angle_max: bool( use sugar_bb phi/psi/omega data to get angle_max ) Default = False
-    :return: Pose
-    """
-    # imports
-    from random import choice
-    from rosetta.basic import periodic_range
-    from rosetta.numeric.random import uniform
-    from rosetta.core.id import MainchainTorsionType, phi_dihedral, psi_dihedral, omega_dihedral
-    from rosetta.core.pose.carbohydrates import get_glycosidic_torsion, set_glycosidic_torsion, \
-        get_reference_atoms
+class SugarSmallMover:
+    def __init__( self, mm, n_moves, angle_max, input_pose, move_all_torsions = True, use_sugar_bb_angle_max = False ):
+        '''
+        Randomly resets the phi, psi, and omega values of <n_moves> residues found in the <mm> MoveMap that are carbohydrates and have their BB freedom turned on
+        Math works out to where the max motion to either direction or starting position is angle_max/2 ( old_value +/- angle_max/2 )
+        Emulates the SmallMover but with the additional omega mover
+        Can either move all torsions found on the chosen residue (Default action), or can set move_all_torsions to False and will instead pick one of the available torsions of that residue to perturb
+        use_sugar_bb_angle_max means to use an angle max for phi and psi (and omega that Jason told me) that comes from the sugar_bb graph (just eyeballed)
+        :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be moved )
+        :param n_moves: int( how many moves should be allowed in one call to the SugarSmallMover? )
+        :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
+        :param input_pose: Pose
+        :param move_all_torsions: bool( do you want to move all BackBone torsions of the residues at the same time? If not, a single torsion will be randomly chosen and perturbed ) Default = True
+        :param use_sugar_bb_angle_max: bool( use sugar_bb phi/psi/omega data to get angle_max. This was more or less arbitrary and created by looking at the LCM data ) Default = False
+        :return: Pose
+        '''
+        # information needed to create and then apply this SugarSmallMover
+        self.movemap_in = mm
+        # collected by getting all residues with bb set to True in the movemap_in
+        self.moveable_res_nums = []
+        self.n_moves = n_moves
+        self.pose_in = input_pose.clone()
+        # the big_angle is the input angle_max. The max arc available on both sides of the current position
+        self.big_angle = float( angle_max )
+        # the small_angle is the largest possible single move that can be made (in a single direction + or -)
+        self.small_angle = 0
+        self.move_all_torsions = move_all_torsions
+        self.use_sugar_bb_angle_max = use_sugar_bb_angle_max
+        # not doing a dictionary just in case the same residues gest moved more than once in one .apply()
+        # lists are ordered anyway so I think this is more useful
+        # list of single residue numbers in Pose numbering ex. [ 36, 9, 100 ]
+        self.moved_residues = []
+        self.n_moved_residues = 0
+        # a list of lists containing all moveable_torsions for the residue number
+        # ex. [ [ phi_dihedral, psi_dihedral ], [ phi_dihedral, psi_dihedral, omega_dihedral ], ... ]
+        # if move_all_torsions == False, then it will be like [ [ phi_dihedral ], [ omega_dihedral ], [ psi_dihedral ] ]
+        self.moved_residues_torsions = []
+        # a list of lists containing the values for each moveable_torsion stored for each residue number
+        # ex. [ [ cur + new, cur + new ] , [ cur + new, cur + new, cur + new ] , ... ]
+        self.moved_residues_torsions_new_values = []
+        self.moved_residues_torsions_old_values = []
+        self.moved_residues_torsions_perturbations = []
 
 
-    # copy the input pose
-    pose = input_pose.clone()
+        # collect some information that was passed to prepare for .apply()
+        # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
+        # I'm copying this idea from GlycanRelaxMover, but overall it makes sense anyway. Only things with BB freedom should be sampled
+        self.moveable_res_nums = [ res_num for res_num in range( 1, self.pose_in.n_residue() + 1 ) if self.movemap_in.get_bb( res_num ) and self.pose_in.residue( res_num ).is_carbohydrate() ]
 
-    # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
-    # I'm copying this idea from GlycanRelaxMover, but overall it makes sense anyway. Only things with BB freedom should be sampled
-    moveable_res_nums = [ res_num for res_num in range( 1, pose.n_residue() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
+        # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover
+        self.small_angle = self.big_angle / 2.0
 
-    # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover
-    big_angle = angle_max
-    small_angle = big_angle / 2.0
 
-    # for as many moves as specified
-    for ii in range( nmoves ):
-        # pick a residue to sample
-        res_num = choice( moveable_res_nums )
+    def apply( self, pose ):
+        # imports
+        from random import choice
+        from rosetta.basic import periodic_range
+        from rosetta.numeric.random import uniform
+        from rosetta.core.id import MainchainTorsionType, phi_dihedral, psi_dihedral, omega_dihedral
+        from rosetta.core.pose.carbohydrates import get_glycosidic_torsion, set_glycosidic_torsion, \
+            get_reference_atoms
 
-        # check which glycosidic torsions it has (except omega3_dihedral, that doesn't work at the moment)
-        moveable_torsions = []
-        for torsion_name in MainchainTorsionType.names:
-            # have to skip omega3, hence doing by name
-            if torsion_name != "omega3_dihedral":
-                # if this torsion has reference atoms, it exists
-                # bool( len([]) ) = False, so it will return False if there are no reference atoms (ie. it doesn't exist)
-                if bool( len( get_reference_atoms( MainchainTorsionType.names[ torsion_name ], pose, res_num ) ) ):
-                    # this torsion type has reference atoms, thus it exists. Keep it
-                    moveable_torsions.append( MainchainTorsionType.names[ torsion_name ] )
-        # keep one torsion if the user doesn't want all torsions sampled
-        if move_all_torsions is False:
-            moveable_torsions = [ choice( moveable_torsions ) ]
 
-        # get the current torsions for the moveable_torsions and perturb them according to angle_max
-        for moveable_torsion in moveable_torsions:
-            # get the current torsion value
-            old_torsion_value = get_glycosidic_torsion( moveable_torsion, pose, res_num )
+        # set all the new torsions using information collected from init
+        # for as many moves as specified
+        for ii in range( self.n_moves ):
+            # pick a residue to sample and add it to the class-held list
+            res_num = choice( self.moveable_res_nums )
+            self.moved_residues.append( res_num )
 
-            # if use_sugar_bb_angle_max is set to True, change the angle_max, small_angle, and big_angle
-            # depending on if the torsion being sampled is a phi, psi, or omega
-            if use_sugar_bb_angle_max:
-                # phi and omega
-                if moveable_torsion == phi_dihedral or moveable_torsion == omega_dihedral:
-                    big_angle = 30
-                    small_angle = big_angle / 2.0
-                # psi
-                elif moveable_torsion == psi_dihedral:
-                    big_angle = 100
-                    small_angle = big_angle / 2.0
+            # check which glycosidic torsions it has (except omega3_dihedral, that doesn't work at the moment)
+            moveable_torsions = []
+            for torsion_name in MainchainTorsionType.names:
+                # have to skip omega3, hence doing by name
+                if torsion_name != "omega3_dihedral":
+                    # if this torsion has reference atoms, it exists
+                    # bool( len([]) ) = False, so it will return False if there are no reference atoms (ie. it doesn't exist)
+                    if bool( len( get_reference_atoms( MainchainTorsionType.names[ torsion_name ], self.pose_in, res_num ) ) ):
+                        # this torsion type has reference atoms, thus it exists. Keep it
+                        moveable_torsions.append( MainchainTorsionType.names[ torsion_name ] )
+            # keep one torsion if the user doesn't want all torsions sampled
+            if self.move_all_torsions is False:
+                moveable_torsions = [ choice( moveable_torsions ) ]
+            # add the moveable_torsions to the class-held list
+            self.moved_residues_torsions.append( moveable_torsions )
 
-            # perturb this torsion randomly
-            # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move, took out .rg()
-            new_torsion_value = periodic_range( old_torsion_value - small_angle + uniform() * big_angle, 360.0 )
+            # get the current torsions for the moveable_torsions and perturb them according to angle_max
+            moveable_torsion_new_values = []
+            moveable_torsion_old_values = []
+            moveable_torsion_perturbations = []
+            for moveable_torsion in moveable_torsions:
+                # get the current torsion value
+                old_torsion_value = get_glycosidic_torsion( moveable_torsion, self.pose_in, res_num )
+                moveable_torsion_old_values.append( old_torsion_value )
 
-            # set the new torsion
-            set_glycosidic_torsion( moveable_torsion, pose, res_num, new_torsion_value )
+                # if use_sugar_bb_angle_max is set to True, change the angle_max, small_angle, and big_angle
+                # depending on if the torsion being sampled is a phi, psi, or omega
+                # this is eye-balled data from the LCM data
+                if self.use_sugar_bb_angle_max:
+                    # phi and omega
+                    if moveable_torsion == phi_dihedral or moveable_torsion == omega_dihedral:
+                        self.big_angle = 30
+                        self.small_angle = self.big_angle / 2.0
+                    # psi
+                    elif moveable_torsion == psi_dihedral:
+                        self.big_angle = 100
+                        self.small_angle = self.big_angle / 2.0
 
-    return pose
+                # prepare a new torsion value
+                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move, took out .rg()
+                new_torsion_value = periodic_range( old_torsion_value - self.small_angle + uniform() * self.big_angle, 360.0 )
+                moveable_torsion_new_values.append( new_torsion_value )
+                # store the amount that this was perturbed by using the new and old torsion value
+                moveable_torsion_perturbations.append( new_torsion_value - old_torsion_value )
+                # perturb this torsion randomly
+                set_glycosidic_torsion( moveable_torsion, self.pose_in, res_num, new_torsion_value )
+            # add the moveable_torsion_values to the class-held list
+            self.moved_residues_torsions_new_values.append( moveable_torsion_new_values )
+            self.moved_residues_torsions_old_values.append( moveable_torsion_old_values )
+            self.moved_residues_torsions_perturbations.append( moveable_torsion_perturbations )
+
+        # add the number of residues that were moved
+        self.n_moved_residues = len( self.moved_residues )
+
+        return self.pose_in
 
 
 
 def get_ramp_score_weight( current_weight, target_weight, current_step, total_steps ):
-    """
+    '''
     Given the <current_weight> and the <target_weight>, use the <current_step> and the <total_steps> to determine how much the weight should be increased or decreased for this particular round
     Current and Total steps -- Say you're doing 100 (1-100) rounds, if you're on round 57, current_step = 57, total_steps = 100
     :param current_weight: int( or float( value of your current ScoreType weight ) )
@@ -363,7 +409,7 @@ def get_ramp_score_weight( current_weight, target_weight, current_step, total_st
     :param current_step: int( current step of how many rounds you're doing )
     :param total_steps: int( number of rounds you're doing )
     :return: float( the new weight to set for your ScoreType for this particular round )
-    """
+    '''
     # imports
     import sys
 
@@ -399,7 +445,7 @@ def get_ramp_score_weight( current_weight, target_weight, current_step, total_st
 
 
 def get_ramp_angle_max( current_angle_max, target_angle_max, current_step, total_steps ):
-    """
+    '''
     Given the <current_angle_max> and the <target_angle_max>, use the <current_step> and the <total_steps> to determine how much the angle_max should be increased or decreased for this particular round
     Current and Total steps -- Say you're doing 100 (1-100) rounds, if you're on round 57, current_step = 57, total_steps = 100
     :param current_angle_max: int( or float( value of your current angle_max ) )
@@ -407,7 +453,7 @@ def get_ramp_angle_max( current_angle_max, target_angle_max, current_step, total
     :param current_step: int( current step of how many rounds you're doing )
     :param total_steps: int( number of rounds you're doing )
     :return: float( the new angle angle_max to set for your SugarSmall/ShearMover for this particular round )
-    """
+    '''
     # imports
     import sys
 
@@ -443,7 +489,7 @@ def get_ramp_angle_max( current_angle_max, target_angle_max, current_step, total
 
 
 def get_res_nums_within_radius( residues, input_pose, radius, include_passed_res_nums = False, sort_return_list = False ):
-    """
+    '''
     Find all residue numbers around a single <residues> or a list of <residues> given in <input_pose> within <radius> Angstroms.
     Set <include_residues> if you want to include the single or list of passed <residues> in the return list of residue numbers. Best for packing cases
     :param residues: int( or list( Pose residue numbers or single number ) )
@@ -452,7 +498,7 @@ def get_res_nums_within_radius( residues, input_pose, radius, include_passed_res
     :param include_passed_res_nums: bool( do you want to include the passed <residues> in the return list of resiude numbers? ) Default = False
     :param sort_return_list: bool( do you want to sort the return residue list? ) Default = False
     :return: list( residues around passed <residues> list within <radius> Angstroms
-    """
+    '''
     # argument check: ensure passed <residues> argument is a list or an integer
     if type( residues ) != list:
         if type( residues ) != int:
@@ -495,13 +541,13 @@ def get_res_nums_within_radius( residues, input_pose, radius, include_passed_res
 
 
 def spin_carbs_connected_to_prot( mm, input_pose, spin_using_ideal_omegas = True ):
-    """
+    '''
     The intent of this spin is to set the carbohydrate involved in the protein-carbohydrate connection into a reasonable starting position after the reset. This is because current LCM data found in the default.table was collected for surface glycans. These data are not reflective of the glycans found in the Ig system
     :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be reset )
     :param input_pose: Pose
     :param spin_using_ideal_omegas: bool( set omega1 (and omega2) to either 180, 60, or -60? If not, it would be those values +/- 0-20 ) Default = True
     :return: Pose
-    """
+    '''
     # imports
     from random import choice
     from rosetta.core.pose.carbohydrates import find_seqpos_of_saccharides_parent_residue, \
@@ -560,7 +606,7 @@ def spin_carbs_connected_to_prot( mm, input_pose, spin_using_ideal_omegas = True
 
 
 def glycosylate_working_pose( input_pose, glyco_file, glyco_sites ):
-    """
+    '''
     Glycosylate the <input_pose> using the <glyco_file> at the <glyco_sites> on the ND2 atom (assumes an ASN N-linked glycosylation, for now)
     Can work with PDB numbers (must have chain!) or Pose numbers for the glycosylation sites
     PDB number example: 123B. Or can give a list [ 123A, 123B ]
@@ -570,7 +616,7 @@ def glycosylate_working_pose( input_pose, glyco_file, glyco_sites ):
     :param glyco_file: str( /path/to/glyco.iupac file )
     :param glyco_sites: PDB numbers list( [ 123A, 123B ] ) or Pose numbers list( [ 35, 78 ] )
     :return: glycosylated Pose
-    """
+    '''
     # imports
     import re, sys
     from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
@@ -633,11 +679,11 @@ def glycosylate_working_pose( input_pose, glyco_file, glyco_sites ):
 
 
 def get_chains( input_pose, residue_range = None ):
-    """
+    '''
     Get a list of the chain ID's in the Pose. Can get the chain ID's associated with specific residues in <residue_range>
     :param input_pose: Pose
     :return: list( chains ) such as [ 'A', 'B', 'C' ]
-    """
+    '''
     chains = []
 
     # if no residue_range was given, replace it with all the residues in the input_pose
@@ -656,12 +702,12 @@ def get_chains( input_pose, residue_range = None ):
 
 
 def calc_mean_degrees( data ):
-    """
+    '''
     Given a list of <data> in degrees from -180 to 180, return the mean
     Since I can't use NumPy on Jazz
     :param data: list( data points )
     :return: float( mean )
-    """
+    '''
     '''
     # imports
     Found from https://rosettacode.org/wiki/Averages/Mean_angle
@@ -674,12 +720,12 @@ def calc_mean_degrees( data ):
 
 
 def calc_stddev_degrees( data ):
-    """
+    '''
     Given a list of <data> in degrees from -180 to 180, return the sample standard deviation
     Since I can't use NumPy on Jazz
     :param data: list( data points )
     :return: float( standard deviation )
-    """
+    '''
     # imports
     from math import sqrt
 
@@ -701,7 +747,7 @@ def calc_stddev_degrees( data ):
 
 
 def make_RotamerTrialsMover( moveable_residues, sf, input_pose, pack_radius = None ):
-    """
+    '''
     Given a list of <moveable_residues>, get all additional residues within <pack_radius> Angstroms around them in <input_pose> and return a RotamerTrialsMover that will pack these residues
     If no <pack_radius> is given, then only residues in <moveable_residues> will be allowed to pack
     :param moveable_residues: list( Pose numbers )
@@ -709,7 +755,7 @@ def make_RotamerTrialsMover( moveable_residues, sf, input_pose, pack_radius = No
     :param input_pose: Pose
     :param pack_radius: int( or float( radius in Angstroms to pack around the <moveable_residues>. Uses nbr_atom to determine residues in proximity ) ) Default = None which means that only residues in <moveable_residues> get packed
     :return: RotamerTrialsMover
-    """
+    '''
     # imports
     from rosetta import standard_packer_task, RotamerTrialsMover
 

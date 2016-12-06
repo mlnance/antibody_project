@@ -731,8 +731,8 @@ class Model3ay4Glycan:
                     # make and apply the min_mover
                     min_mover = MinMover( movemap_in = min_mm, 
                                           scorefxn_in = self.sf,
-                                          #min_type_in = "dfpmin_strong_wolfe",
-                                          min_type_in = "lbfgs_armijo_nonmonotone", # will move to this because this is Rosetta standard
+                                          min_type_in = "dfpmin_strong_wolfe",
+                                          #min_type_in = "lbfgs_armijo_nonmonotone", # will move to this because this is Rosetta standard
                                           tolerance_in = 0.01,
                                           use_nb_list_in = True )
                     min_mover.apply( working_pose )

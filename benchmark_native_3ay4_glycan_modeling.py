@@ -110,9 +110,6 @@ if input_args.protocol_num == 100:
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
-        mm.set_chi( res_num, True )
-        if native_pose.residue( res_num ).is_branch_point():
-            mm.set_branches( res_num, True )
 
     # create the desired scorefxn
     sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
@@ -160,9 +157,6 @@ elif input_args.protocol_num == 101:
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
-        mm.set_chi( res_num, True )
-        if native_pose.residue( res_num ).is_branch_point():
-            mm.set_branches( res_num, True )
 
     # create the desired scorefxn
     sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
@@ -210,9 +204,6 @@ elif input_args.protocol_num == 102:
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
-        mm.set_chi( res_num, True )
-        if native_pose.residue( res_num ).is_branch_point():
-            mm.set_branches( res_num, True )
 
     # create the desired scorefxn
     sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
@@ -260,9 +251,6 @@ elif input_args.protocol_num == 103:
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
-        mm.set_chi( res_num, True )
-        if native_pose.residue( res_num ).is_branch_point():
-            mm.set_branches( res_num, True )
 
     # create the desired scorefxn
     sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
@@ -310,9 +298,6 @@ elif input_args.protocol_num == 104:
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
-        mm.set_chi( res_num, True )
-        if native_pose.residue( res_num ).is_branch_point():
-            mm.set_branches( res_num, True )
 
     # create the desired scorefxn
     sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
@@ -360,9 +345,6 @@ elif input_args.protocol_num == 105:
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
-        mm.set_chi( res_num, True )
-        if native_pose.residue( res_num ).is_branch_point():
-            mm.set_branches( res_num, True )
 
     # create the desired scorefxn
     sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
@@ -410,9 +392,6 @@ elif input_args.protocol_num == 106:
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
-        mm.set_chi( res_num, True )
-        if native_pose.residue( res_num ).is_branch_point():
-            mm.set_branches( res_num, True )
 
     # create the desired scorefxn
     sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )

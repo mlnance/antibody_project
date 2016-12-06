@@ -705,8 +705,8 @@ class Model3ay4Glycan:
                         # set chi to True in the min_mm if the residue is not a branch point
                         # skipping surrounding carbohydrate residues (FcR glycan) because PyR3 treats the bb
                         # as chi for some reason (setting chi min to True for glycan moves more than the side
-                        # chains. This is a bug. Just ignoring the bug for now) keeping the carb chi in for
-                        # consistency though until I figure out what to do
+                        # chains. This is a bug. Just ignoring the bug for now)
+                        # ignoring the chi of branch points and sugar residues because it does weird stuff
                         for surrounding_res in surrounding_residues:
                             if not working_pose.residue( surrounding_res ).is_branch_point():
                                 if not working_pose.residue( surrounding_res ).is_carbohydrate():
@@ -739,8 +739,8 @@ class Model3ay4Glycan:
                     # make and apply the min_mover
                     min_mover = MinMover( movemap_in = min_mm, 
                                           scorefxn_in = self.sf,
-                                          min_type_in = "dfpmin_strong_wolfe",
-                                          #min_type_in = "lbfgs_armijo_nonmonotone", # will move to this because this is Rosetta standard
+                                          #min_type_in = "dfpmin_strong_wolfe",
+                                          min_type_in = "lbfgs_armijo_nonmonotone", # will move to this because this is Rosetta standard
                                           tolerance_in = 0.01,
                                           use_nb_list_in = True )
                     min_mover.apply( working_pose )

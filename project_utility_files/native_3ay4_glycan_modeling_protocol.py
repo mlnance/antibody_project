@@ -673,9 +673,9 @@ class Model3ay4Glycan:
                 ##################################
                 #### PREPARE FOR PACK AND MIN ####
                 ##################################
-                # if you aren't going to pack this round, then the pack_and_min_residues will mirror the residues that were just moved
+                # if you aren't going to pack this round, then the pack_and_min_residues will mirror the glycan residues
                 # if you are packing this round, then you need residues surrounding as well
-                pack_and_min_residues = [ res_num for res_num in SSmM.moved_residues ]
+                pack_and_min_residues = [ res_num for res_num in self.moveable_residues ]
                 # if you aren't going to pack this round, then the minimizer's MoveMap should only include the self.moveable_residues (bb and chi)
                 # if you are packing this round, then the MoveMap has bb and chi for self.moveable_residues and chi for surrounding_residues
                 # default MoveMap creation has everything set to False, so set the appropriate residues to True

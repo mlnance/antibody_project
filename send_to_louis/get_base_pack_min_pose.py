@@ -159,8 +159,10 @@ while not jd.job_complete:
     working_pose_info = hold_chain_and_res_designations_3ay4()
     working_pose_info.native()
 
-    # collect all non-branch point residue numbers
-    moveable_residues = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) if working_pose.residue( res_num ).is_branch_point() == False ]
+    # collect all residue numbers
+    # this is redundant but oh well
+    # non-branch and non-carbohydrate residues will be ignored when minizming chi
+    moveable_residues = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) ]
 
     for ii in range( 2 ):
         # pack all residues except for branch point residues
@@ -178,7 +180,10 @@ while not jd.job_complete:
         for res_num in moveable_residues:
             # minimizing chi of sugars is really weird...it moves the whole residue
             if not working_pose.residue( res_num ).is_carbohydrate():
-                mm.set_chi( res_num, True )
+                # minimizing branch points (like Asn297) moves the glycan too
+                # turning that off for consistency for now (12/6/2016)
+                if not working_pose.residue( res_num ).is_branch_point():
+                    mm.set_chi( res_num, True )
 
         # minimize the chi's that were just packed now
         min_mover = MinMover( movemap_in = mm,

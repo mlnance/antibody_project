@@ -617,6 +617,8 @@ class Model3ay4Glycan:
                                                         target_angle_max = self.angle_min, 
                                                         current_step = inner_trial, 
                                                         total_steps = self.inner_trials )
+                    # DEBUG
+                    #print "angle_max: %s" %angle_max
 
 
             	#########################################

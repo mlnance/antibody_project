@@ -866,9 +866,13 @@ elif input_args.protocol_num == 27:
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
 
-# for protocol_28 I have updated SugarSmallMover into a class and now only minimize the bb of the
-# made a new start pose by packing and minimizing the chi of only non-branch protein residues
-# specific residues that were moved using the SSM
+# for protocol_28 I have updated SugarSmallMover into a class
+# bb of all moveable glycan minimized every round
+# everything 3 rounds surrounding side chains get packed
+# but only protein side chains have the chi minimized because chi min of sugars is weird
+# also not minimizing the chi of branches because that moves the sugars in a weird way too
+# so the starting pose from here on out was minimized in the same way except bb was always off
+# also moved from the strong wolfe thing to the lbfgs one
 elif input_args.protocol_num == 28:
     # create the necessary minimization (and overall movement) MoveMap for Protocol_28 version
     ###########################################################################################
@@ -877,9 +881,6 @@ elif input_args.protocol_num == 28:
     mm = MoveMap()
     for res_num in native_Fc_glycan_nums:
         mm.set_bb( res_num, True )
-        mm.set_chi( res_num, False )
-        if native_pose.residue( res_num ).is_branch_point():
-            mm.set_branches( res_num, False )
 
     # create the desired scorefxn
     sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
@@ -890,9 +891,9 @@ elif input_args.protocol_num == 28:
                                            angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
                                            dump_dir = input_args.structure_dir, 
                                            pmm = pmm )
-    GlycanModelProtocol.outer_trials = 2
-    GlycanModelProtocol.inner_trials = 250
-    GlycanModelProtocol.moves_per_trial = 3
+    GlycanModelProtocol.outer_trials = 1
+    GlycanModelProtocol.inner_trials = 600
+    GlycanModelProtocol.moves_per_trial = 1
     GlycanModelProtocol.LCM_reset = True
     GlycanModelProtocol.use_population_ideal_LCM_reset = False
     GlycanModelProtocol.spin_carb_connected_to_prot = False
@@ -914,6 +915,7 @@ elif input_args.protocol_num == 28:
     GlycanModelProtocol.verbose = input_args.verbose
     GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
+    GlycanModelProtocol.watch_accepted_move_sizes = True
 
     # write information to file (also prints to screen)
     GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )

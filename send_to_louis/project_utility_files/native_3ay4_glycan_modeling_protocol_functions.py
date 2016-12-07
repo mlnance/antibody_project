@@ -381,11 +381,11 @@ class SugarSmallMover:
                         self.small_angle = self.big_angle / 2.0
 
                 # prepare a new torsion value
-                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move, took out .rg()
+                # this specific format is pulled from rosetta.protocols.simple_moves:SmallMover::make_move, took out .rg()
                 new_torsion_value = periodic_range( old_torsion_value - self.small_angle + uniform() * self.big_angle, 360.0 )
                 moveable_torsion_new_values.append( new_torsion_value )
                 # store the amount that this was perturbed by using the new and old torsion value
-                moveable_torsion_perturbations.append( new_torsion_value - old_torsion_value )
+                moveable_torsion_perturbations.append( periodic_range( new_torsion_value - old_torsion_value, 360.0 ) )
                 # perturb this torsion randomly
                 set_glycosidic_torsion( moveable_torsion, self.pose_in, res_num, new_torsion_value )
             # add the moveable_torsion_values to the class-held list

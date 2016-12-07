@@ -24,17 +24,6 @@ class Model3ay4Glycan:
         :param dump_dir: str( /path/to/structure dump directory )
         :param pmm: PyMOL_Mover
         '''
-        # pandas isn't on Jazz, so use the csv module if you can't use pandas
-        # this is for watching energy per trial number
-        try:
-            import pandas as pd
-            self.df = pd.DataFrame()
-            self.pandas = True
-        except:
-            self.df = None
-            self.pandas = False
-            pass
-
         # default arguments
         self.name = "Model3ay4Glycan"
 
@@ -89,6 +78,7 @@ class Model3ay4Glycan:
 
         # watch and listen arguments
         self.verbose = False
+        self.watch_accepted_move_sizes = False
         self.watch_E_vs_trial = False
         self.lowest_score_seen = None
         self.lowest_score_pose_seen = None
@@ -306,11 +296,31 @@ class Model3ay4Glycan:
             make_RotamerTrialsMover, get_res_nums_within_radius
 
 
+        # pandas isn't on Jazz, so use the csv module if you can't use pandas
+        if self.watch_accepted_move_sizes or self.watch_E_vs_trial:
+            try:
+                import pandas as pd
+                self.pandas = True
+                self.E_vs_trial_df = pd.DataFrame()
+                self.move_size_df = pd.DataFrame()
+            except:
+                import csv
+                self.pandas = False
+                pass
+
+        # for watching the range of accepted move size
+        if self.watch_accepted_move_sizes:
+            move_size_trial_nums = []
+            moved_torsions = []
+            move_sizes = []
+            res_nums = []
+            move_accepted = []
+
         # for watching the energy per trial
         if self.watch_E_vs_trial:
-            self.trial_nums = []
-            self.energies = []
-            self.lowest_seen_energies = []
+            E_vs_trial_nums = []
+            energies = []
+            lowest_seen_energies = []
 
         ##########################
         #### COPY INPUT POSES ####
@@ -530,10 +540,10 @@ class Model3ay4Glycan:
         # append all the information to the lists
         if self.watch_E_vs_trial:
             # 0th trial is the reset pose
-            self.trial_nums.append( 0 )
-            self.energies.append( self.watch_sf( working_pose ) )
+            E_vs_trial_nums.append( 0 )
+            energies.append( self.watch_sf( working_pose ) )
             # the lowest seen pose and energy will be that of the reset pose to start
-            self.lowest_seen_energies.append( self.watch_sf( working_pose ) )
+            lowest_seen_energies.append( self.watch_sf( working_pose ) )
             self.lowest_score_seen = self.watch_sf( working_pose )
             self.lowest_score_pose_seen = working_pose.clone()
 
@@ -746,7 +756,9 @@ class Model3ay4Glycan:
             	#### ACCEPT OR REJECT MOVE ####
             	###############################
                 # accept or reject the total move using the MonteCarlo object
+                accepted = False
                 if self.mc.boltzmann( working_pose ):
+                    accepted = True
                     # add the accepted-move pose to the list of poses for the movie, if desired
                     if self.make_movie:
                         # change the name to just "protocol_X_decoy_Y_Z.pdb" without path location
@@ -769,6 +781,17 @@ class Model3ay4Glycan:
                         pass
                 num_mc_checks += 1
 
+                # for watching range of accepted move size
+                if self.watch_accepted_move_sizes:
+                    # each residue has each torsion in it perturbed by a different amount
+                    for ii in range( SSmM.n_moves ):
+                        for jj in range( len( SSmM.moved_residues_torsions[ ii ] ) ):
+                            move_size_trial_nums.append( inner_trial + self.inner_trials * ( outer_trial - 1 ) )
+                            moved_torsions.append( SSmM.moved_residues_torsions[ ii ][ jj ] )
+                            move_sizes.append( SSmM.moved_residues_torsions_perturbations[ ii ][ jj ] )
+                            res_nums.append( SSmM.moved_residues[ ii ] )
+                            move_accepted.append( accepted )
+
                 # for watching energy during a protocol
                 if self.watch_E_vs_trial:
                     # collect the lowest-scoring decoy seen using the watch_sf
@@ -778,9 +801,9 @@ class Model3ay4Glycan:
                         self.lowest_score_seen = self.watch_sf( working_pose )
                         self.lowest_score_pose_seen = working_pose.clone()
                     # append all the information to the lists
-                    self.trial_nums.append( inner_trial + self.inner_trials * ( outer_trial - 1 ) )
-                    self.energies.append( self.watch_sf( working_pose ) )
-                    self.lowest_seen_energies.append( self.lowest_score_seen )
+                    E_vs_trial_nums.append( inner_trial + self.inner_trials * ( outer_trial - 1 ) )
+                    energies.append( self.watch_sf( working_pose ) )
+                    lowest_seen_energies.append( self.lowest_score_seen )
 
                 # print out the MC acceptance rate every 3 trials and on the last trial
                 mc_acceptance = round( ( float( num_mc_accepts ) / float( num_mc_checks ) * 100 ), 2 )
@@ -807,17 +830,26 @@ class Model3ay4Glycan:
             E_vs_trial_filename = E_vs_trial_dir + self.decoy_name.split( '/' )[-1].split( ".pdb" )[0] + "_E_vs_trial.csv"
             # use a pandas DataFrame, if possible
             if self.pandas:
-                self.df[ "trial_nums" ] = self.trial_nums
-                self.df[ "total_score" ] = self.energies
-                self.df[ "lowest_score" ] = self.lowest_seen_energies
-                self.df.to_csv( E_vs_trial_filename )
+                self.E_vs_trial_df[ "trial_nums" ] = E_vs_trial_nums
+                self.E_vs_trial_df[ "total_score" ] = energies
+                self.E_vs_trial_df[ "lowest_score" ] = lowest_seen_energies
+                self.E_vs_trial_df.to_csv( E_vs_trial_filename )
             # otherwise I'm on jazz and can't use a DataFrame, so use a csv file instead
             else:
-                import csv
-                data_rows = zip( self.trial_nums, self.energies, self.lowest_seen_energies )
+                data_rows = zip( E_vs_trial_nums, energies, lowest_seen_energies )
                 with open( E_vs_trial_filename, "wb" ) as fh:
                     csvwriter = csv.writer( fh )
                     csvwriter.writerow( [ "trial_num", "score", "lowest_score" ] )
                     [ csvwriter.writerow( row ) for row in data_rows ]
+
+        if self.watch_accepted_move_sizes:
+            if self.pandas:
+                self.move_size_df[ "trial_nums" ] = move_size_trial_nums
+                self.move_size_df[ "torsion" ] = moved_torsions
+                self.move_size_df[ "res_num" ] = res_nums
+                self.move_size_df[ "move_size" ] = move_sizes
+                self.move_size_df[ "mc_accept" ] = move_accepted
+            else:
+                pass
 
         return working_pose

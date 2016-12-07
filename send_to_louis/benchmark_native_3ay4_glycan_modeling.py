@@ -121,7 +121,7 @@ if input_args.protocol_num == 100:
                                            dump_dir = input_args.structure_dir, 
                                            pmm = pmm )
     GlycanModelProtocol.outer_trials = 1
-    GlycanModelProtocol.inner_trials = 20
+    GlycanModelProtocol.inner_trials = 10
     GlycanModelProtocol.moves_per_trial = 1
     GlycanModelProtocol.LCM_reset = True
     GlycanModelProtocol.use_population_ideal_LCM_reset = False
@@ -404,6 +404,198 @@ elif input_args.protocol_num == 106:
                                            pmm = pmm )
     GlycanModelProtocol.outer_trials = 1
     GlycanModelProtocol.inner_trials = 1280
+    GlycanModelProtocol.moves_per_trial = 1
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = False
+    GlycanModelProtocol.spin_using_ideal_omegas = False
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = False
+    # default.table now includes IgG1 Fc stats, so this shouldn't need to be used
+    GlycanModelProtocol.set_native_core_omegas_to_stats = False
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.ramp_angle_max = True
+    GlycanModelProtocol.angle_min = 6.0 * 3
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.01
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.pack_after_x_rounds = 3
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
+    GlycanModelProtocol.verbose = input_args.verbose
+    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.watch_E_vs_trial = True
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
+### PURELY FOR TESTING HOW MANY OUTER CYCLES ARE NEEDED IF THEY HELP ###
+### INNER TRIAL BENCHMARK CAME OUT TO MAKING 800 MOVES LOOK GOOD ENOUGH ### idk
+elif input_args.protocol_num == 110:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_110 version
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
+    mm = MoveMap()
+    for res_num in native_Fc_glycan_nums:
+        mm.set_bb( res_num, True )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+
+    # Protocol_110 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.outer_trials = 1
+    GlycanModelProtocol.inner_trials = 800
+    GlycanModelProtocol.moves_per_trial = 1
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = False
+    GlycanModelProtocol.spin_using_ideal_omegas = False
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = False
+    # default.table now includes IgG1 Fc stats, so this shouldn't need to be used
+    GlycanModelProtocol.set_native_core_omegas_to_stats = False
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.ramp_angle_max = True
+    GlycanModelProtocol.angle_min = 6.0 * 3
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.01
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.pack_after_x_rounds = 3
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
+    GlycanModelProtocol.verbose = input_args.verbose
+    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.watch_E_vs_trial = True
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
+### PURELY FOR TESTING HOW MANY OUTER CYCLES ARE NEEDED IF THEY HELP ###
+### INNER TRIAL BENCHMARK CAME OUT TO MAKING 800 MOVES LOOK GOOD ENOUGH ### idk
+elif input_args.protocol_num == 111:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_111 version
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
+    mm = MoveMap()
+    for res_num in native_Fc_glycan_nums:
+        mm.set_bb( res_num, True )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+
+    # Protocol_111 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.outer_trials = 2
+    GlycanModelProtocol.inner_trials = 400
+    GlycanModelProtocol.moves_per_trial = 1
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = False
+    GlycanModelProtocol.spin_using_ideal_omegas = False
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = False
+    # default.table now includes IgG1 Fc stats, so this shouldn't need to be used
+    GlycanModelProtocol.set_native_core_omegas_to_stats = False
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.ramp_angle_max = True
+    GlycanModelProtocol.angle_min = 6.0 * 3
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.01
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.pack_after_x_rounds = 3
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
+    GlycanModelProtocol.verbose = input_args.verbose
+    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.watch_E_vs_trial = True
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
+### PURELY FOR TESTING HOW MANY OUTER CYCLES ARE NEEDED IF THEY HELP ###
+### INNER TRIAL BENCHMARK CAME OUT TO MAKING 800 MOVES LOOK GOOD ENOUGH ### idk
+elif input_args.protocol_num == 112:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_112 version
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
+    mm = MoveMap()
+    for res_num in native_Fc_glycan_nums:
+        mm.set_bb( res_num, True )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+
+    # Protocol_112 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.outer_trials = 3
+    GlycanModelProtocol.inner_trials = 267
+    GlycanModelProtocol.moves_per_trial = 1
+    GlycanModelProtocol.LCM_reset = True
+    GlycanModelProtocol.use_population_ideal_LCM_reset = False
+    GlycanModelProtocol.spin_carb_connected_to_prot = False
+    GlycanModelProtocol.spin_using_ideal_omegas = False
+    GlycanModelProtocol.set_native_omega = False
+    GlycanModelProtocol.set_native_core = False
+    # default.table now includes IgG1 Fc stats, so this shouldn't need to be used
+    GlycanModelProtocol.set_native_core_omegas_to_stats = False
+    GlycanModelProtocol.ramp_sf = True
+    GlycanModelProtocol.ramp_angle_max = True
+    GlycanModelProtocol.angle_min = 6.0 * 3
+    GlycanModelProtocol.fa_atr_ramp_factor = 2.0
+    GlycanModelProtocol.fa_rep_ramp_factor = 0.01
+    GlycanModelProtocol.minimize_each_round = True
+    GlycanModelProtocol.pack_after_x_rounds = 3
+    GlycanModelProtocol.make_small_moves = True
+    GlycanModelProtocol.make_shear_moves = False
+    GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
+    GlycanModelProtocol.verbose = input_args.verbose
+    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.watch_E_vs_trial = True
+
+    # write information to file (also prints to screen)
+    GlycanModelProtocol.write_protocol_info_file( native_pose, input_args.protocol_num )
+
+### PURELY FOR TESTING HOW MANY OUTER CYCLES ARE NEEDED IF THEY HELP ###
+### INNER TRIAL BENCHMARK CAME OUT TO MAKING 800 MOVES LOOK GOOD ENOUGH ### idk
+elif input_args.protocol_num == 113:
+    # create the necessary minimization (and overall movement) MoveMap for Protocol_113 version
+    ###########################################################################################
+    #### THIS PROTOCOL INVOLVES PACKING AND CHI MIN BUT OMEGA 1 & 2 IS SET TO IgG1 Fc DATA ####
+    ###########################################################################################
+    mm = MoveMap()
+    for res_num in native_Fc_glycan_nums:
+        mm.set_bb( res_num, True )
+
+    # create the desired scorefxn
+    sf = get_fa_scorefxn_with_given_weights( { "fa_intra_rep" : 0.44, "atom_pair_constraint" : 1.0 } )
+
+    # Protocol_113 creation and argument setting
+    GlycanModelProtocol = Model3ay4Glycan( mm_in = mm, 
+                                           sf_in = sf, 
+                                           angle_max = 6.0 * 5,  # 6.0 comes from default angle_max from SmallMover and ShearMover
+                                           dump_dir = input_args.structure_dir, 
+                                           pmm = pmm )
+    GlycanModelProtocol.outer_trials = 4
+    GlycanModelProtocol.inner_trials = 200
     GlycanModelProtocol.moves_per_trial = 1
     GlycanModelProtocol.LCM_reset = True
     GlycanModelProtocol.use_population_ideal_LCM_reset = False

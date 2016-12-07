@@ -234,14 +234,6 @@ class Model3ay4Glycan:
         except:
             pass
 
-        # create a working directory to be used for dumping E vs trial_num, if needed
-        if self.watch_E_vs_trial:
-            self.E_vs_trial_dir = self.dump_dir + "E_vs_trial_dir/"
-            try:
-                os.mkdir( self.E_vs_trial_dir )
-            except:
-                pass
-
 
     def write_protocol_info_file( self, pose, protocol_num ):
         info_file_details = []
@@ -802,7 +794,15 @@ class Model3ay4Glycan:
 
         # for watching energy during a protocol
         if self.watch_E_vs_trial:
-            E_vs_trial_filename = self.E_vs_trial_dir + self.decoy_name.split( '/' )[-1].split( ".pdb" )[0] + "_E_vs_trial.csv"
+            # make the dump dir for the .csv files if needed
+            E_vs_trial_dir = self.dump_dir + "E_vs_trial_dir/"
+            if not os.path.isdir( E_vs_trial_dir ):
+                try:
+                    os.mkdir( E_vs_trial_dir )
+                except:
+                    pass
+            # make the filename using the E_vs_trial_dir
+            E_vs_trial_filename = E_vs_trial_dir + self.decoy_name.split( '/' )[-1].split( ".pdb" )[0] + "_E_vs_trial.csv"
             # use a pandas DataFrame, if possible
             if self.pandas:
                 self.df[ "trial_nums" ] = self.trial_nums

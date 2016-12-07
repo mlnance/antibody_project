@@ -142,7 +142,7 @@ if input_args.protocol_num == 100:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
@@ -189,7 +189,7 @@ elif input_args.protocol_num == 101:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
@@ -236,7 +236,7 @@ elif input_args.protocol_num == 102:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
@@ -283,7 +283,7 @@ elif input_args.protocol_num == 103:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
@@ -330,7 +330,7 @@ elif input_args.protocol_num == 104:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
@@ -377,7 +377,7 @@ elif input_args.protocol_num == 105:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
@@ -424,7 +424,7 @@ elif input_args.protocol_num == 106:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
@@ -472,7 +472,7 @@ elif input_args.protocol_num == 110:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
@@ -520,7 +520,7 @@ elif input_args.protocol_num == 111:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
@@ -568,7 +568,7 @@ elif input_args.protocol_num == 112:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)
@@ -616,7 +616,7 @@ elif input_args.protocol_num == 113:
     GlycanModelProtocol.make_shear_moves = False
     GlycanModelProtocol.constraint_file = "project_constraint_files/native_3ay4_Gal_6A_1A_tol.cst"
     GlycanModelProtocol.verbose = input_args.verbose
-    GlycanModelProtocol.make_move = True
+    GlycanModelProtocol.make_movie = False
     GlycanModelProtocol.watch_E_vs_trial = True
 
     # write information to file (also prints to screen)

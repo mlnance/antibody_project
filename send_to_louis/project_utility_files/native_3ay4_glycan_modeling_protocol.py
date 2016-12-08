@@ -364,7 +364,7 @@ class Model3ay4Glycan:
                                                                   input_pose = working_pose, 
                                                                   use_population_ideal_LCM_reset = self.use_population_ideal_LCM_reset ) )
             if self.verbose:
-                print "score of LCM reset:", self.watch_sf( working_pose )
+                print "score of LCM reset:", self.watch_sf( working_pose.clone() )
 
 
         ##########################
@@ -375,7 +375,7 @@ class Model3ay4Glycan:
             working_pose.assign( native_3ay4_Fc_glycan_random_reset( mm = self.mm, 
                                                                      input_pose = working_pose ) )
             if self.verbose:
-                print "score of random reset:", self.watch_sf( working_pose )
+                print "score of random reset:", self.watch_sf( working_pose.clone() )
 
 
         ######################################################
@@ -394,7 +394,7 @@ class Model3ay4Glycan:
                                                                input_pose = working_pose, 
                                                                spin_using_ideal_omegas = self.spin_using_ideal_omegas) )
             if self.verbose:
-                print "score of core GlcNAc spin:", self.watch_sf( working_pose )
+                print "score of core GlcNAc spin:", self.watch_sf( working_pose.clone() )
 
 
         #########################################
@@ -406,7 +406,7 @@ class Model3ay4Glycan:
             working_pose.set_omega( 221, self.native_pose.omega( 221 ) )
             working_pose.set_omega( 445, self.native_pose.omega( 445 ) )
             if self.verbose:
-                print "score of omega branch reset:", self.watch_sf( working_pose )
+                print "score of omega branch reset:", self.watch_sf( working_pose.clone() )
 
 
         ########################################
@@ -432,7 +432,7 @@ class Model3ay4Glycan:
             set_glycosidic_torsion( omega2_dihedral, working_pose, 440, 
                                     get_glycosidic_torsion( omega2_dihedral, self.native_pose, 440 ) )
             if self.verbose:
-                print "score of core GlcNAc reset:", self.watch_sf( working_pose )
+                print "score of core GlcNAc reset:", self.watch_sf( working_pose.clone() )
 
 
         # no longer needed because I changed the default.table to store these data
@@ -496,7 +496,7 @@ class Model3ay4Glycan:
             set_glycosidic_torsion( omega2_dihedral, working_pose, 440, new_omega2_440 )
 
             if self.verbose:
-                print "score of core GlcNAc reset using IgG Fc statistics:", self.watch_sf( working_pose )
+                print "score of core GlcNAc reset using IgG Fc statistics:", self.watch_sf( working_pose.clone() )
         '''
 
 
@@ -541,10 +541,10 @@ class Model3ay4Glycan:
         if self.watch_E_vs_trial:
             # 0th trial is the reset pose
             E_vs_trial_nums.append( 0 )
-            energies.append( self.watch_sf( working_pose ) )
+            energies.append( self.watch_sf( working_pose.clone() ) )
             # the lowest seen pose and energy will be that of the reset pose to start
-            lowest_seen_energies.append( self.watch_sf( working_pose ) )
-            self.lowest_score_seen = self.watch_sf( working_pose )
+            lowest_seen_energies.append( self.watch_sf( working_pose.clone() ) )
+            self.lowest_score_seen = self.watch_sf( working_pose.clone() )
             self.lowest_score_pose_seen = working_pose.clone()
 
 
@@ -609,7 +609,7 @@ class Model3ay4Glycan:
             for inner_trial in range( 1, self.inner_trials + 1 ):
                 # print current score
                 if self.verbose:
-                    print "\nstarting score:", self.watch_sf( working_pose )
+                    print "\nstarting score:", self.watch_sf( working_pose.clone() )
 
             	####################################
             	#### RAMP WITH ANGLE MAX UPDATE ####
@@ -679,7 +679,7 @@ class Model3ay4Glycan:
 
                 # relay score information
                 if self.verbose:
-                    print "score after sugar moves:", self.watch_sf( working_pose )
+                    print "score after sugar moves:", self.watch_sf( working_pose.clone() )
 
 
                 ##################################
@@ -730,7 +730,7 @@ class Model3ay4Glycan:
                                                                         pack_radius = None )
                         rotamer_trials_mover.apply( working_pose )
                         if self.verbose:
-                            print "score after local pack:", self.watch_sf( working_pose )
+                            print "score after local pack:", self.watch_sf( working_pose.clone() )
 
 
             	###################
@@ -749,7 +749,7 @@ class Model3ay4Glycan:
                                           use_nb_list_in = True )
                     min_mover.apply( working_pose )
                     if self.verbose:
-                        print "score after min:", self.watch_sf( working_pose )
+                        print "score after min:", self.watch_sf( working_pose.clone() )
 
 
             	###############################
@@ -797,12 +797,12 @@ class Model3ay4Glycan:
                     # collect the lowest-scoring decoy seen using the watch_sf
                     # can't use the mc.lowest_score() because that uses the ramped sf, so the score is variable
                     # update the lowest_score_seen if the current working_pose has a lower score
-                    if self.watch_sf( working_pose ) < self.lowest_score_seen:
-                        self.lowest_score_seen = self.watch_sf( working_pose )
+                    if self.watch_sf( working_pose.clone() ) < self.lowest_score_seen:
+                        self.lowest_score_seen = self.watch_sf( working_pose.clone() )
                         self.lowest_score_pose_seen = working_pose.clone()
                     # append all the information to the lists
                     E_vs_trial_nums.append( inner_trial + self.inner_trials * ( outer_trial - 1 ) )
-                    energies.append( self.watch_sf( working_pose ) )
+                    energies.append( self.watch_sf( working_pose.clone() ) )
                     lowest_seen_energies.append( self.lowest_score_seen )
 
                 # print out the MC acceptance rate every 3 trials and on the last trial

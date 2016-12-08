@@ -569,10 +569,16 @@ class Model3ay4Glycan:
         # create the MonteCarlo object
         if self.mc is None:
             self.mc = MonteCarlo( working_pose, self.sf, self.kT )
+        self.mc.set_temperature( self.kT )
         # reset everything just to be safe since MonteCarlo is a mess
+        # clear and reset the counters
         self.mc.reset_counters()
+        # last_accepted_pose and lowest_score_pose is an empty pose
+        # lowest_score is still the lowest E seen
         self.mc.clear_poses()
-        self.mc.reset( working_pose )
+        # sets the passed sf as the mc.sf and the last_accepted_pose as the passed pose
+        # the lowest_score_pose is the passed pose and the lowest_score is the
+        # score of the passed pose using the passed sf
         self.mc.reset_scorefxn( working_pose, self.sf )
 
 
@@ -598,13 +604,6 @@ class Model3ay4Glycan:
         movie_num = 1
         # for each set of outer trials
         for outer_trial in range( 1, self.outer_trials + 1 ):
-            # reset the MonteCarlo object with the working_pose before each chunk of inner_trials
-            self.mc.reset_counters()
-            self.mc.clear_poses()
-            self.mc.reset( working_pose )
-            # whether ramp_sf is True or False, this should reset the MC to the latest pose with the passed sf weights
-            self.mc.reset_scorefxn( working_pose, self.sf )
-
             # inner_trial must be 1 to N because decoy 0 will be the reset_pose when creating a movie
             for inner_trial in range( 1, self.inner_trials + 1 ):
                 # print current score
@@ -645,6 +644,14 @@ class Model3ay4Glycan:
                         # adjust the fa_rep weight by the passed fa_rep_ramp_factor
                         FA_REP_NEW = FA_REP_ORIG * self.fa_rep_ramp_factor
                         self.sf.set_weight( fa_rep, FA_REP_NEW )
+                        # reset the MonteCarlo object with the working_pose and ramped sf
+                        # inner_trial == 1 means we should forget everything that happened in a previous round of outer_trials
+                        self.mc.reset_counters()
+                        self.mc.clear_poses()
+                        # the sf was just re-ramped, so ensure the MonteCarlo object is aware of this change and thinks
+                        # the working_pose using this ramped sf is the lowest_score_pose it has seen
+                        self.mc.reset_scorefxn( working_pose, self.sf )
+
                     # else, adjust the score weight based on the current inner_trial step
                     else:
                         # ramp up or down the appropriate scoring terms
@@ -656,11 +663,16 @@ class Model3ay4Glycan:
                                                                            target_weight = FA_REP_ORIG, 
                                                                            current_step = inner_trial, 
                                                                            total_steps = self.inner_trials ) )
+                        # give ramped sf back to MonteCarlo object
+                        # this is because MonteCarlo stores a clone so it does not update the sf itself
+                        self.mc.score_function( self.sf )
+                        # the sf was just re-ramped, so ensure the MonteCarlo object is aware of this change and thinks
+                        # the current working_pose using this ramped sf is the lowest_score_pose it has seen
+                        self.mc.reset_scorefxn( working_pose, self.sf )
+
                     # DEBUG
                     #print "\n".join( [ "%s %s" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) for score_type in self.sf.get_nonzero_weighted_scoretypes() ] )
-                    # give ramped sf back to MonteCarlo object
-                    # this is because PyRosetta apparently doesn't do the whole pointer thing with the sf
-                    self.mc.score_function( self.sf )
+                    #print "\n".join( [ "%s %s" %( str( score_type ), str( self.mc.score_function().get_weight( score_type ) ) ) for score_type in self.mc.score_function().get_nonzero_weighted_scoretypes() ] )
 
 
             	##########################

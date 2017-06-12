@@ -11,7 +11,6 @@ The intent for this file is to hold all of the single-call functions for each pr
 import sys, os
 
 
-
 class Model3ay4Glycan:
     #def __init__( self, mm_in, sf_in, argument_file = None, pmm = None ):
     #:param argument_file: str( /path/to/file that contains needed setter arguments for this protocol class
@@ -30,17 +29,15 @@ class Model3ay4Glycan:
         # required arguments
         self.mm = mm_in
         self.sf = sf_in
+        self.angle_max_in = angle_max
         self.angle_max = angle_max
         self.dump_dir = dump_dir
         self.watch_sf = sf_in.clone()  # used when looking for convergence and verbose print outs
         self.pmm = pmm
-        if self.pmm is not None:
-            pmm.keep_history( True )
 
         # default arguments
         #self.glyco_file = None  # not used for native protocol right now
-        self.outer_trials = 2
-        self.inner_trials = 50
+        self.trials = 50
         self.moves_per_trial = 1
         #self.light_reset = False  # not used at the moment
         self.random_reset = False
@@ -62,11 +59,13 @@ class Model3ay4Glycan:
         self.make_small_moves = True
         self.make_shear_moves = False
         self.move_all_torsions = True
-        self.moveable_residues = []  # gets filled when .apply() is called
         self.constraint_file = None
         self.kT = 0.8
         self.mc = None  # MonteCarlo object
         self.mc_acceptance = None
+        self.min_mover = None
+        self.pack_rotamers_mover = None
+        self.packer_task = None
         self.native_pose = None
         self.reset_pose = None
         self.pmm_name = None
@@ -76,15 +75,8 @@ class Model3ay4Glycan:
         self.dump_reset_pose = False
         self.zip_dump_poses = False
 
-        # watch and listen arguments
+        # "optional" arguments
         self.verbose = False
-        self.watch_accepted_move_sizes = False
-        self.watch_E_vs_trial = False
-        self.lowest_score_seen = None
-        self.lowest_score_pose_seen = None
-        self.make_movie = False
-        self.movie_poses = []
-        self.movie_poses_dir = None
 
 
         '''
@@ -125,7 +117,7 @@ class Model3ay4Glycan:
                         sys.exit()
                 elif arg == "trials":
                     try:
-                        self.inner_trials = int( trials )
+                        self.trials = int( trials )
                     except ValueError:
                         print "\nDid you give me a number for your trials argument in your argument_file?\n"
                         sys.exit()
@@ -230,13 +222,12 @@ class Model3ay4Glycan:
         info_file_details.append( "Protocol Number Used:\t\t\t%s\n" %protocol_num )
         info_file_details.append( "Native PDB filename:\t\t\t%s\n" %pose.pdb_info().name().split( '/' )[-1] )
         #info_file_details.append( "Sugar filename:\t\t\t\t%s\n" %input_args.glyco_file.split( '/' )[-1] )
-        info_file_details.append( "Number of Protocol outer trials:\t%s\n" %self.outer_trials )
-        info_file_details.append( "Number of Protocol inner trials:\t%s\n" %self.inner_trials )
+        info_file_details.append( "Number of SugarSmallMove trials:\t%s\n" %self.trials )
         info_file_details.append( "Number of SugarSmallMoves per trial:\t%s\n" %self.moves_per_trial )
         if self.ramp_angle_max:
-            angle_max_txt = "%s (meaning a max of +/- %s to either side of current which ramps down to %s throughout protocol)" %( self.angle_max, self.angle_max/2, self.angle_min/2 )
+            angle_max_txt = "%s (meaning a max of +/- %s to either side of current which ramps down to %s throughout protocol)" %( self.angle_max_in, self.angle_max_in/2, self.angle_min/2 )
         else:
-            angle_max_txt = "%s (meaning a max of +/- %s to either side of current)" %( self.angle_max, self.angle_max/2 )
+            angle_max_txt = "%s (meaning a max of +/- %s to either side of current)" %( self.angle_max_in, self.angle_max_in/2 )
         info_file_details.append( "Angle max (arc range available):\t%s\n" %angle_max_txt )
         #info_file_details.append( "Light reset of Fc glycan?:\t\t%s\n" %self.light_reset )
         info_file_details.append( "Random reset of Fc glycan?:\t\t%s\n" %self.random_reset )
@@ -261,10 +252,11 @@ class Model3ay4Glycan:
         # ScoreFunction information
         score_types = self.sf.get_nonzero_weighted_scoretypes()
         info_file_details.append( "\nScore weights used in ScoreFunction:\n" )
-        for score_type in score_types:
-            if str( score_type ) == "fa_atr":
+        for ii in range( 1, len( score_types ) ):
+            score_type = score_types[ii]
+            if str( score_type ).split( '.' )[-1] == "fa_atr":
                 info_file_details.append( "%s: %s * %s in ramp\n" %( str( score_type ), str( self.sf.get_weight( score_type ) ), self.fa_atr_ramp_factor ) )
-            elif str( score_type ) == "fa_rep":
+            elif str( score_type ).split( '.' )[-1] == "fa_rep":
                 info_file_details.append( "%s: %s * %s in ramp\n" %( str( score_type ), str( self.sf.get_weight( score_type ) ), self.fa_rep_ramp_factor ) )
             else:
                 info_file_details.append( "%s: %s\n" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) )
@@ -288,63 +280,25 @@ class Model3ay4Glycan:
         #################
         from os import popen
         from random import choice
-        from rosetta import MoveMap, MinMover, MonteCarlo, PyMOL_Mover
+        from rosetta.protocols.simple_moves import MinMover
+        from pyrosetta import MonteCarlo, standard_packer_task
+        from rosetta.protocols.simple_moves import RotamerTrialsMover
         from rosetta.core.scoring import fa_atr, fa_rep
+        #from antibody_functions import native_Fc_glycan_nums_except_core_GlcNAc  # shouldn't need this as a MoveMap is passed to create this class
         from native_3ay4_glycan_modeling_protocol_functions import native_3ay4_Fc_glycan_LCM_reset, \
             add_constraints_to_pose, get_ramp_score_weight, get_ramp_angle_max, \
-            native_3ay4_Fc_glycan_random_reset, SugarSmallMover, \
-            make_RotamerTrialsMover, get_res_nums_within_radius
+            native_3ay4_Fc_glycan_random_reset, get_res_nums_within_radius_of_residue_list, \
+            SugarSmallMover
 
 
-        # pandas isn't on Jazz, so use the csv module if you can't use pandas
-        if self.watch_accepted_move_sizes or self.watch_E_vs_trial:
-            try:
-                import pandas as pd
-                self.pandas = True
-                self.E_vs_trial_df = pd.DataFrame()
-                self.move_size_df = pd.DataFrame()
-            except:
-                import csv
-                self.pandas = False
-                pass
-
-        # for watching the range of accepted move size
-        if self.watch_accepted_move_sizes:
-            move_size_trial_nums = []
-            moved_torsions = []
-            move_sizes = []
-            res_nums = []
-            move_accepted = []
-
-        # for watching the energy per trial
-        if self.watch_E_vs_trial:
-            E_vs_trial_nums = []
-            energies = []
-            lowest_seen_energies = []
-
-        ##########################
-        #### COPY INPUT POSES ####
-        ##########################
+        ########################################
+        #### COPY POSES AND MAKE VISUALIZER ####
+        ########################################
         # get the working and native pose (for this particular script, they are the same thing)
-        self.native_pose = pose.clone()
+        native_pose = pose.clone()
         working_pose = pose.clone()
         self.decoy_name = working_pose.pdb_info().name()
-
-
-        #######################################
-        #### PREPARE FOR MOVIE, IF DESIRED ####
-        #######################################
-        # create a movie_poses_dir, if desired
-        if self.make_movie:
-            # each apply should have an empty self.movie_poses list
-            self.movie_poses = []
-            # make the directory, if needed
-            self.movie_poses_dir = self.dump_dir + "movie_poses_dir/"
-            if not os.path.isdir( self.movie_poses_dir ):
-                try:
-                    os.mkdir( self.movie_poses_dir )
-                except:
-                    pass
+        self.native_pose = native_pose.clone()
 
 
         ###############################
@@ -352,7 +306,7 @@ class Model3ay4Glycan:
         ###############################
         # get the moveable residues from passed MoveMap
         # moveable means the BackBone in the MoveMap was set to True and it is a carbohydrate
-        self.moveable_residues = [ res_num for res_num in range( 1, working_pose.n_residue() + 1 ) if self.mm.get_bb( res_num ) and working_pose.residue( res_num ).is_carbohydrate() ]
+        moveable_residues = [ res_num for res_num in range( 1, working_pose.size() + 1 ) if self.mm.get_bb( res_num ) and working_pose.residue( res_num ).is_carbohydrate() ]
 
 
         ###################
@@ -364,7 +318,7 @@ class Model3ay4Glycan:
                                                                   input_pose = working_pose, 
                                                                   use_population_ideal_LCM_reset = self.use_population_ideal_LCM_reset ) )
             if self.verbose:
-                print "score of LCM reset:", self.watch_sf( working_pose.clone() )
+                print "score of LCM reset:", self.watch_sf( working_pose )
 
 
         ##########################
@@ -375,7 +329,7 @@ class Model3ay4Glycan:
             working_pose.assign( native_3ay4_Fc_glycan_random_reset( mm = self.mm, 
                                                                      input_pose = working_pose ) )
             if self.verbose:
-                print "score of random reset:", self.watch_sf( working_pose.clone() )
+                print "score of random reset:", self.watch_sf( working_pose )
 
 
         ######################################################
@@ -394,7 +348,7 @@ class Model3ay4Glycan:
                                                                input_pose = working_pose, 
                                                                spin_using_ideal_omegas = self.spin_using_ideal_omegas) )
             if self.verbose:
-                print "score of core GlcNAc spin:", self.watch_sf( working_pose.clone() )
+                print "score of core GlcNAc spin:", self.watch_sf( working_pose )
 
 
         #########################################
@@ -403,10 +357,10 @@ class Model3ay4Glycan:
         # reset the native omega torsion, if desired
         # hardcoded for now as this is not something that would be done in a real protocol
         if self.set_native_omega:
-            working_pose.set_omega( 221, self.native_pose.omega( 221 ) )
-            working_pose.set_omega( 445, self.native_pose.omega( 445 ) )
+            working_pose.set_omega( 221, native_pose.omega( 221 ) )
+            working_pose.set_omega( 445, native_pose.omega( 445 ) )
             if self.verbose:
-                print "score of omega branch reset:", self.watch_sf( working_pose.clone() )
+                print "score of omega branch reset:", self.watch_sf( working_pose )
 
 
         ########################################
@@ -420,32 +374,28 @@ class Model3ay4Glycan:
 
             # reset the phi, psi, omega, and omega2 torsions of residues 216 and 440 (core GlcNAc to ASN-69)
             # 216
-            working_pose.set_phi( 216, self.native_pose.phi( 216 ) )
-            working_pose.set_psi( 216, self.native_pose.psi( 216 ) )
-            working_pose.set_omega( 216, self.native_pose.omega( 216 ) )
+            working_pose.set_phi( 216, native_pose.phi( 216 ) )
+            working_pose.set_psi( 216, native_pose.psi( 216 ) )
+            working_pose.set_omega( 216, native_pose.omega( 216 ) )
             set_glycosidic_torsion( omega2_dihedral, working_pose, 216, 
-                                    get_glycosidic_torsion( omega2_dihedral, self.native_pose, 216 ) )
+                                    get_glycosidic_torsion( omega2_dihedral, native_pose, 216 ) )
             # 440
-            working_pose.set_phi( 440, self.native_pose.phi( 440 ) )
-            working_pose.set_psi( 440, self.native_pose.psi( 440 ) )
-            working_pose.set_omega( 440, self.native_pose.omega( 440 ) )
+            working_pose.set_phi( 440, native_pose.phi( 440 ) )
+            working_pose.set_psi( 440, native_pose.psi( 440 ) )
+            working_pose.set_omega( 440, native_pose.omega( 440 ) )
             set_glycosidic_torsion( omega2_dihedral, working_pose, 440, 
-                                    get_glycosidic_torsion( omega2_dihedral, self.native_pose, 440 ) )
+                                    get_glycosidic_torsion( omega2_dihedral, native_pose, 440 ) )
             if self.verbose:
-                print "score of core GlcNAc reset:", self.watch_sf( working_pose.clone() )
+                print "score of core GlcNAc reset:", self.watch_sf( working_pose )
 
 
-        # no longer needed because I changed the default.table to store these data
-        # thus, I am letting the LCM choose from IgG1 Fc stats to reset GlcNAc core omega1 and omega2
-        # commented, not deleted, so that I may reference it and how it was structured to work
-        '''
-        ####################################################
-        #### HARDCODED CORE RESET TO IgG1 Fc STATISTICS ####
-        ####################################################
+        ###################################################
+        #### HARDCODED CORE RESET TO IgG FC STATISTICS ####
+        ###################################################
         # reset the torsions for the core GlcNAcs to values seen in IgG Fcs, if desired
         # hardcoded for now as this is not something that would be done in a real protocol
         if self.set_native_core_omegas_to_stats:
-            from rosetta.core.id import omega_dihedral, omega2_dihedral
+            from rosetta.core.id import omega2_dihedral
             from rosetta.core.pose.carbohydrates import set_glycosidic_torsion
             from rosetta.numeric.random import gaussian
             from native_3ay4_glycan_modeling_protocol_functions import calc_mean_degrees, calc_stddev_degrees
@@ -479,7 +429,6 @@ class Model3ay4Glycan:
             # standard deviation
             omega1_stddev = calc_stddev_degrees( omega1_data )
             omega2_stddev = calc_stddev_degrees( omega2_data )
-
             # 216
             new_omega1_216 = base_omega1 + ( omega1_stddev * gaussian() )
             new_omega2_216 = base_omega2 + ( omega2_stddev * gaussian() )
@@ -489,15 +438,14 @@ class Model3ay4Glycan:
 
             # reset the omega1 and omega2 torsions of residues 216 and 440 (core GlcNAc to ASN-69)
             # 216
-            set_glycosidic_torsion( omega_dihedral, working_pose, 216, new_omega1_216 )
-            set_glycosidic_torsion( omega2_dihedral, working_pose, 216, new_omega2_216 )
+            working_pose.set_omega( 216, new_omega1_216 )
+            set_glycosidic_torsion( int( omega2_dihedral ), working_pose, 216, new_omega2_216 )
             # 440
-            set_glycosidic_torsion( omega_dihedral, working_pose, 440, new_omega1_440 )
-            set_glycosidic_torsion( omega2_dihedral, working_pose, 440, new_omega2_440 )
+            working_pose.set_omega( 440, new_omega1_440 )
+            set_glycosidic_torsion( int( omega2_dihedral ), working_pose, 440, new_omega2_440 )
 
             if self.verbose:
-                print "score of core GlcNAc reset using IgG Fc statistics:", self.watch_sf( working_pose.clone() )
-        '''
+                print "score of core GlcNAc reset using IgG Fc statistics:", self.watch_sf( working_pose )
 
 
         ############################################
@@ -526,27 +474,6 @@ class Model3ay4Glycan:
             if self.zip_dump_poses:
                 os.popen( "gzip %s" %reset_name )
 
-        # add the reset pose to the list of poses for the movie, if desired
-        if self.make_movie:
-            # change the name to just "protocol_X_decoy_Y_0.pdb" without path location
-            # X is protocol number, Y is decoy number, 0 for the movie number
-            # state 0 is the reset_pose for when making a movie
-            orig_name = self.reset_pose.pdb_info().name()
-            reset_name = self.reset_pose.pdb_info().name().split( '/' )[-1].split( ".pdb" )[0] + "_0.pdb"
-            self.reset_pose.pdb_info().name( reset_name )
-            self.movie_poses.append( self.reset_pose.clone() )
-            self.reset_pose.pdb_info().name( orig_name )
-
-        # append all the information to the lists
-        if self.watch_E_vs_trial:
-            # 0th trial is the reset pose
-            E_vs_trial_nums.append( 0 )
-            energies.append( self.watch_sf( working_pose.clone() ) )
-            # the lowest seen pose and energy will be that of the reset pose to start
-            lowest_seen_energies.append( self.watch_sf( working_pose.clone() ) )
-            self.lowest_score_seen = self.watch_sf( working_pose.clone() )
-            self.lowest_score_pose_seen = working_pose.clone()
-
 
         #########################
         #### ADD CONSTRAINTS ####
@@ -559,39 +486,74 @@ class Model3ay4Glycan:
                 # add atom_pair_constraint to the ScoreFunction, if needed
                 self.sf.set_weight_if_zero( atom_pair_constraint, 1.0 )
             except:
-                print "\nThere was something wrong with your constraint file. Are you sure it exists? Are you sure you used the correct names for the constraints? Check on %s\n" %self.constraint_file
+                print "\nThere was something wrong with your constraint file. Are you sure it exists? Are you sure you used the correct names for the constraints?\n"
                 sys.exit()
+
+
+        ############################
+        #### MIN MOVER CREATION ####
+        ############################
+        # make the MinMover from the passed MoveMap
+        # if desired
+        if self.minimize_each_round:
+            # if needed
+            if self.min_mover is None:
+                self.min_mover = MinMover()
+                self.min_mover.movemap( self.mm )
+                self.min_mover.score_function( self.sf )
+                self.min_mover.min_type( "dfpmin_strong_wolfe" )
+                self.min_mover.tolerance( 0.01 )
+                self.min_mover.nb_list( True )
+
+
+        ######################################
+        #### PACK ROTAMERS MOVER CREATION ####
+        ######################################
+        # make the PackerRotamersMover from the passed MoveMap
+        # if desired
+        if self.pack_after_x_rounds > 0:
+            # if needed
+            if self.pack_rotamers_mover is None:
+                # make the packer task
+                # default of standard_packer_task is to set packing for residues to True
+                task = standard_packer_task( working_pose )
+                task.or_include_current( True )
+                task.restrict_to_repacking()
+
+                # get all the protein residues within 8A of the moveable_residues
+                # this uses the nbr_atom to determine if a residue is nearby or not, hence why I'm using a big distance like 8A
+                # nbr_atom seems to be basically the same as C4 in sugars
+                # this should include the Tyr if core GlcNAc is moveable in 3ay4
+                nearby_protein_residues = get_res_nums_within_radius_of_residue_list( moveable_residues, working_pose, 
+                                                                                      radius = 8, 
+                                                                                      include_res_nums = False )
+
+                # create a list of residue numbers that can be packed
+                # meaning, the moveable carbohydrate residues and the residues around them
+                packable_residues = moveable_residues
+                packable_residues.extend( nearby_protein_residues )
+                packable_residues = set( packable_residues )
+
+                # turn off packing for all residues that are NOT_packable_residues
+                # this is a new set with elements in pose.size() but not in packable_residues ( disjoint, s - t )
+                # meaning, all residue numbers in pose.size() that are not packable need to be NOT packed
+                NOT_packable_residues = list( set( range( 1, working_pose.size() + 1 ) ) - packable_residues )
+                [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in NOT_packable_residues ]
+
+                # make the pack_rotamers_mover
+                pack_rotamers_mover = RotamerTrialsMover( self.sf, task )
+
+                # attach the task and the mover to the protocol object
+                self.packer_task = task
+                self.pack_rotamers_mover = pack_rotamers_mover
 
 
         ####################################
         #### MAKE THE MONTECARLO OBJECT ####
         ####################################
-        # create the MonteCarlo object
+        # create the MonteCarlo object, if needed
         if self.mc is None:
             self.mc = MonteCarlo( working_pose, self.sf, self.kT )
-        self.mc.set_temperature( self.kT )
-        # reset everything just to be safe since MonteCarlo is a mess
-        # clear and reset the counters
-        self.mc.reset_counters()
-        # last_accepted_pose and lowest_score_pose is an empty pose
-        # lowest_score is still the lowest E seen
-        self.mc.clear_poses()
-        # sets the passed sf as the mc.sf and the last_accepted_pose as the passed pose
-        # the lowest_score_pose is the passed pose and the lowest_score is the
-        # score of the passed pose using the passed sf
-        self.mc.reset_scorefxn( working_pose, self.sf )
-
-
-        #############################
-        #### PREPARE FOR RAMPING ####
-        #############################
-        # store the original fa_atr and fa_rep
-        # this will be accessed as the outer_trials pass and the sf gets re-ramped
-        FA_ATR_ORIG = self.sf.get_weight( fa_atr )
-        FA_REP_ORIG = self.sf.get_weight( fa_rep )
-        # set the local angle_max to the passed angle_max value
-        # this will be adjusted if ramp_angle_max is True
-        angle_max = self.angle_max
 
 
         ########################################
@@ -600,268 +562,126 @@ class Model3ay4Glycan:
         # for as many trials as specified
         num_mc_accepts = 0
         num_mc_checks = 0
-        mc_acceptance = -1  # -1 so that it will play nice in the metrics file if the number doesn't get updated somehow
-        movie_num = 1
-        # for each set of outer trials
-        for outer_trial in range( 1, self.outer_trials + 1 ):
-            # inner_trial must be 1 to N because decoy 0 will be the reset_pose when creating a movie
-            for inner_trial in range( 1, self.inner_trials + 1 ):
-                # print current score
-                if self.verbose:
-                    print "\nstarting score:", self.watch_sf( working_pose.clone() )
+        mc_acceptance = -1
+        for trial_num in range( 1, self.trials + 1 ):
+            # print current score
+            if self.verbose:
+                print "\nstarting score:", self.watch_sf( working_pose )
 
-            	####################################
-            	#### RAMP WITH ANGLE MAX UPDATE ####
-            	####################################
-                if self.ramp_angle_max:
-                    # the last ~10% of moves in the inner_trials will be the angle_min
-                    # the first move should use the passed angle_max
-                    if inner_trial == 1:
-                        angle_max = self.angle_max
-                    # otherwise, adjust the angle_max according to which inner_trial number we are on
-                    else:
-                        # by the end of the protocol our angle_max should be angle_min
-                        # angle_min is 6.0 by default which is the angle_max for loop residues in the BackboneMover
-                        angle_max = get_ramp_angle_max( current_angle_max = angle_max, 
-                                                        target_angle_max = self.angle_min, 
-                                                        current_step = inner_trial, 
-                                                        total_steps = self.inner_trials )
-                    # DEBUG
-                    #print "angle_max: %s" %angle_max
+            ####################################
+            #### RAMP WITH ANGLE MAX UPDATE ####
+            ####################################
+            if self.ramp_angle_max:
+                # skip ramping on the first trial because the passed angle_max should be the angle_max used
+                if trial_num !=1:
+                    # by the end of the protocol our angle_max should be angle_min
+                    # angle_min is 6.0 by default which is the angle_max for loop residues in the BackboneMover
+                    self.angle_max = get_ramp_angle_max( current_angle_max = self.angle_max, 
+                                                         target_angle_max = self.angle_min, 
+                                                         current_step = trial_num, 
+                                                         total_steps = self.trials )
 
 
-            	#########################################
-            	#### RAMP WITH SCORE FUNCTION UPDATE ####
-            	#########################################
-                if self.ramp_sf:
-                    # if this is the first move, adjust the fa_atr and fa_rep terms by the corresponding factors
-                    # after the first move, we will ramp the score up or down accordingly back to the original value
-                    # the last ~10% of moves in the inner_trials will be the original values
-                    if inner_trial == 1:
-                        # adjust the fa_atr weight by the passed fa_atr_ramp_factor
-                        FA_ATR_NEW = FA_ATR_ORIG * self.fa_atr_ramp_factor
-                        self.sf.set_weight( fa_atr, FA_ATR_NEW )
-                        # adjust the fa_rep weight by the passed fa_rep_ramp_factor
-                        FA_REP_NEW = FA_REP_ORIG * self.fa_rep_ramp_factor
-                        self.sf.set_weight( fa_rep, FA_REP_NEW )
-                        # reset the MonteCarlo object with the working_pose and ramped sf
-                        # inner_trial == 1 means we should forget everything that happened in a previous round of outer_trials
-                        self.mc.reset_counters()
-                        self.mc.clear_poses()
-                        # the sf was just re-ramped, so ensure the MonteCarlo object is aware of this change and thinks
-                        # the working_pose using this ramped sf is the lowest_score_pose it has seen
-                        self.mc.reset_scorefxn( working_pose, self.sf )
+            #########################################
+            #### RAMP WITH SCORE FUNCTION UPDATE ####
+            #########################################
+            if self.ramp_sf:
+                # if this is the first move, adjust the fa_atr and fa_rep terms by the corresponding factors
+                if trial_num == 1:
+                    # store the original fa_atr and fa_rep
+                    FA_ATR_ORIG = self.sf.get_weight( fa_atr )
+                    FA_REP_ORIG = self.sf.get_weight( fa_rep )
+                    # adjust the fa_atr weight by the passed fa_atr_ramp_factor
+                    FA_ATR_NEW = FA_ATR_ORIG * self.fa_atr_ramp_factor
+                    self.sf.set_weight( fa_atr, FA_ATR_NEW )
+                    # adjust the fa_rep weight by the passed fa_rep_ramp_factor
+                    FA_REP_NEW = FA_REP_ORIG * self.fa_rep_ramp_factor
+                    self.sf.set_weight( fa_rep, FA_REP_NEW )
 
-                    # else, adjust the score weight based on the current inner_trial step
-                    else:
-                        # ramp up or down the appropriate scoring terms
-                        self.sf.set_weight( fa_atr, get_ramp_score_weight( current_weight = self.sf.get_weight( fa_atr ), 
-                                                                           target_weight = FA_ATR_ORIG, 
-                                                                           current_step = inner_trial, 
-                                                                           total_steps = self.inner_trials ) )
-                        self.sf.set_weight( fa_rep, get_ramp_score_weight( current_weight = self.sf.get_weight( fa_rep ), 
-                                                                           target_weight = FA_REP_ORIG, 
-                                                                           current_step = inner_trial, 
-                                                                           total_steps = self.inner_trials ) )
-                        # give ramped sf back to MonteCarlo object
-                        # this is because MonteCarlo stores a clone so it does not update the sf itself
-                        self.mc.score_function( self.sf )
-                        # the sf was just re-ramped, so ensure the MonteCarlo object is aware of this change and thinks
-                        # the current working_pose using this ramped sf is the lowest_score_pose it has seen
-                        self.mc.reset_scorefxn( working_pose, self.sf )
-
-                    # DEBUG
-                    #print "\n".join( [ "%s %s" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) for score_type in self.sf.get_nonzero_weighted_scoretypes() ] )
-                    #print "\n".join( [ "%s %s" %( str( score_type ), str( self.mc.score_function().get_weight( score_type ) ) ) for score_type in self.mc.score_function().get_nonzero_weighted_scoretypes() ] )
+                # else, adjust the score weight
+                else:
+                    # ramp up or down the appropriate scoring terms
+                    self.sf.set_weight( fa_atr, get_ramp_score_weight( current_weight = self.sf.get_weight( fa_atr ), 
+                                                                       target_weight = FA_ATR_ORIG, 
+                                                                       current_step = trial_num, 
+                                                                       total_steps = self.trials ) )
+                    self.sf.set_weight( fa_rep, get_ramp_score_weight( current_weight = self.sf.get_weight( fa_rep ), 
+                                                                       target_weight = FA_REP_ORIG, 
+                                                                       current_step = trial_num, 
+                                                                       total_steps = self.trials ) )
+                # DEBUG
+                #print "\n".join( [ "%s %s" %( str( score_type ), str( self.sf.get_weight( score_type ) ) ) for score_type in self.sf.get_nonzero_weighted_scoretypes() ] )
+                # give ramped sf back to MC and MinMover
+                # this is because PyRosetta apparently doesn't do the whole pointer thing with the sf
+                self.mc.score_function( self.sf )
+                self.min_mover.score_function( self.sf )
 
 
-            	##########################
-            	#### MAKE SUGAR MOVES ####
-            	##########################
-                # make as many moves per trial as desired
-                # SugarSmallMover
-                if self.make_small_moves:
-                    SSmM = SugarSmallMover( self.mm, self.moves_per_trial, angle_max, working_pose, 
-                                            move_all_torsions = self.move_all_torsions )
-                    working_pose.assign( SSmM.apply( working_pose ) )
+            ##########################
+            #### MAKE SUGAR MOVES ####
+            ##########################
+            # make as many moves per trial as desired
+            # SugarSmallMover
+            if self.make_small_moves:
+                working_pose.assign( SugarSmallMover( self.mm, self.moves_per_trial, self.angle_max, working_pose, 
+                                                      move_all_torsions = self.move_all_torsions ) )
+            # SugarShearMover
+            elif self.make_shear_moves:
+                pass
 
-                # SugarShearMover
-                elif self.make_shear_moves:
-                    pass
-
-                # relay score information
-                if self.verbose:
-                    print "score after sugar moves:", self.watch_sf( working_pose.clone() )
+            # relay score information
+            if self.verbose:
+                print "score after sugar moves:", self.watch_sf( working_pose )
 
 
-                ##################################
-                #### PREPARE FOR PACK AND MIN ####
-                ##################################
-                # if you aren't going to pack this round, then the pack_and_min_residues will mirror the glycan residues
-                # if you are packing this round, then you need residues surrounding as well
-                pack_and_min_residues = [ res_num for res_num in self.moveable_residues ]
-                # if you aren't going to pack this round, then the minimizer's MoveMap should only include the self.moveable_residues (bb and chi)
-                # if you are packing this round, then the MoveMap has bb and chi for self.moveable_residues and chi for surrounding_residues
-                # default MoveMap creation has everything set to False, so set the appropriate residues to True
-                min_mm = MoveMap()
-                for res_num in pack_and_min_residues:
-                    min_mm.set_bb( res_num, True )
-                    # minimizing the chi of carbohydrates is really weird as it moves the whole residue
-                    #min_mm.set_chi( res_num, True )
-                # check if we are packing, adjust the pack_and_min_residues and min_mm accordingly
-                if self.pack_after_x_rounds > 0:
-                    if inner_trial % self.pack_after_x_rounds == 0:
-                        # this function I wrote uses the nbr_atom to calculate distances, which is about the C4 atom
-                        # 10A should be enough to include Tyr296 if the fucose is in the pose
-                        surrounding_residues = get_res_nums_within_radius( pack_and_min_residues, working_pose, 
-                                                                           radius = 10, 
-                                                                           include_passed_res_nums = False )
-                        # add the surrounding_residues to the list of residues that will be packed and minimized
-                        pack_and_min_residues.extend( surrounding_residues )
-                        # set chi to True in the min_mm if the residue is not a branch point
-                        # skipping surrounding carbohydrate residues (FcR glycan) because PyR3 treats the bb
-                        # as chi for some reason (setting chi min to True for glycan moves more than the side
-                        # chains. This is a bug. Just ignoring the bug for now)
-                        # ignoring the chi of branch points and sugar residues because it does weird stuff
-                        for surrounding_res in surrounding_residues:
-                            if not working_pose.residue( surrounding_res ).is_branch_point():
-                                if not working_pose.residue( surrounding_res ).is_carbohydrate():
-                                    min_mm.set_chi( surrounding_res, True )
-
-
-            	##############
-            	#### PACK ####
-            	##############
-                # pack the sugars and surrounding residues, if desired
-                if self.pack_after_x_rounds > 0:
-                    if inner_trial % self.pack_after_x_rounds == 0:
-                        # have to make the packer task each time because the residues surrounding the sugars
-                        # will likely change after each move, thus need to make a new RotamerTrialsMover
-                        # pack_radius of None means that only the residues specified will be packed
-                        rotamer_trials_mover = make_RotamerTrialsMover( pack_and_min_residues, self.sf, working_pose, 
-                                                                        pack_radius = None )
-                        rotamer_trials_mover.apply( working_pose )
-                        if self.verbose:
-                            print "score after local pack:", self.watch_sf( working_pose.clone() )
-
-
-            	###################
-                #### MINIMIZE #####
-            	###################
-                # make the MinMover from the pack_and_min_residues, if desired
-                # if a pack was not just done, this will only include the self.moveable_residues (bb and chi)
-                # if a pack was just done, this will include self.moveable_residues (bb and chi) and the surrounding_residues (chi)
-                if self.minimize_each_round:
-                    # make and apply the min_mover
-                    min_mover = MinMover( movemap_in = min_mm, 
-                                          scorefxn_in = self.sf,
-                                          #min_type_in = "dfpmin_strong_wolfe",
-                                          min_type_in = "lbfgs_armijo_nonmonotone", # will move to this because this is Rosetta standard
-                                          tolerance_in = 0.01,
-                                          use_nb_list_in = True )
-                    min_mover.apply( working_pose )
+            ##############
+            #### PACK ####
+            ##############
+            # pack the sugars and surrounding residues, if desired
+            if self.pack_after_x_rounds > 0:
+                if trial_num % self.pack_after_x_rounds == 0:
+                    self.pack_rotamers_mover.apply( working_pose )
                     if self.verbose:
-                        print "score after min:", self.watch_sf( working_pose.clone() )
+                        print "score after local pack:", self.watch_sf( working_pose )
 
 
-            	###############################
-            	#### ACCEPT OR REJECT MOVE ####
-            	###############################
-                # accept or reject the total move using the MonteCarlo object
-                accepted = False
-                if self.mc.boltzmann( working_pose ):
-                    accepted = True
-                    # add the accepted-move pose to the list of poses for the movie, if desired
-                    if self.make_movie:
-                        # change the name to just "protocol_X_decoy_Y_Z.pdb" without path location
-                        # X is protocol number, Y is decoy number, Z is movie number
-                        # ex name) protocol_10_decoy_5_23.pdb
-                        working_pose.pdb_info().name( self.decoy_name.split( '/' )[-1].split( ".pdb" )[0] + "_%s.pdb" %movie_num )
-                        self.movie_poses.append( working_pose.clone() )
-                        working_pose.pdb_info().name( self.decoy_name )
-                        movie_num += 1
-                    # up the counters and send to pymol
-                    num_mc_accepts += 1
-                    try:
-                        if self.pmm_name is not None:
-                            working_pose.pdb_info().name( self.pmm_name )
-                            self.pmm.apply( working_pose )
-                            working_pose.pdb_info().name( self.decoy_name )
-                        else:
-                            self.pmm.apply( working_pose )
-                    except:
-                        pass
-                num_mc_checks += 1
-
-                # for watching range of accepted move size
-                if self.watch_accepted_move_sizes:
-                    # each residue has each torsion in it perturbed by a different amount
-                    for ii in range( SSmM.n_moves ):
-                        for jj in range( len( SSmM.moved_residues_torsions[ ii ] ) ):
-                            move_size_trial_nums.append( inner_trial + self.inner_trials * ( outer_trial - 1 ) )
-                            moved_torsions.append( SSmM.moved_residues_torsions[ ii ][ jj ] )
-                            move_sizes.append( SSmM.moved_residues_torsions_perturbations[ ii ][ jj ] )
-                            res_nums.append( SSmM.moved_residues[ ii ] )
-                            move_accepted.append( accepted )
-
-                # for watching energy during a protocol
-                if self.watch_E_vs_trial:
-                    # collect the lowest-scoring decoy seen using the watch_sf
-                    # can't use the mc.lowest_score() because that uses the ramped sf, so the score is variable
-                    # update the lowest_score_seen if the current working_pose has a lower score
-                    if self.watch_sf( working_pose.clone() ) < self.lowest_score_seen:
-                        self.lowest_score_seen = self.watch_sf( working_pose.clone() )
-                        self.lowest_score_pose_seen = working_pose.clone()
-                    # append all the information to the lists
-                    E_vs_trial_nums.append( inner_trial + self.inner_trials * ( outer_trial - 1 ) )
-                    energies.append( self.watch_sf( working_pose.clone() ) )
-                    lowest_seen_energies.append( self.lowest_score_seen )
-
-                # print out the MC acceptance rate every 3 trials and on the last trial
-                mc_acceptance = round( ( float( num_mc_accepts ) / float( num_mc_checks ) * 100 ), 2 )
+            ###################
+            #### MINIMIZE #####
+            ###################
+            # minimize the backbone of the sugars, if desired
+            if self.minimize_each_round:
+                self.min_mover.apply( working_pose )
                 if self.verbose:
-                    if inner_trial % 3 == 0 or inner_trial == self.inner_trials:
-                        print "Moves made so far:", num_mc_checks,
-                        print "  Moves accepted:", num_mc_accepts,
-                        print "  Acceptance rate:", mc_acceptance
+                    print "score after min:", self.watch_sf( working_pose )
 
-        # finished outer_trials and inner_trials
-        # add any relevant data to the class object
-        self.mc_acceptance = mc_acceptance
 
-        # for watching energy during a protocol
-        if self.watch_E_vs_trial:
-            # make the dump dir for the .csv files if needed
-            E_vs_trial_dir = self.dump_dir + "E_vs_trial_dir/"
-            if not os.path.isdir( E_vs_trial_dir ):
+            ###############################
+            #### ACCEPT OR REJECT MOVE ####
+            ###############################
+            # accept or reject the total move using the MonteCarlo object
+            if self.mc.boltzmann( working_pose ):
+                # up the counters and send to pymol
+                num_mc_accepts += 1
                 try:
-                    os.mkdir( E_vs_trial_dir )
+                    if self.pmm_name is not None:
+                        working_pose.pdb_info().name( self.pmm_name )
+                        self.pmm.apply( working_pose )
+                        working_pose.pdb_info().name( self.decoy_name )
+                    else:
+                        self.pmm.apply( working_pose )
                 except:
                     pass
-            # make the filename using the E_vs_trial_dir
-            E_vs_trial_filename = E_vs_trial_dir + self.decoy_name.split( '/' )[-1].split( ".pdb" )[0] + "_E_vs_trial.csv"
-            # use a pandas DataFrame, if possible
-            if self.pandas:
-                self.E_vs_trial_df[ "trial_nums" ] = E_vs_trial_nums
-                self.E_vs_trial_df[ "total_score" ] = energies
-                self.E_vs_trial_df[ "lowest_score" ] = lowest_seen_energies
-                self.E_vs_trial_df.to_csv( E_vs_trial_filename )
-            # otherwise I'm on jazz and can't use a DataFrame, so use a csv file instead
-            else:
-                data_rows = zip( E_vs_trial_nums, energies, lowest_seen_energies )
-                with open( E_vs_trial_filename, "wb" ) as fh:
-                    csvwriter = csv.writer( fh )
-                    csvwriter.writerow( [ "trial_num", "score", "lowest_score" ] )
-                    [ csvwriter.writerow( row ) for row in data_rows ]
+            num_mc_checks += 1
 
-        if self.watch_accepted_move_sizes:
-            if self.pandas:
-                self.move_size_df[ "trial_nums" ] = move_size_trial_nums
-                self.move_size_df[ "torsion" ] = moved_torsions
-                self.move_size_df[ "res_num" ] = res_nums
-                self.move_size_df[ "move_size" ] = move_sizes
-                self.move_size_df[ "mc_accept" ] = move_accepted
-            else:
-                pass
+            # print out the MC acceptance rate every 3 trials and on the last trial
+            mc_acceptance = round( ( float( num_mc_accepts ) / float( num_mc_checks ) * 100 ), 2 )
+            if self.verbose:
+                if trial_num % 3 == 0 or trial_num == self.trials:
+                    print "Moves made so far:", num_mc_checks,
+                    print "  Moves accepted:", num_mc_accepts,
+                    print "  Acceptance rate:", mc_acceptance
+
+        # add any relevant data to the class object
+        self.mc_acceptance = mc_acceptance
 
         return working_pose

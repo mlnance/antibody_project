@@ -32,9 +32,10 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
         pass
 
     # Rosetta functions
-    from rosetta import Vector1, calc_interaction_energy
+    from pyrosetta import Vector1
+    from pyrosetta.toolbox import get_hbonds
+    from rosetta.protocols.docking import calc_interaction_energy
     from rosetta.protocols.simple_moves import ConstraintSetMover
-    from toolbox import get_hbonds
     
     # Rosetta functions I wrote out
     from antibody_functions import calc_interface_sasa, \
@@ -81,7 +82,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( "delta_hbonds:" )
     metric_data.append( str( delta_hbonds ) )
     
-
+    
     # glycan RMSD, tot score, hbond, and sasa calculation
     working_Fc_glycan_data = Fc_glycan_metrics( working, native, working_info.native_Fc_glycan_chains, native_info.native_Fc_glycan_chains, sf, decoy_num, dump_dir )
     delta_Fc_glycan_tot_score = working_Fc_glycan_data.Fc_glycan_tot_score - working_Fc_glycan_data.native_Fc_glycan_tot_score
@@ -107,13 +108,14 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     metric_data.append( "delta_Fc_glycan_sasa_contributed:" )
     metric_data.append( str( delta_Fc_glycan_sasa_contributed ) )
 
-
+    '''
     # average ring atom distances (not rmsd as there is no alignment) of decoy to native
     for ring_residue in working_info.native_Fc_glycan_nums_except_core_GlcNAc:
         # decoy numbering is the same as native, so just use the same number
         ring_atoms_avg_dist = avg_dist_from_native_Fc_glycan_ring_atoms( working, ring_residue, native, ring_residue )
         metric_data.append( "ring_atoms_avg_dist_res_%s:" %str( ''.join( working.pdb_info().pose2pdb( ring_residue ).strip().split( ' ' ) ) ) )
         metric_data.append( str( round( ring_atoms_avg_dist, 2 ) ) )
+    '''
     
 
     ## pseudo-inferface energy 
@@ -162,67 +164,99 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     
 
     # check if the GlcNAc above the Gal residue contacts the Phe residue within 5 Angstroms ( 4.68 contact distance in native )
-    GlcNAc_to_Phe_cutoff = 5
-    working_GlcNAc_to_Phe_contacts = check_GlcNAc_to_Phe_contacts( working, GlcNAc_to_Phe_cutoff, native = True )
-    metric_data.append( "GlcNAc_to_its_Phe_contacts_%sA:" %( str( GlcNAc_to_Phe_cutoff ) ) )
-    metric_data.append( str( working_GlcNAc_to_Phe_contacts ) )
+#    GlcNAc_to_Phe_cutoff = 5
+#    working_GlcNAc_to_Phe_contacts = check_GlcNAc_to_Phe_contacts( working, GlcNAc_to_Phe_cutoff, native = True )
+#    metric_data.append( "GlcNAc_to_its_Phe_contacts_%sA:" %( str( GlcNAc_to_Phe_cutoff ) ) )
+#    metric_data.append( str( working_GlcNAc_to_Phe_contacts ) )
     
 
+    '''
     #################
     # get the contact maps for the working and the native to use for other metric calculations
+    # working Fc glycan to Fc protein
     Fc_glycan_to_Fc_protein_CUTOFF = 8
-    working_Fc_glycan_to_Fc_protein_contact_map, working_Fc_glycan_to_Fc_protein_tot_contacts = get_contact_map_between_range1_range2( working_info.native_Fc_glycan_nums_except_core_GlcNAc, 
-                                                                                                                                       working_info.native_Fc_protein_nums, 
-                                                                                                                                       working, 
-                                                                                                                                       cutoff = Fc_glycan_to_Fc_protein_CUTOFF,
-                                                                                                                                       return_more_info = True )
-    native_Fc_glycan_to_Fc_protein_contact_map, native_Fc_glycan_to_Fc_protein_tot_contacts = get_contact_map_between_range1_range2( native_info.native_Fc_glycan_nums_except_core_GlcNAc, 
-                                                                                                                                     native_info.native_Fc_protein_nums, 
-                                                                                                                                     native, 
-                                                                                                                                     cutoff = Fc_glycan_to_Fc_protein_CUTOFF, 
-                                                                                                                                     return_more_info = True )
+    working_Fc_glycan_to_Fc_protein_contact_map, \
+        working_Fc_glycan_to_Fc_protein_tot_contacts = \
+        get_contact_map_between_range1_range2( working_info.native_Fc_glycan_nums_except_core_GlcNAc, 
+                                               working_info.native_Fc_protein_nums, 
+                                               working, 
+                                               cutoff = Fc_glycan_to_Fc_protein_CUTOFF,
+                                               return_more_info = True )
+    # native Fc glycan to Fc protein
+    native_Fc_glycan_to_Fc_protein_contact_map, \
+        native_Fc_glycan_to_Fc_protein_tot_contacts = \
+        get_contact_map_between_range1_range2( native_info.native_Fc_glycan_nums_except_core_GlcNAc, 
+                                               native_info.native_Fc_protein_nums, 
+                                               native, 
+                                               cutoff = Fc_glycan_to_Fc_protein_CUTOFF, 
+                                               return_more_info = True )
 
+    # working Fc glycan to FcR glycan
     Fc_glycan_to_FcR_glycan_CUTOFF = 8
-    working_Fc_glycan_to_FcR_glycan_contact_map, working_Fc_glycan_to_FcR_glycan_tot_contacts = get_contact_map_between_range1_range2( working_info.native_Fc_glycan_nums_except_core_GlcNAc, 
-                                                                                                                                       working_info.native_FcR_glycan_nums, 
-                                                                                                                                       working, 
-                                                                                                                                       cutoff = Fc_glycan_to_FcR_glycan_CUTOFF, 
-                                                                                                                                       return_more_info = True )
-    native_Fc_glycan_to_FcR_glycan_contact_map, native_Fc_glycan_to_FcR_glycan_tot_contacts = get_contact_map_between_range1_range2( native_info.native_Fc_glycan_nums_except_core_GlcNAc, 
-                                                                                                                                     native_info.native_FcR_glycan_nums, 
-                                                                                                                                     native, 
-                                                                                                                                     cutoff = Fc_glycan_to_FcR_glycan_CUTOFF, 
-                                                                                                                                     return_more_info = True )
+    working_Fc_glycan_to_FcR_glycan_contact_map, \
+        working_Fc_glycan_to_FcR_glycan_tot_contacts = \
+        get_contact_map_between_range1_range2( working_info.native_Fc_glycan_nums_except_core_GlcNAc, 
+                                               working_info.native_FcR_glycan_nums, 
+                                               working, 
+                                               cutoff = Fc_glycan_to_FcR_glycan_CUTOFF, 
+                                               return_more_info = True )
+    # native Fc glycan to FcR glycan
+    native_Fc_glycan_to_FcR_glycan_contact_map, \
+        native_Fc_glycan_to_FcR_glycan_tot_contacts = \
+        get_contact_map_between_range1_range2( native_info.native_Fc_glycan_nums_except_core_GlcNAc, 
+                                               native_info.native_FcR_glycan_nums, 
+                                               native, 
+                                               cutoff = Fc_glycan_to_FcR_glycan_CUTOFF, 
+                                               return_more_info = True )
+    '''
+
 
     '''
+    #################
+    ## get the contact maps
     intf_CUTOFF = 8
-    working_intf_contact_map, working_intf_tot_contacts = get_contact_map_with_JUMP_NUM( JUMP_NUM, 
-                                                                                         working, 
-                                                                                         cutoff = intf_CUTOFF, 
-                                                                                         return_more_info = True )
-    native_intf_contact_map, native_intf_tot_contacts = get_contact_map_with_JUMP_NUM( JUMP_NUM, 
-                                                                                       native, 
-                                                                                       cutoff = intf_CUTOFF, 
-                                                                                       return_more_info = True )
-    '''
+    working_intf_contact_map, \
+        working_intf_tot_contacts = \
+        get_contact_map_with_JUMP_NUM( JUMP_NUM, 
+                                       working, 
+                                       cutoff = intf_CUTOFF, 
+                                       return_more_info = True )
+    native_intf_contact_map, \
+        native_intf_tot_contacts = \
+        get_contact_map_with_JUMP_NUM( JUMP_NUM, 
+                                       native, 
+                                       cutoff = intf_CUTOFF, 
+                                       return_more_info = True )
 
     #################
-
     ## analyze the contact maps
     # Fc glycan to Fc protein contact map analysis
-    working_Fc_glycan_to_Fc_protein_data_holder = analyze_contact_map( working_Fc_glycan_to_Fc_protein_contact_map, working )
-    native_Fc_glycan_to_Fc_protein_data_holder = analyze_contact_map( native_Fc_glycan_to_Fc_protein_contact_map, native )
+    working_Fc_glycan_to_Fc_protein_data_holder = \
+        analyze_contact_map( working_Fc_glycan_to_Fc_protein_contact_map, 
+                             working )
+    native_Fc_glycan_to_Fc_protein_data_holder = \
+        analyze_contact_map( native_Fc_glycan_to_Fc_protein_contact_map, 
+                             native )
 
     # Fc glycan to protein Fnat calculations
-    Fc_glycan_to_Fc_protein_Fnats_data_holder = calc_Fnats_with_contact_maps( working_Fc_glycan_to_Fc_protein_contact_map, 
-                                                                              working, 
-                                                                              native_Fc_glycan_to_Fc_protein_contact_map, 
-                                                                              native )
+    Fc_glycan_to_Fc_protein_Fnats_data_holder = \
+        calc_Fnats_with_contact_maps( working_Fc_glycan_to_Fc_protein_contact_map, 
+                                      working, 
+                                      native_Fc_glycan_to_Fc_protein_contact_map, 
+                                      native )
 
-    delta_Fc_glycan_to_Fc_protein_tot_contacts = working_Fc_glycan_to_Fc_protein_tot_contacts - native_Fc_glycan_to_Fc_protein_tot_contacts
-    delta_Fc_glycan_to_Fc_protein_carb_to_polar_contacts = working_Fc_glycan_to_Fc_protein_data_holder.carb_to_polar_contacts - native_Fc_glycan_to_Fc_protein_data_holder.carb_to_polar_contacts
-    delta_Fc_glycan_to_Fc_protein_carb_to_nonpolar_contacts = working_Fc_glycan_to_Fc_protein_data_holder.carb_to_nonpolar_contacts - native_Fc_glycan_to_Fc_protein_data_holder.carb_to_nonpolar_contacts
-    delta_Fc_glycan_to_Fc_protein_carb_to_aromatic_contacts = working_Fc_glycan_to_Fc_protein_data_holder.carb_to_aromatic_contacts - native_Fc_glycan_to_Fc_protein_data_holder.carb_to_aromatic_contacts
+    delta_Fc_glycan_to_Fc_protein_tot_contacts = \
+        working_Fc_glycan_to_Fc_protein_tot_contacts - \
+        native_Fc_glycan_to_Fc_protein_tot_contacts
+    delta_Fc_glycan_to_Fc_protein_carb_to_polar_contacts = \
+        working_Fc_glycan_to_Fc_protein_data_holder.carb_to_polar_contacts - \
+        native_Fc_glycan_to_Fc_protein_data_holder.carb_to_polar_contacts
+    delta_Fc_glycan_to_Fc_protein_carb_to_nonpolar_contacts = \
+        working_Fc_glycan_to_Fc_protein_data_holder.carb_to_nonpolar_contacts - \
+        native_Fc_glycan_to_Fc_protein_data_holder.carb_to_nonpolar_contacts
+    delta_Fc_glycan_to_Fc_protein_carb_to_aromatic_contacts = \
+        working_Fc_glycan_to_Fc_protein_data_holder.carb_to_aromatic_contacts - \
+        native_Fc_glycan_to_Fc_protein_data_holder.carb_to_aromatic_contacts
     #delta_Fc_glycan_to_Fc_protein_contact_distance_avg = working_Fc_glycan_to_Fc_protein_data_holder.contact_distance_avg - native_Fc_glycan_to_Fc_protein_data_holder.contact_distance_avg
     #delta_Fc_glycan_to_Fc_protein_contact_distance_max = working_Fc_glycan_to_Fc_protein_data_holder.contact_distance_max - native_Fc_glycan_to_Fc_protein_data_holder.contact_distance_max
     #delta_Fc_glycan_to_Fc_protein_contact_distance_min = working_Fc_glycan_to_Fc_protein_data_holder.contact_distance_min - native_Fc_glycan_to_Fc_protein_data_holder.contact_distance_min
@@ -295,6 +329,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
     #metric_data.append( str( working_Fc_glycan_to_FcR_glycan_data_holder.contact_distance_min ) )
     #metric_data.append( "delta_Fc_glycan_to_FcR_glycan_contact_distance_min_%sA:" %( str( Fc_glycan_to_FcR_glycan_CUTOFF ) ) )
     #metric_data.append( str( delta_Fc_glycan_to_FcR_glycan_contact_distance_min ) )
+    '''
 
 
     '''
@@ -404,6 +439,7 @@ def main( in_working, working_info, in_native, native_info, in_sf, JUMP_NUM, dec
         metric_data.append( str( working.psi( res_of_torsional_interest2 ) ) )
         metric_data.append( "BOmega" )
         metric_data.append( str( working.omega( res_of_torsional_interest2 ) ) )
+
 
     # create metrics string
     metrics = ' '.join( metric_data )    

@@ -8,7 +8,7 @@ __author__ = 'morganlnance'
 #####################
 
 # main PyMOL_Mover watcher
-from rosetta import PyMOL_Mover
+#from rosetta import PyMOL_Mover
 
 # import extras
 import os, sys
@@ -25,7 +25,7 @@ import os, sys
 
 # create global pymol object
 # TODO-add visualization options to each relevant function using this global PyMOL_Mover
-pmm = PyMOL_Mover()
+#pmm = PyMOL_Mover()
 
 
 # global variables
@@ -129,9 +129,9 @@ def _new_loops( loops ):
         loop = loops[ ii ]
         new_loop( loop )
 
-from rosetta import FoldTree
-FoldTree.new_loop = _new_loop
-FoldTree.new_loops = _new_loops
+#from rosetta import FoldTree
+#FoldTree.new_loop = _new_loop
+#FoldTree.new_loops = _new_loops
 
 
 
@@ -146,7 +146,7 @@ def initialize_rosetta( constant_seed = False, debug = False ):
     If constant_seed == True, use default constant seed 1111111
     If debug == True, use default constant seed and do not mute Rosetta
     """
-    from rosetta import init
+    from pyrosetta import init
 
 
     print "Initializing Rosetta with sugar flags"
@@ -169,7 +169,8 @@ def load_pose( pose_filename ):
     :return: a Rosetta Pose
     """
     # imports
-    from rosetta import Pose, pose_from_file, FoldTree
+    from rosetta.core.pose import Pose
+    from pyrosetta import pose_from_file
     
     # create Pose object from filename
     pose = Pose()
@@ -179,11 +180,6 @@ def load_pose( pose_filename ):
     pose_name = pose.pdb_info().name()
     pose_name = pose_name.split( '/' )[-1]
     pose.pdb_info().name( pose_name )
-
-    # store the original FoldTree and add empty loops for use later
-    pose.orig_fold_tree = FoldTree( pose.fold_tree() )
-    pose.loops = None
-    pose.loops_file = None
 
     return pose
 
@@ -258,7 +254,7 @@ def align_sugar_virtual_atoms( input_pose ):
     :param input_pose: Pose
     :return: Pose
     """
-    from rosetta import AtomID
+    from rosetta.core.id import AtomID
 
 
     # copy the input pose
@@ -915,7 +911,7 @@ def set_glycan_to_ideal_SugarBB_phi_psi( sugar_nums, input_pose, verbose = False
                 print "\nArgument error. You gave me a list for <sugar_nums>, but it does not only contain integers. Returning input Pose."
                 return input_pose
             # ensure the residue number is found within the <input_pose> as well
-            if not sugar_num in range( 1, input_pose.n_residue() + 1 ):
+            if not sugar_num in range( 1, input_pose.size() + 1 ):
                 print "\nArgument error. You gave me a list of residue numbers where one or more numbers is not actually within the Pose range. Returning input Pose."
                 return input_pose
             # also ensure it is a carbohydrate residue
@@ -929,7 +925,7 @@ def set_glycan_to_ideal_SugarBB_phi_psi( sugar_nums, input_pose, verbose = False
             return input_pose
         # if an int was passed, ensure it is found within <input_pose>
         else:
-            if not sugar_nums in range( 1, input_pose.n_residue() + 1 ):
+            if not sugar_nums in range( 1, input_pose.size() + 1 ):
                 print "\nArgument error. You gave me a single residue number, but it is not actually within the Pose range. Returning input Pose."
                 return input_pose
             # also ensure it is a carbohydrate residue
@@ -986,7 +982,7 @@ def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
     :param verbose: bool( print the final weights of the returned ScoreFunction? ) Default = False
     "return: ScoreFunction( fa_scorefxn with adjusted weights of given scoretypes )
     """
-    from rosetta import get_fa_scorefxn
+    from pyrosetta import get_fa_scorefxn
     from rosetta.core.scoring import score_type_from_name
 
 
@@ -1044,7 +1040,7 @@ def make_fa_scorefxn_from_file( scorefxn_file, verbose = False ):
     :param verbose: bool( print the final weights of the returned ScoreFunction? ) Default = False
     "return: ScoreFunction( fa_scorefxn with adjusted weights of given scoretypes )
     """
-    from rosetta import get_fa_scorefxn
+    from pyrosetta import get_fa_scorefxn
     from rosetta.core.scoring import score_type_from_name
 
 
@@ -1360,7 +1356,7 @@ def get_res_with_biggest_score_diff( in_decoy, in_native, in_sf, decoy_to_native
     biggest_delta_score_native_num = None
 
     # iterate through each residue in decoy and compare its total score to the corresponding residue found in native
-    for decoy_num in range( 1, decoy.n_residue() + 1 ):
+    for decoy_num in range( 1, decoy.size() + 1 ):
         # get the corresponding residue number in native, if needed
         if decoy_to_native_res_map is not None:
             native_num = decoy_to_native_res_map[ decoy_num ]
@@ -1427,7 +1423,7 @@ def get_sugar_bb_only_sf( weight = 1 ):
     :param weight: int( or float( weight of the sugar_bb term in the sf ) ). Default = 1
     :return: ScoreFunction
     """
-    from rosetta import get_fa_scorefxn
+    from pyrosetta import get_fa_scorefxn
     from rosetta.core.scoring import score_type_from_name
 
 
@@ -1462,9 +1458,9 @@ def apply_sugar_constraints_to_sf( sf, pose, weight = 1.0, verbose = False ):
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: ScoreFunction( sf including sugar constraints )
     """
-    from rosetta import AtomID
-    from rosetta.core.scoring.constraints import AtomPairConstraint, AngleConstraint
+    from rosetta.core.id import AtomID
     from rosetta.core.scoring import score_type_from_name
+    from rosetta.core.scoring.constraints import AtomPairConstraint, AngleConstraint
     from rosetta.core.scoring.func import HarmonicFunc, CircularHarmonicFunc
 
 
@@ -2091,7 +2087,7 @@ def get_atom_nums_within_radius( seq_pos, atom_num, input_pose, radius ):
     # container for the CA or the C1 xyz of each residue in <input_pose>
     CA_C1_xyz_of_pose = {}
 
-    for res_num in range( 1, input_pose.n_residue() + 1 ):
+    for res_num in range( 1, input_pose.size() + 1 ):
         # skip the <seq_pos> if the user specified to do so
         if res_num == seq_pos and include_seq_pos == False:
             pass
@@ -2169,7 +2165,9 @@ def make_pack_rotamers_mover( sf, input_pose, pack_branch_points = True, residue
     :return: a pack_rotamers_mover object
     """
     # imports
-    from rosetta import Pose, standard_packer_task, RotamerTrialsMover
+    from pyrosetta import standard_packer_task
+    from rosetta.core.pose import Pose
+    from rosetta.protocols.simple_moves import RotamerTrialsMover
 
 
     # copy a fresh pose
@@ -2181,13 +2179,13 @@ def make_pack_rotamers_mover( sf, input_pose, pack_branch_points = True, residue
         if isinstance( residue_range, list ):
             # quick check to make sure the numbers are valid residue sequence positions
             for res_num in residue_range:
-                if not 0 < res_num <= pose.n_residue():
+                if not 0 < res_num <= pose.size():
                     print "\nIt seems that", res_num, "is not a valid sequence position in the Pose you gave me. Exiting"
                     sys.exit()
         # if they gave a single residue for <residue_range>, then that's okay as long as it is a valid residue sequence position
         elif isinstance( residue_range, int ):
             # if this isn't a valid residue number, print message and exit
-            if residue_range not in range( 1, pose.n_residue() + 1 ):
+            if residue_range not in range( 1, pose.size() + 1 ):
                 print "\nYou gave me a single residue number, but it is not a valid sequence position in the Pose you gave me. Check if", residue_range, "is what you intended to give me. Exiting"
                 sys.exit()
             # otherwise, put the integer into a list by itself
@@ -2208,7 +2206,7 @@ def make_pack_rotamers_mover( sf, input_pose, pack_branch_points = True, residue
         print "Making a pack rotamers mover"
 
     # get a list of the residues in the protein
-    protein_residues = range( 1, pose.n_residue() + 1 )
+    protein_residues = range( 1, pose.size() + 1 )
         
     # make the beginning packer task
     # this results in a packer task where each residue is allowed to be packed ( except for the first and last resiudes? )
@@ -2248,7 +2246,7 @@ def make_pack_rotamers_mover( sf, input_pose, pack_branch_points = True, residue
     if verbose:
         # task.being_packed returns True if that residue is being packed in the task
         num_packed = [ task.being_packed( res_num ) for res_num in protein_residues ].count( True )
-        num_not_packed = pose.n_residue() - num_packed
+        num_not_packed = pose.size() - num_packed
         print "  Preventing", num_not_packed, "residues from repacking in this packer task"
         print "  Allowing", num_packed, "residues to be packed"
 
@@ -2273,7 +2271,9 @@ def make_min_mover( sf, input_pose, jumps = None, allow_sugar_chi = False, minim
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: min_mover object
     """
-    from rosetta import Pose, MoveMap, MinMover
+    from rosetta.core.pose import Pose
+    from rosetta.core.kinematics import MoveMap
+    from rosetta.protocols.simple_moves import MinMover
 
 
     if verbose:
@@ -2340,7 +2340,7 @@ def make_movemap_for_loop( loop, allow_bb_movement = True, allow_chi_movement = 
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: MoveMap for Loop
     """
-    from rosetta import MoveMap
+    from rosetta.core.kinematics import MoveMap
 
 
     if verbose:
@@ -2369,7 +2369,7 @@ def make_movemap_for_jumps( JUMP_NUMbers, verbose = False ):
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: MoveMap for Jump(s)
     """
-    from rosetta import MoveMap
+    from rosetta.core.kinematics import MoveMap
 
 
     # instantiate a MoveMap
@@ -2412,7 +2412,7 @@ def make_movemap_for_sugars( pose, allow_bb_movement = True, allow_chi_movement 
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: MoveMap for all sugar residues in <pose>
     """
-    from rosetta import MoveMap
+    from rosetta.core.kinematics import MoveMap
 
 
     if verbose:
@@ -2448,7 +2448,7 @@ def make_movemap_for_range( seqpos_list, allow_bb_movement = True, allow_chi_mov
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: MoveMap for all sugar residues in <pose>
     """
-    from rosetta import MoveMap
+    from rosetta.core.kinematics import MoveMap
 
 
     # check to make sure <seqpos_list> is a list
@@ -2490,7 +2490,7 @@ def do_min_with_this_mm( mm, sf, pose, minimization_type = "dfpmin_strong_wolfe"
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: minimized Pose
     """
-    from rosetta import MinMover
+    from rosetta.protocols.simple_moves import MinMover
 
 
     # create a MinMover with options
@@ -2529,7 +2529,7 @@ def do_pack_min( sf, input_pose, residue_range = None, jumps = None, pack_branch
     :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
     :return: packed and minimized Pose
     """
-    from rosetta import Pose
+    from rosetta.core.pose import Pose
 
 
     if verbose:
@@ -2745,7 +2745,7 @@ def get_res_nums_within_radius( res_num_in, input_pose, radius, include_res_num 
     centers_of_res = []
 
     # fill up the centers container
-    for res_num in range( 1, pose.n_residue() + 1 ):
+    for res_num in range( 1, pose.size() + 1 ):
         center = pose.residue( res_num ).nbr_atom_xyz()
         centers_of_res.append( center )
 
@@ -2755,7 +2755,7 @@ def get_res_nums_within_radius( res_num_in, input_pose, radius, include_res_num 
     # nbr_xyz of the residue of interest
     res_num_xyz = pose.residue( res_num_in ).nbr_atom_xyz()
 
-    for res_num in range( 1, pose.n_residue() + 1 ):
+    for res_num in range( 1, pose.size() + 1 ):
         # this will get the xyz of the residue of interest, but it will be removed from the final list if desired
         # (since it will be added as 0 will always be less than <radius>)
         # get the center of the residue
@@ -2822,7 +2822,7 @@ def compare_single_residue_energies_between_poses( sf, res_num, native, decoy ):
     :param decoy: Pose
     """
     # imports
-    from rosetta import score_type_from_name
+    from rosetta.core.scoring import score_type_from_name
 
 
     # get the string version of the residue's energies from Pose
@@ -3009,7 +3009,7 @@ def get_best_structure_based_on_score( sf, pose, outer_trials = 3, inner_trials 
     :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
     :return: Pose( the Pose with the lowest total score after the trials of packing and minimization )
     """
-    from rosetta import Pose
+    from rosetta.core.pose import Pose
 
 
     # inform user of options depending on how much they want to hear
@@ -3423,7 +3423,7 @@ def get_JUMP_NUM_from_seq_pos( seq_pos, pose, downstream = False, verbose = Fals
     :return: int( up- or downstream jump number )
     """
     # first check to see that the <seq_pos> entered is a valid position
-    if seq_pos <= 0 or seq_pos > pose.n_residue():
+    if seq_pos <= 0 or seq_pos > pose.size():
         print
         print "Invalid sequence position given:", seq_pos, "Exiting"
         sys.exit()
@@ -3743,7 +3743,7 @@ def setup_new_fold_tree( loops_file, pose, PDB_numbering = False, anchor_loops =
     :param verbose: bool( if you want the function to print out statements about what its doing, set to True ). Default = False
     :return: Pose with the new FoldTree
     """
-    from rosetta import Loops
+    from rosetta.protocols.loops import Loops
 
 
     # attach the Loops object to the <pose> to be used when tearing down the FoldTree with restore_original_fold_tree
@@ -3842,7 +3842,7 @@ def restore_original_fold_tree( pose, verbose = False ):
 #### MUTATIONAL WORKER FUNCTIONS ####
 #####################################
 
-def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb_chain = None, pack_radius = 5, do_pack = True, do_min = True, do_full_pack_min = False ):
+def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb_chain = None, pack_radius = 5 ):
     """
     Mutate residue at position <pose_num> to <new_res_name>
     <new_res_name> can be a single-letter or three-letter residue code
@@ -3854,13 +3854,13 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
     :param pdb_num: bool( did you give me a PDB number instead? Set to True if so. Give me a <pdb_chain> too then ) Default = False (Pose number)
     :param pdb_chain: str( PDB chain id such as 'A' or 'X'. Must have set <pdb_num> to True as well
     :param pack_radius: int or float( how far out in Angstroms do you want to pack around the mutation site? ) Default = 5
-    :param do_pack: bool( do you want to pack around the mutation? ) Default = True
-    :param do_min: bool( do you want to minimize around the mutation? ) Default = True
-    :param do_full_pack_min: bool( instead of doing a local pack and/or min, do you want to do it to the whole Pose instead? ) Default = False
     :return: mutated Pose
     """
     # imports
-    from rosetta import Pose, pose_from_sequence, ResidueFactory, MoveMap, MinMover
+    from pyrosetta import pose_from_sequence, MoveMap
+    from rosetta.core.pose import Pose
+    from rosetta.core.conformation import ResidueFactory
+    from rosetta.protocols.simple_moves import MinMover
 
 
     # copy over the input pose
@@ -3895,7 +3895,7 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
 
     # ensure <pose_num> (and <pdb_chain>) exists in the pose
     if not pdb_num:
-        if not 1 <= pose_num <= pose.n_residue():
+        if not 1 <= pose_num <= pose.size():
             print "\nYou appear to have given me an invalid Pose residue number. Ensure residue number %s exists in your Pose. Returning the original pose." %pose_num
             return pose
     # if it's a PDB number, check it exists as well using the <pdb_chain> too
@@ -3926,37 +3926,26 @@ def mutate_residue( pose_num, new_res_name, input_pose, sf, pdb_num = False, pdb
     # replace the old residue in the pose
     pose.replace_residue( pose_num, new_residue, orient_backbone = True )
 
-    # if a pack and/or min is happening
-    if do_pack or do_min:
-        # if they don't want to do a full Pose pack and/or min
-        if not do_full_pack_min:
-            # get residue numbers (including mutation site) to be packed and minimized
-            res_nums_around_mutation_site = get_res_nums_within_radius( pose_num, pose, pack_radius, include_res_num = True )
-        # if a full pack and/or min is desired, make the residue range the full size of the pose
-        else:
-            res_nums_around_mutation_site = range( 1, pose.n_residue() + 1 )
+    # get residue numbers (including mutation site) to be packed and minimized
+    res_nums_around_mutation_site = get_res_nums_within_radius( pose_num, pose, pack_radius, include_res_num = True )
 
-    # pack around mutation, if desired
-    if do_pack:
-        pack_rotamers_mover = make_pack_rotamers_mover( sf, pose,
-                                                        pack_branch_points = True,
-                                                        residue_range = res_nums_around_mutation_site )
-        pack_rotamers_mover.apply( pose )
+    # pack around mutation
+    pack_rotamers_mover = make_pack_rotamers_mover( sf, pose,
+                                                    pack_branch_points = True,
+                                                    residue_range = res_nums_around_mutation_site )
+    pack_rotamers_mover.apply( pose )
 
-    # minimize around mutation, if desired
-    if do_min:
-        min_mm = MoveMap()
-        # turn on packing for the bb and chi
-        for res_num in res_nums_around_mutation_site:
-            min_mm.set_bb( res_num, True )
-            min_mm.set_chi( res_num, True )
-        # create and apply the MinMover
-        min_mover = MinMover( movemap_in = min_mm,
-                              scorefxn_in = sf,
-                              min_type_in = "dfpmin_strong_wolfe",
-                              tolerance_in = 0.01,
-                              use_nb_list_in = True )
-        min_mover.apply( pose )
+    # minimize around mutation
+    min_mm = MoveMap()
+    for res_num in res_nums_around_mutation_site:
+        min_mm.set_bb( res_num, True )
+        min_mm.set_chi( res_num, True )
+    min_mover = MinMover( movemap_in = min_mm,
+                          scorefxn_in = sf,
+                          min_type_in = "dfpmin_strong_wolfe",
+                          tolerance_in = 0.01,
+                          use_nb_list_in = True )
+    min_mover.apply( pose )
 
     return pose
 
@@ -3973,8 +3962,10 @@ def make_mutation_packer_task( amino_acid, seq_pos, sf, pose, pack_radius = PACK
     :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 20
     :return: packer_task ready to pack a Pose with a SINGLE mutation
     """
-    from rosetta import standard_packer_task, RotamerTrialsMover, \
-        aa_from_oneletter_code
+    # imports
+    from pyrosetta import standard_packer_task
+    from rosetta.core.chemical import aa_from_oneletter_code
+    from rosetta.protocols.simple_moves import RotamerTrialsMover
     from rosetta.utility import vector1_bool
 
 
@@ -4015,9 +4006,11 @@ def do_mutation_pack( seq_pos, amino_acid, sf, mutated_pose, pack_radius = PACK_
     :param pack_radius: int( or float( the distance in Angstroms around the mutated residue you want to be packed ). Default = PACK_RADIUS = 20
     :return: Pose packed around the SINGLE mutation
     """
-    from rosetta import Pose
+    # imports
+    from rosetta.core.pose import Pose
 
 
+    # make a fresh copy of the mutated_pose
     pose = Pose()
     pose.assign( mutated_pose )
     
@@ -4249,7 +4242,6 @@ def read_mutation_file( mutation_filepath ):
     Return a list of mutations to be made by reading a mutation file designated by the <mutation_filepath>
     Assumes PDB numbering!!!
     Chain designations are separated by '_', multiple mutations are separated by '-'. See below for examples
-    Second column can be a ratio of binding constants, if known (i.e. the Shields paper). Some kind of ordered ranking system, basically
     Five possible formats for a mutation string
     1) Single point mutation on both sides (symmetrical)
        A123T (Ala at position 123 on chain A and B to Thr)
@@ -4267,7 +4259,6 @@ def read_mutation_file( mutation_filepath ):
     :param mutation_filepath: str( /path/to/file with mutation strings desired )
     :return: list( mutations to be made )
     """
-    # try to open the file
     try:
         f = open( mutation_filepath, "rb" )
         lines = f.readlines()
@@ -4275,58 +4266,17 @@ def read_mutation_file( mutation_filepath ):
         print "Something is wrong with your <mutation_filepath> ( %s ). Please check your input." %mutation_filepath
         raise
 
-
-    # using an object as to hold mutation names and ratios, if the ratios are in the file
-    data_holder = DataHolder()
-
     # for each line specifying a mutation
     all_mutations = []
-    mutation_to_ratio = {}
-    mutation_to_normalized_ratio = {}
     for line in lines:
         # strip off the carriage return
-        line = line.strip()
+        mutation = line.strip()
 
-        # skip empty lines and commented out lines
-        if line != '' and not line.startswith( '#' ):
-            # the second column can contain information
-            mutation = line.split( ' ' )[0]
-            try:
-                ratio = line.split( ' ' )[1]
-            except IndexError:
-                ratio = None
-                pass
-
-            # add the mutation to the list
+        # skip over comments and blank lines
+        if mutation != '' and not mutation.startswith( '#' ):
             all_mutations.append( mutation )
-            # add the ratio, if any, to the mutation_to_ratio dict
-            if ratio is not None:
-                mutation_to_ratio[ mutation ] = float( ratio )
-            else:
-                mutation_to_ratio[ mutation ] = ratio
 
-    '''
-    # normalize the ratios given, if they were given
-    # the min, max, and mean should ignore None's
-    no_none_ratios = [ val for val in mutation_to_ratio.values() if val is not None ]
-    if len( no_none_ratios ) == 0 or len( no_none_ratios ) == 1:
-        mutat
-    min_ratio = min( no_none_ratios )
-    max_ratio = max( no_none_ratios )
-    mean_ratio = sum( no_none_ratios ) / len( no_none_ratios )
-    for mut_name, ratio in mutation_to_ratio.items():
-        if ratio is not None:
-            mutation_to_normalized_ratio[ mut_name ] = round( ( float( ratio ) - min_ratio ) / ( max_ratio - min_ratio ), 4 )
-        else:
-            mutation_to_normalized_ratio[ mut_name ] = None
-    '''
-    
-    # attach the data to the DataHolder object
-    data_holder.all_mutations = all_mutations
-    data_holder.mutation_to_ratio = mutation_to_ratio
-    #data_holder.mutation_to_normalized_ratio = mutation_to_normalized_ratio
-
-    return data_holder
+    return all_mutations
 
 
 
@@ -4350,7 +4300,7 @@ def get_full_contact_map( pose, cutoff = CUTOFF_DISTANCE, verbose = False ):
     # holds the resulting contact map
     contact_map = {}
 
-    for seq_pos in range( 1, pose.n_residue() + 1 ):
+    for seq_pos in range( 1, pose.size() + 1 ):
         # holder for the residue numbers of residues within the given <cutoff> distance
         contacts = []
 
@@ -4898,8 +4848,9 @@ def calc_interface_sasa( pose, JUMP_NUM ):
     :return: float( interface_SASA value )
     """
     # imports
-    from rosetta import Pose, calc_total_sasa
-    from rosetta.numeric import xyzVector_Real
+    from rosetta.core.pose import Pose
+    from rosetta.core.scoring import calc_total_sasa
+    from rosetta.numeric import xyzVector_double_t
 
     
     # make sure a valid JUMP_NUM was passed in
@@ -4914,7 +4865,7 @@ def calc_interface_sasa( pose, JUMP_NUM ):
     jump = temp_pose.jump( JUMP_NUM )
 
     #TODO-get current xyz location and multiply by 500 or something instead
-    vec = xyzVector_Real( 1000, 1000, 1000 )
+    vec = xyzVector_double_t( 1000, 1000, 1000 )
     jump.set_translation( vec )
     temp_pose.set_jump( JUMP_NUM, jump )
     
@@ -4927,15 +4878,15 @@ def calc_interface_sasa( pose, JUMP_NUM ):
 
 
 
-def analyze_interface( pose, JUMP_NUM, pack_separated = True, verbose = False ):
+def analyze_interface( pose, JUMP_NUM, pack_separated = True ):
     """
     Use rosetta.protocols.analysis.Interface Analyzer to compute various interface metrics
     :param pose: Pose
     :param JUMP_NUM: int( valid Jump number defining interface )
     :param pack_separated: bool( Do you want to pack the protein after you split them apart? ). Default = True
-    :param verbose: bool( if you want the function to print out the high-energy residues, set to True ). Default = False
-    :return: InterfaceAnalyzerMover with data ready to be extracted from it
+    :return: float( interface_SASA value )
     """
+    # imports
     from rosetta.protocols.analysis import InterfaceAnalyzerMover as IAM
 
 
@@ -4953,46 +4904,42 @@ def analyze_interface( pose, JUMP_NUM, pack_separated = True, verbose = False ):
 
     # TODO-see what's worth calculating and then actually return the value
     # set what you want to calculate
-    IAmover.set_compute_interface_delta_hbond_unsat( True )
-    IAmover.set_compute_interface_sc( True )
+    ##IAmover.set_compute_interface_delta_hbond_unsat( True )
+    ##IAmover.set_compute_interface_sc( True )
     IAmover.set_compute_separated_sasa( True )
 
     # set the relevant options
     IAmover.set_input_pose( pose )
     IAmover.set_pack_separated( pack_separated )
 
-    if verbose:
-        print "Analyzing interface..."
+    print "Analyzing interface..."
     IAmover.reset_status()
     IAmover.apply( pose )
 
     # retrieve data
     # TODO-retrieve new, relevant data
-    #interface_dSASA = IAmover.get_interface_delta_sasa()
+    interface_dSASA = IAmover.get_interface_delta_sasa()
     ##unsat_hbond =  IAmover.get_interface_delta_hbond_unsat()
-    #interface_dG = IAmover.get_interface_dG()  # I already calculate this with the fxn I wrote
+    ##interface_dG = IAmover.get_interface_dG()  # I already calculate this with the fxn I wrote
     ##num_interface_residues = IAmover.get_num_interface_residues()
 
-    return IAmover
+
+    return interface_dSASA
 
 
 
-def get_interface_score( JUMP_NUM, sf, pose, watch = False ):
+def get_interface_score( JUMP_NUM, sf, pose ):
     """
     Given a jump number that defines the interface, calculates Rosetta's ddG interface
     Splits apart the two domains defined by the <JUMP_NUM>, scores it, then subtracts that from the total score of the <pose>  -  result is the interface score
     :param JUMP_NUM: int( valid Jump number of the interface )
     :param sf: ScoreFunction
     :param pose: Pose
-    :param watch: bool( do you want to debug this in PyMol? ) Default = False
     :return: float( ddG interface score )
     """
     # imports
-    from rosetta import Pose
-    from rosetta.numeric import xyzVector_Real
-    if watch:
-        from rosetta import PyMOL_Mover
-        pmm = PyMOL_Mover()
+    from rosetta.core.pose import Pose
+    from rosetta.numeric import xyzVector_double_t
 
 
     # get start score
@@ -5002,17 +4949,11 @@ def get_interface_score( JUMP_NUM, sf, pose, watch = False ):
     temp_pose = Pose()
     temp_pose.assign( pose )
     jump = temp_pose.jump( JUMP_NUM )
-    if watch:
-        temp_pose.pdb_info().name( "temp_pose" )
-        pmm.apply( temp_pose )
 
-    # multiply the jump's translation vector by 500
-    vec = jump.get_translation() * 500
+    #TODO-get current xyz location and multiply by 500 or something instead
+    vec = xyzVector_double_t( 1000, 1000, 1000 )
     jump.set_translation( vec )
     temp_pose.set_jump( JUMP_NUM, jump )
-    if watch:
-        temp_pose.pdb_info().name( "split_pose" )
-        pmm.apply( temp_pose )
 
     # get and return interface score
     split_apart_score = sf( temp_pose )
@@ -5044,6 +4985,7 @@ def determine_amino_acid_composition( pose ):
     :param pose: Pose
     :return: a DataFrame or dictionary of the data, depending on if Pandas can be imported
     """
+    # imports
     try:
         import pandas as pd
         pandas_on = True
@@ -5193,7 +5135,7 @@ def check_E_per_residue( sf, pose, energy_cutoff = 1.5, verbose = False ):
     return high_E_residues
 
 
-def compare_native_vs_decoy_per_res( sf, native, decoy ):
+def compare_native_vs_low_E_vs_low_grmsd( sf, native, decoy ):
     """
     Uses Pandas to construct a DataFrame of residues between the two poses that show a difference in scores
     :param sf: ScoreFunction
@@ -5203,7 +5145,7 @@ def compare_native_vs_decoy_per_res( sf, native, decoy ):
     """
     # imports
     import pandas as pd
-    from rosetta import score_type_from_name
+    from rosetta.core.scoring import score_type_from_name
     from rosetta.core.scoring.sasa import per_res_sc_sasa
 
 
@@ -5217,7 +5159,7 @@ def compare_native_vs_decoy_per_res( sf, native, decoy ):
 
     # instantiate the DataFrame object
     df = pd.DataFrame()
-    residue_numbers = range( 1, native.n_residue() + 1 )
+    residue_numbers = range( 1, native.size() + 1 )
     df[ "res_num" ] = residue_numbers
 
     # get delta scores between native and the two passed decoys
@@ -5241,97 +5183,6 @@ def compare_native_vs_decoy_per_res( sf, native, decoy ):
 
 
 
-def get_pymol_res_selection( residues, input_pose ):
-    """
-    Using the list of Pose <residues> numbers, turn them into a string selection using pdb_info() from <input_pose>
-    :param residues: list( Pose residue numbers )
-    :param input_pose: Pose
-    :return: str( pymol selection of residues )
-    """
-    pymol_selection = "select resi "
-    for ii in range( len( residues ) ):
-        # for all residues except the last one
-        if ii != len( residues ) - 1:
-            pymol_selection += input_pose.pdb_info().pose2pdb( residues[ii] ).strip().split( ' ' )[0] + " and chain " + input_pose.pdb_info().pose2pdb( residues[ii] ).split( ' ' )[1] + " + resi "
-        else:
-            pymol_selection += input_pose.pdb_info().pose2pdb( residues[ii] ).strip().split( ' ' )[0] + " and chain " + input_pose.pdb_info().pose2pdb( residues[ii] ).split( ' ' )[1]
-
-    return pymol_selection
-
-
-
-def get_rank_order_of_list( input ):
-    """
-    Function retreived from http://codereview.stackexchange.com/questions/65031/creating-a-list-containing-the-rank-of-the-elements-in-the-original-list
-    """
-    indices = list(range(len(input)))
-    indices.sort(key=lambda x: input[x])
-    output = [0] * len(indices)
-    for i, x in enumerate(indices):
-        # i'm adding a plus one because this ranks from 0 - n-1, I want 1 - n
-        # also added the float() part
-        output[x] = float( i + 1 )
-    return output
-
-
-
-def make_RotamerTrialsMover( moveable_residues, sf, input_pose, pack_radius = None ):
-    """
-    Given a list of <moveable_residues>, get all additional residues within <pack_radius> Angstroms around them in <input_pose> and return a RotamerTrialsMover that will pack these residues
-    If no <pack_radius> is given, then only residues in <moveable_residues> will be allowed to pack
-    :param moveable_residues: list( Pose numbers )
-    :param sf: ScoreFunction
-    :param input_pose: Pose
-    :param pack_radius: int( or float( radius in Angstroms to pack around the <moveable_residues>. Uses nbr_atom to determine residues in proximity ) ) Default = None which means that only residues in <moveable_residues> get packed
-    :return: RotamerTrialsMover
-    """
-    # imports
-    from rosetta import standard_packer_task, RotamerTrialsMover
-
-
-    # copy over the input_pose
-    pose = input_pose.clone()
-
-    # make the PackRotamersMover from the passed MoveMap
-    # default of standard_packer_task is to set packing for residues to True
-    task = standard_packer_task( pose )
-    task.or_include_current( True )
-    task.restrict_to_repacking()
-
-    # if a pack_radius was not given, then everything gets packed. So the task does not need to be adjusted as the default option is packing True for all
-    # otherwise, if a pack_radius was given, turn off repacking for residues outside the pack_radius
-    if pack_radius is not None:
-        # get all the protein residues within pack_radius of the moveable_residues
-        # inclue_passed_res_nums means that the function will return a list of residues that includes all numbers in moveable_residues
-        # I am adding them in myself for clarity, so this setting is set to off
-        nearby_protein_residues = get_res_nums_within_radius( moveable_residues, pose, 
-                                                              radius = pack_radius, 
-                                                              include_passed_res_nums = False )
-
-        # create a list of residue numbers that can be packed
-        # meaning, the moveable carbohydrate residues and the residues around them
-        packable_residues = [ res_num for res_num in moveable_residues ]
-        packable_residues.extend( nearby_protein_residues )
-        packable_residues = list( set( packable_residues ) )
-
-        # turn off packing for all residues that are NOT packable
-        # i.e. for all residues in the pose, turn OFF packing if they are NOT in the packable_residues list
-        [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in range( 1, pose.n_residue() + 1 ) if res_num not in packable_residues ]
-
-    # otherwise, only residues specified by moveable_residues should be allowed to be packed
-    else:
-        # turn off repacking for all residues in the pose that are NOT in moveable_residues
-        # no pack_radius was given, so all residues not specified in moveable_residues should not be packed
-        [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in range( 1, pose.n_residue() + 1 ) if res_num not in moveable_residues ]
-
-    # make the pack_rotamers_mover with the given ScoreFunction and created task
-    pack_rotamers_mover = RotamerTrialsMover( sf, task )
-
-    return pack_rotamers_mover
-
-
-
-
 
 ############################
 #### INITIALIZE ROSETTA ####
@@ -5339,7 +5190,7 @@ def make_RotamerTrialsMover( moveable_residues, sf, input_pose, pack_radius = No
 
 if __name__ == '__main__':
     # initialize rosetta with sugar flags
-    from rosetta import init
+    from pyrosetta import init
     
     print "Initializing Rosetta with sugar flags"
     #init( extra_options="-mute basic -mute core -mute protocols -include_sugars -override_rsd_type_limit -read_pdb_link_records -write_pdb_link_records" )

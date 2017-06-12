@@ -126,13 +126,13 @@ def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
     :param pmm: PyMOL_Mover( pass a PyMOL_Mover object if you want to watch the protocol ). Default = None
     :return: float( pseudo interface energy )
     """
-    from rosetta import FoldTree, Pose
-    from rosetta.numeric import xyzVector_Real
+    from pyrosetta import FoldTree, Pose
+    from rosetta.numeric import xyzVector_double_t
     from rosetta.core.scoring import score_type_from_name
 
 
     # if this isn't the Fc-FcR structure of 3ay4, just return 0
-    if pose.n_residue() != 618:
+    if pose.size() != 618:
         return 0
 
     # set atom_pair_constraint weight to 0
@@ -207,7 +207,7 @@ def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
     # if decoy structure -- the two glycans are now the last two new jumps
     if not native:
         jump = temp_pose.jump( 3 ) # sugar A
-        vec = xyzVector_Real( 1000, 1000, 1000 )
+        vec = xyzVector_double_t( 1000, 1000, 1000 )
         jump.set_translation( vec )
         temp_pose.set_jump( 3, jump )
         try:
@@ -215,7 +215,7 @@ def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
         except:
             pass
         jump = temp_pose.jump( 4 ) # sugar B
-        vec = xyzVector_Real( 1000, 1000, 1000 )
+        vec = xyzVector_double_t( 1000, 1000, 1000 )
         jump.set_translation( vec )
         temp_pose.set_jump( 4, jump )
         try:
@@ -226,7 +226,7 @@ def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
     # else native structure -- the two glycans are the first and third new jumps
     else:
         jump = temp_pose.jump( 1 ) # sugar A
-        vec = xyzVector_Real( 1000, 1000, 1000 )
+        vec = xyzVector_double_t( 1000, 1000, 1000 )
         jump.set_translation( vec )
         temp_pose.set_jump( 1, jump )
         try:
@@ -234,7 +234,7 @@ def pseudo_interface_energy_3ay4( pose, in_sf, native = False, pmm = None ):
         except:
             pass
         jump = temp_pose.jump( 3 ) # sugar B
-        vec = xyzVector_Real( 1000, 1000, 1000 )
+        vec = xyzVector_double_t( 1000, 1000, 1000 )
         jump.set_translation( vec )
         temp_pose.set_jump( 3, jump )
         try:
@@ -308,7 +308,7 @@ def Fc_glycan_rmsd( working, working_Fc_glycan_chains, native, native_Fc_glycan_
     """
     # imports
     import os
-    from rosetta import Pose
+    from pyrosetta import Pose
     from rosetta.core.scoring import non_peptide_heavy_atom_RMSD
     from antibody_functions import load_pose
     from util import dump_pdb_by_chain, id_generator
@@ -377,8 +377,9 @@ def Fc_glycan_metrics( working, native, working_Fc_glycan_chains, native_Fc_glyc
     #################
 
     # Rosetta functions
-    from rosetta import Pose, calc_total_sasa
-    from rosetta.core.scoring import non_peptide_heavy_atom_RMSD
+    from pyrosetta import Pose
+    from rosetta.core.scoring import non_peptide_heavy_atom_RMSD, \
+        calc_total_sasa
 
     # Rosetta functions I wrote out
     from antibody_functions import load_pose, DataHolder
@@ -386,7 +387,7 @@ def Fc_glycan_metrics( working, native, working_Fc_glycan_chains, native_Fc_glyc
     # utility functions
     import os
     from util import dump_pdb_by_chain, id_generator
-    from toolbox import get_hbonds
+    from pyrosetta.toolbox import get_hbonds
 
     # for use in SASA calculations
     probe_size = 1.4

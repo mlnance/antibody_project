@@ -49,13 +49,13 @@ native_FcR_glycan_chains = [ 'H', 'I', 'J', 'K' ]
 ###################
 
 def initialize_rosetta( constant_seed = False, debug = False ):
-    '''
+    """
     Initialize Rosetta and mute basic, core, and protocols.
     If constant_seed == True, use default constant seed 1111111
     If debug == True, use default constant seed and do not mute Rosetta
-    '''
+    """
     # imports
-    from rosetta import init
+    from pyrosetta import init
 
 
     print "Initializing Rosetta with sugar flags"
@@ -72,13 +72,14 @@ def initialize_rosetta( constant_seed = False, debug = False ):
 
 
 def load_pose( pose_filename ):
-    '''
+    """
     Load pose from a filename
     :param pose_filename: str( /path/to/pose/filename )
     :return: a Rosetta Pose
-    '''
+    """
     # imports
-    from rosetta import Pose, pose_from_file, FoldTree
+    from rosetta.core.pose import Pose
+    from pyrosetta import pose_from_file
 
     
     # create Pose object from filename
@@ -90,28 +91,23 @@ def load_pose( pose_filename ):
     pose_name = pose_name.split( '/' )[-1]
     pose.pdb_info().name( pose_name )
 
-    # store the original FoldTree and add empty loops for use later
-    pose.orig_fold_tree = FoldTree( pose.fold_tree() )
-    pose.loops = None
-    pose.loops_file = None
-
     return pose
 
 
 
 def get_fa_scorefxn_with_given_weights( weights_dict, verbose = False ):
-    '''
+    """
     Return an sf from get_fa_scoretype but with adjusted weights <scoretypes> with given <weights>
     If <input_scoretype> is not already part of the <sf>, this function will add it to <sf> with a weight of <weight>, and then get the score
     Will exit if the string( <input_scoretype> ) is not a valid ScoreType
     :param weights_dict: dict( ScoreType or str of ScoreType name : int( or float( weight ) ) )
     :param verbose: bool( print the final weights of the returned ScoreFunction? ) Default = False
     "return: ScoreFunction( fa_scorefxn with adjusted weights of given scoretypes )
-    '''
+    """
     # imports
     import sys
-    from rosetta import get_fa_scorefxn, score_type_from_name
-    from rosetta.core.scoring import fa_atr
+    from pyrosetta import get_fa_scorefxn
+    from rosetta.core.scoring import fa_atr, score_type_from_name
 
 
     # argument check - check the passed argument is a dict
@@ -170,7 +166,7 @@ def native_3ay4_Fc_glycan_LCM_reset( mm, input_pose, use_population_ideal_LCM_re
 
     # imports
     import sys
-    from rosetta import MoveMap
+    from rosetta.core.kinematics import MoveMap
     from rosetta.protocols.carbohydrates import LinkageConformerMover
 
 
@@ -184,7 +180,7 @@ def native_3ay4_Fc_glycan_LCM_reset( mm, input_pose, use_population_ideal_LCM_re
 
     # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
     # I'm copying this idea from GlycanRelaxMover, but overall it makes sense anyway. Only things with BB freedom should be sampled
-    carbohydrate_res_nums = [ res_num for res_num in range( 1, pose.n_residue() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
+    carbohydrate_res_nums = [ res_num for res_num in range( 1, pose.size() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
 
     # for each residue in <carbohydrate_res_nums>
     for res_num in carbohydrate_res_nums:
@@ -227,7 +223,7 @@ def native_3ay4_Fc_glycan_random_reset( mm, input_pose ):
     # imports
     import sys
     from random import uniform
-    from rosetta import MoveMap
+    from rosetta.core.kinematics import MoveMap
 
 
     # copy in the input_pose
@@ -235,7 +231,7 @@ def native_3ay4_Fc_glycan_random_reset( mm, input_pose ):
 
     # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
     # I'm copying this idea from GlycanRelaxMover, but overall it makes sense anyway. Only things with BB freedom should be sampled
-    carbohydrate_res_nums = [ res_num for res_num in range( 1, pose.n_residue() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
+    carbohydrate_res_nums = [ res_num for res_num in range( 1, pose.size() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
 
     # for each residue in <carbohydrate_res_nums>
     for res_num in carbohydrate_res_nums:
@@ -272,136 +268,93 @@ def add_constraints_to_pose( constraint_file, input_pose ):
 
 
 
-class SugarSmallMover:
-    def __init__( self, mm, n_moves, angle_max, input_pose, move_all_torsions = True, use_sugar_bb_angle_max = False ):
-        '''
-        Randomly resets the phi, psi, and omega values of <n_moves> residues found in the <mm> MoveMap that are carbohydrates and have their BB freedom turned on
-        Math works out to where the max motion to either direction or starting position is angle_max/2 ( old_value +/- angle_max/2 )
-        Emulates the SmallMover but with the additional omega mover
-        Can either move all torsions found on the chosen residue (Default action), or can set move_all_torsions to False and will instead pick one of the available torsions of that residue to perturb
-        use_sugar_bb_angle_max means to use an angle max for phi and psi (and omega that Jason told me) that comes from the sugar_bb graph (just eyeballed)
-        :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be moved )
-        :param n_moves: int( how many moves should be allowed in one call to the SugarSmallMover? )
-        :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
-        :param input_pose: Pose
-        :param move_all_torsions: bool( do you want to move all BackBone torsions of the residues at the same time? If not, a single torsion will be randomly chosen and perturbed ) Default = True
-        :param use_sugar_bb_angle_max: bool( use sugar_bb phi/psi/omega data to get angle_max. This was more or less arbitrary and created by looking at the LCM data ) Default = False
-        :return: Pose
-        '''
-        # information needed to create and then apply this SugarSmallMover
-        self.movemap_in = mm
-        # collected by getting all residues with bb set to True in the movemap_in
-        self.moveable_res_nums = []
-        self.n_moves = n_moves
-        self.pose_in = input_pose.clone()
-        # the big_angle is the input angle_max. The max arc available on both sides of the current position
-        self.big_angle = float( angle_max )
-        # the small_angle is the largest possible single move that can be made (in a single direction + or -)
-        self.small_angle = 0
-        self.move_all_torsions = move_all_torsions
-        self.use_sugar_bb_angle_max = use_sugar_bb_angle_max
-        # not doing a dictionary just in case the same residues gest moved more than once in one .apply()
-        # lists are ordered anyway so I think this is more useful
-        # list of single residue numbers in Pose numbering ex. [ 36, 9, 100 ]
-        self.moved_residues = []
-        self.n_moved_residues = 0
-        # a list of lists containing all moveable_torsions for the residue number
-        # ex. [ [ phi_dihedral, psi_dihedral ], [ phi_dihedral, psi_dihedral, omega_dihedral ], ... ]
-        # if move_all_torsions == False, then it will be like [ [ phi_dihedral ], [ omega_dihedral ], [ psi_dihedral ] ]
-        self.moved_residues_torsions = []
-        # a list of lists containing the values for each moveable_torsion stored for each residue number
-        # ex. [ [ cur + new, cur + new ] , [ cur + new, cur + new, cur + new ] , ... ]
-        self.moved_residues_torsions_new_values = []
-        self.moved_residues_torsions_old_values = []
-        self.moved_residues_torsions_perturbations = []
+def SugarSmallMover( mm, nmoves, angle_max, input_pose, move_all_torsions = True, use_sugar_bb_angle_max = False ):
+    """
+    Randomly resets the phi, psi, and omega values of <nmoves> residues found in the <mm> MoveMap that are carbohydrates and have their BB freedom turned on
+    Math works out to where the max motion to either direction or starting position is angle_max/2 ( old_value +/- angle_max/2 )
+    Emulates the SmallMover but with the additional omega mover
+    Can either move all torsions found on the chosen residue (Default action), or can set move_all_torsions to False and will instead pick one of the available torsions of that residue to perturb
+    use_sugar_bb_angle_max means to use an angle max for phi and psi (and omega that Jason told me) that comes from the sugar_bb graph (just eyeballed)
+    :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be moved )
+    :param nmoves: int( how many moves should be allowed in one call to the SugarSmallMover? )
+    :param angle_max: int( or float( the max angle around which the phi/psi/omega could move ) )
+    :param input_pose: Pose
+    :param move_all_torsions: bool( do you want to move all BackBone torsions of the residues at the same time? If not, a single torsion will be randomly chosen and perturbed ) Default = True
+    :param use_sugar_bb_angle_max: bool( use sugar_bb phi/psi/omega data to get angle_max ) Default = False
+    :return: Pose
+    """
+    # imports
+    from random import choice
+    from rosetta.basic import periodic_range
+    from rosetta.numeric.random import uniform
+    from rosetta.core.id import phi_dihedral, psi_dihedral, omega_dihedral, omega2_dihedral, omega3_dihedral
+    from rosetta.core.pose.carbohydrates import get_glycosidic_torsion, set_glycosidic_torsion, \
+        get_reference_atoms
 
 
-        # collect some information that was passed to prepare for .apply()
-        # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
-        # I'm copying this idea from GlycanRelaxMover, but overall it makes sense anyway. Only things with BB freedom should be sampled
-        self.moveable_res_nums = [ res_num for res_num in range( 1, self.pose_in.n_residue() + 1 ) if self.movemap_in.get_bb( res_num ) and self.pose_in.residue( res_num ).is_carbohydrate() ]
+    # copy the input pose
+    pose = input_pose.clone()
 
-        # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover
-        self.small_angle = self.big_angle / 2.0
+    # This apparently is gone in PyRosetta4 now...
+    MainchainTorsionTypes = [ phi_dihedral, psi_dihedral, omega_dihedral, omega2_dihedral, omega3_dihedral ]
 
+    # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
+    # I'm copying this idea from GlycanRelaxMover, but overall it makes sense anyway. Only things with BB freedom should be sampled
+    moveable_res_nums = [ res_num for res_num in range( 1, pose.size() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
 
-    def apply( self, pose ):
-        # imports
-        from random import choice
-        from rosetta.basic import periodic_range
-        from rosetta.numeric.random import uniform
-        from rosetta.core.id import MainchainTorsionType, phi_dihedral, psi_dihedral, omega_dihedral
-        from rosetta.core.pose.carbohydrates import get_glycosidic_torsion, set_glycosidic_torsion, \
-            get_reference_atoms
+    # from rosetta.protocols.simple_moves:BackboneMover.cc file for SmallMover
+    big_angle = angle_max
+    small_angle = big_angle / 2.0
 
+    # for as many moves as specified
+    for ii in range( nmoves ):
+        # pick a residue to sample
+        res_num = choice( moveable_res_nums )
 
-        # set all the new torsions using information collected from init
-        # for as many moves as specified
-        for ii in range( self.n_moves ):
-            # pick a residue to sample and add it to the class-held list
-            res_num = choice( self.moveable_res_nums )
-            self.moved_residues.append( res_num )
+        # check which glycosidic torsions it has (except omega3_dihedral, that doesn't work at the moment)
+        moveable_torsions = []
+        for torsion_name in MainchainTorsionTypes:
+            # have to skip omega3, hence doing by name
+            if torsion_name != omega3_dihedral:
+                # if this torsion has reference atoms, it exists
+                # bool( len([]) ) = False, so it will return False if there are no reference atoms (ie. it doesn't exist)
+                if bool( len( get_reference_atoms( int( torsion_name ), pose, res_num ) ) ):
+                    # this torsion type has reference atoms, thus it exists. Keep it
+                    moveable_torsions.append( torsion_name )
+        # keep one torsion if the user doesn't want all torsions sampled
+        if move_all_torsions is False:
+            moveable_torsions = [ choice( moveable_torsions ) ]
 
-            # check which glycosidic torsions it has (except omega3_dihedral, that doesn't work at the moment)
-            moveable_torsions = []
-            for torsion_name in MainchainTorsionType.names:
-                # have to skip omega3, hence doing by name
-                if torsion_name != "omega3_dihedral":
-                    # if this torsion has reference atoms, it exists
-                    # bool( len([]) ) = False, so it will return False if there are no reference atoms (ie. it doesn't exist)
-                    if bool( len( get_reference_atoms( MainchainTorsionType.names[ torsion_name ], self.pose_in, res_num ) ) ):
-                        # this torsion type has reference atoms, thus it exists. Keep it
-                        moveable_torsions.append( MainchainTorsionType.names[ torsion_name ] )
-            # keep one torsion if the user doesn't want all torsions sampled
-            if self.move_all_torsions is False:
-                moveable_torsions = [ choice( moveable_torsions ) ]
-            # add the moveable_torsions to the class-held list
-            self.moved_residues_torsions.append( moveable_torsions )
+        # get the current torsions for the moveable_torsions and perturb them according to angle_max
+        for moveable_torsion in moveable_torsions:
+            # get the current torsion value
+            old_torsion_value = get_glycosidic_torsion( int( moveable_torsion ), pose, res_num )
 
-            # get the current torsions for the moveable_torsions and perturb them according to angle_max
-            moveable_torsion_new_values = []
-            moveable_torsion_old_values = []
-            moveable_torsion_perturbations = []
-            for moveable_torsion in moveable_torsions:
-                # get the current torsion value
-                old_torsion_value = get_glycosidic_torsion( moveable_torsion, self.pose_in, res_num )
-                moveable_torsion_old_values.append( old_torsion_value )
+            # if use_sugar_bb_angle_max is set to True, change the angle_max, small_angle, and big_angle
+            # depending on if the torsion being sampled is a phi, psi, or omega
+            if use_sugar_bb_angle_max:
+                # phi and omega
+                if moveable_torsion == phi_dihedral or moveable_torsion == omega_dihedral:
+                    big_angle = 30
+                    small_angle = big_angle / 2.0
+                # psi
+                elif moveable_torsion == psi_dihedral:
+                    big_angle = 100
+                    small_angle = big_angle / 2.0
 
-                # if use_sugar_bb_angle_max is set to True, change the angle_max, small_angle, and big_angle
-                # depending on if the torsion being sampled is a phi, psi, or omega
-                # this is eye-balled data from the LCM data
-                if self.use_sugar_bb_angle_max:
-                    # phi and omega
-                    if moveable_torsion == phi_dihedral or moveable_torsion == omega_dihedral:
-                        self.big_angle = 30
-                        self.small_angle = self.big_angle / 2.0
-                    # psi
-                    elif moveable_torsion == psi_dihedral:
-                        self.big_angle = 100
-                        self.small_angle = self.big_angle / 2.0
+            # perturb this torsion randomly
+            # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
+            new_torsion_value = periodic_range( old_torsion_value - small_angle + uniform() * big_angle, 360.0 )
 
-                # prepare a new torsion value
-                # this specific format is pulled from rosetta.protocols.simple_moves:SmallMover::make_move, took out .rg()
-                new_torsion_value = periodic_range( old_torsion_value - self.small_angle + uniform() * self.big_angle, 360.0 )
-                moveable_torsion_new_values.append( new_torsion_value )
-                # store the amount that this was perturbed by using the new and old torsion value
-                moveable_torsion_perturbations.append( periodic_range( new_torsion_value - old_torsion_value, 360.0 ) )
-                # perturb this torsion randomly
-                set_glycosidic_torsion( moveable_torsion, self.pose_in, res_num, new_torsion_value )
-            # add the moveable_torsion_values to the class-held list
-            self.moved_residues_torsions_new_values.append( moveable_torsion_new_values )
-            self.moved_residues_torsions_old_values.append( moveable_torsion_old_values )
-            self.moved_residues_torsions_perturbations.append( moveable_torsion_perturbations )
+            # set the new torsion
+            set_glycosidic_torsion( int( moveable_torsion ), pose, res_num, new_torsion_value )
 
-        # add the number of residues that were moved
-        self.n_moved_residues = len( self.moved_residues )
-
-        return self.pose_in
+    return pose
 
 
 
 def get_ramp_score_weight( current_weight, target_weight, current_step, total_steps ):
-    '''
+    """
     Given the <current_weight> and the <target_weight>, use the <current_step> and the <total_steps> to determine how much the weight should be increased or decreased for this particular round
     Current and Total steps -- Say you're doing 100 (1-100) rounds, if you're on round 57, current_step = 57, total_steps = 100
     :param current_weight: int( or float( value of your current ScoreType weight ) )
@@ -409,7 +362,7 @@ def get_ramp_score_weight( current_weight, target_weight, current_step, total_st
     :param current_step: int( current step of how many rounds you're doing )
     :param total_steps: int( number of rounds you're doing )
     :return: float( the new weight to set for your ScoreType for this particular round )
-    '''
+    """
     # imports
     import sys
 
@@ -417,7 +370,7 @@ def get_ramp_score_weight( current_weight, target_weight, current_step, total_st
     # need to be able to do this a minimum of 10 times, otherwise the math will break
     if total_steps < 10:
         print
-        print "You need to run a loop at least more than 10 times - otherwise the math for ramping the sf won't work"
+        print "You need to run a loop at least more than 10 times - otherwise the math in here won't work"
         sys.exit()
 
     # adjust the total_steps so that it's actually 10% less than what it actually is
@@ -445,7 +398,7 @@ def get_ramp_score_weight( current_weight, target_weight, current_step, total_st
 
 
 def get_ramp_angle_max( current_angle_max, target_angle_max, current_step, total_steps ):
-    '''
+    """
     Given the <current_angle_max> and the <target_angle_max>, use the <current_step> and the <total_steps> to determine how much the angle_max should be increased or decreased for this particular round
     Current and Total steps -- Say you're doing 100 (1-100) rounds, if you're on round 57, current_step = 57, total_steps = 100
     :param current_angle_max: int( or float( value of your current angle_max ) )
@@ -453,7 +406,7 @@ def get_ramp_angle_max( current_angle_max, target_angle_max, current_step, total
     :param current_step: int( current step of how many rounds you're doing )
     :param total_steps: int( number of rounds you're doing )
     :return: float( the new angle angle_max to set for your SugarSmall/ShearMover for this particular round )
-    '''
+    """
     # imports
     import sys
 
@@ -461,7 +414,7 @@ def get_ramp_angle_max( current_angle_max, target_angle_max, current_step, total
     # need to be able to do this a minimum of 10 times, otherwise the math will break
     if total_steps < 10:
         print
-        print "You need to run a loop at least more than 10 times - otherwise the math for ramping the angle_max won't work"
+        print "You need to run a loop at least more than 10 times - otherwise the math in here won't work"
         sys.exit()
 
     # adjust the total_steps so that it's actually 10% less than what it actually is
@@ -488,73 +441,104 @@ def get_ramp_angle_max( current_angle_max, target_angle_max, current_step, total
 
 
 
-def get_res_nums_within_radius( residues, input_pose, radius, include_passed_res_nums = False, sort_return_list = False ):
-    '''
-    Find all residue numbers around a single <residues> or a list of <residues> given in <input_pose> within <radius> Angstroms.
-    Set <include_residues> if you want to include the single or list of passed <residues> in the return list of residue numbers. Best for packing cases
-    :param residues: int( or list( Pose residue numbers or single number ) )
+def get_res_nums_within_radius( res_num_in, input_pose, radius, include_res_num = False ):
+    """
+    Use the nbr_atom_xyz to find residue numbers within <radius> of <pose_num> in <pose>
+    :param res_num_in: int( Pose residue number )
     :param input_pose: Pose
-    :param radius: int() or float( radius in Angstroms )
-    :param include_passed_res_nums: bool( do you want to include the passed <residues> in the return list of resiude numbers? ) Default = False
-    :param sort_return_list: bool( do you want to sort the return residue list? ) Default = False
-    :return: list( residues around passed <residues> list within <radius> Angstroms
-    '''
-    # argument check: ensure passed <residues> argument is a list or an integer
-    if type( residues ) != list:
-        if type( residues ) != int:
-            print "\nArgument error. You're supposed to past me a list of residue numbers for the <residues> argument, or just a single integer residue number. Returning None."
-            return None
-        else:
-            # if they didn't give a list and instead passed a single integer, make that integer a list
-            residues = [ residues ]
-
-    # copy the input_pose
+    :param radius: int or float( radius around <pose_num> to use to select resiudes )
+    :param include_res_num: bool( do you want to include <res_num> in the return list? ) Default = False
+    :return: list( Pose residue numbers within <radius> of <pose_num>
+    """
+    # clone the <input_pose>
     pose = input_pose.clone()
 
-    # get a list of the xyz coordinates of the nbr_atom in all <residues>
-    xyz_of_residues = [ pose.residue( res_num ).nbr_atom_xyz() for res_num in residues ]
-            
-    # iter only once over each residue in the pose and get distance between that residue and all the residues in <residues>
-    res_nums_within_radius = []
-    for res_num in range( 1, pose.n_residue() + 1 ):
-        # nbr_atom_xyz of every other residue in the pose
-        if res_num not in residues:
-            center = pose.residue( res_num ).nbr_atom_xyz()
-            # check this residue's nbr_atom_xyz against all the residues passed
-            for xyz in xyz_of_residues:
-                # keep the residue number if the nbr_atom_xyz is less than or equal to <radius>
-                if center.distance( xyz ) <= radius:
-                    res_nums_within_radius.append( res_num )
-                    break
+    # container for the centers of each residue in pose
+    centers_of_res = []
 
-    # since we skipped residues that were given, add them to the list if desired
-    # ie. if include_passed_res_nums is True, add <residues> to res_nums_within_radius
-    if include_passed_res_nums:
-        res_nums_within_radius.extend( residues )
+    # fill up the centers container
+    for res_num in range( 1, pose.size() + 1 ):
+        center = pose.residue( res_num ).nbr_atom_xyz()
+        centers_of_res.append( center )
+
+    # container for residues inside the <radius>
+    res_nums_in_radius = []
+
+    # nbr_xyz of the residue of interest
+    res_num_xyz = pose.residue( res_num_in ).nbr_atom_xyz()
+
+    for res_num in range( 1, pose.size() + 1 ):
+        # this will get the xyz of the residue of interest, but it will be removed from the final list if desired
+        # (since it will be added as 0 will always be less than <radius>)
+        # get the center of the residue
+        center = pose.residue( res_num ).nbr_atom_xyz()
+
+        # keep the residue number if the nbr_atom_xyz is less than <radius>
+        if center.distance( res_num_xyz ) <= radius:
+            res_nums_in_radius.append( res_num )
+
+    # if the user didn't want the residue of interest in the return list, remove it
+    if not include_res_num:
+        res_nums_in_radius.remove( res_num_in )
+
+    return res_nums_in_radius
+
+
+
+def get_res_nums_within_radius_of_residue_list( residues, input_pose, radius, include_res_nums = False ):
+    """
+    Find all residue numbers around the list of <residues> given in <input_pose> within <radius> Angstroms.
+    Set <include_residues> if you want to include the list of passed <residues> in the return list of residue numbers.
+    :param residues: list( Pose residue numbers )
+    :param input_pose: Pose
+    :param radius: int() or float( radius in Angstroms )
+    :param include_res_nums: bool( do you want to include the passed <residues> in the return list of resiude numbers? ) Default = False
+    :return: list( residues around passed <residues> list within <radius> Angstroms
+    """
+    # argument check: ensure passed <residues> argument is a list
+    if type( residues ) != list:
+        print "\nArgument error. You're supposed to past me a list of residue numbers for the <residues> argument. Returning None."
+        return None
+
+    # use get_res_nums_within_radius to get all residue numbers
+    residues_within_radius = []
+    for res_num in residues:
+        residues_within_radius.extend( get_res_nums_within_radius( res_num, input_pose, radius, include_res_num = include_res_nums ) )
+
+
+    # get the set of the list and sort the residue numbers
+    set_of_residues_within_radius = [ res for res in set( residues_within_radius ) ]
+
+    # it is possible that there are still residues from <residues> in the list, so remove them one by one if desired
+    if not include_res_nums:
+        for res in residues:
+            try:
+                set_of_residues_within_radius.remove( res )
+            except ValueError:
+                pass
 
     # sort
-    if sort_return_list:
-        res_nums_within_radius.sort()
+    set_of_residues_within_radius.sort()
 
-    return res_nums_within_radius
+    return set_of_residues_within_radius
 
 
 
 def spin_carbs_connected_to_prot( mm, input_pose, spin_using_ideal_omegas = True ):
-    '''
+    """
     The intent of this spin is to set the carbohydrate involved in the protein-carbohydrate connection into a reasonable starting position after the reset. This is because current LCM data found in the default.table was collected for surface glycans. These data are not reflective of the glycans found in the Ig system
     :param mm: MoveMap ( residues with BB set to True and that are carbohydrates are available to be reset )
     :param input_pose: Pose
     :param spin_using_ideal_omegas: bool( set omega1 (and omega2) to either 180, 60, or -60? If not, it would be those values +/- 0-20 ) Default = True
     :return: Pose
-    '''
+    """
     # imports
     from random import choice
     from rosetta.core.pose.carbohydrates import find_seqpos_of_saccharides_parent_residue, \
         get_reference_atoms, set_glycosidic_torsion
     from rosetta.core.id import omega_dihedral, omega2_dihedral
     from rosetta.basic import periodic_range
-    from rosetta.numeric.random import uniform
+    from rosetta.numeric.random import rg
 
 
     # copy the input pose
@@ -562,7 +546,7 @@ def spin_carbs_connected_to_prot( mm, input_pose, spin_using_ideal_omegas = True
 
     # use the MoveMap to see which residues have a parent connection to a protein
     # residues that are allowed to move are based on residues with BB set to True in the MoveMap and the residue is a carbohydrate
-    carbohydrate_res_nums = [ res_num for res_num in range( 1, pose.n_residue() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
+    carbohydrate_res_nums = [ res_num for res_num in range( 1, pose.size() + 1 ) if mm.get_bb( res_num ) and pose.residue( res_num ).is_carbohydrate() ]
 
     # find the seqpos of the parent residue of each moveable residue and determine if it is a protein
     residues_to_spin = []
@@ -585,7 +569,7 @@ def spin_carbs_connected_to_prot( mm, input_pose, spin_using_ideal_omegas = True
             # get a base omega value to start at
             new_omega = choice( possible_omega_values )
             if not spin_using_ideal_omegas:
-                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move, took out .rg()
+                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
                 # small_angle = 15 meaning the max you can move your angle in one direction ( + or - )
                 # big_angle = 30 meaning the entire range available from your current ( + and - small_angle )
                 new_omega = periodic_range( new_omega - 15.0 + uniform() * 30.0, 360.0 )
@@ -595,7 +579,7 @@ def spin_carbs_connected_to_prot( mm, input_pose, spin_using_ideal_omegas = True
             # get a base omega value to start at
             new_omega2 = choice( possible_omega_values )
             if not spin_using_ideal_omegas:
-                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move, took out .rg()
+                # this specific format is pulled from rosetta.protocols.simple_moves:ShearMover::make_move
                 # small_angle = 15 meaning the max you can move your angle in one direction ( + or - )
                 # big_angle = 30 meaning the entire range available from your current ( + and - small_angle )
                 new_omega2 = periodic_range( new_omega2 - 15.0 + uniform() * 30.0, 360.0 )
@@ -606,7 +590,7 @@ def spin_carbs_connected_to_prot( mm, input_pose, spin_using_ideal_omegas = True
 
 
 def glycosylate_working_pose( input_pose, glyco_file, glyco_sites ):
-    '''
+    """
     Glycosylate the <input_pose> using the <glyco_file> at the <glyco_sites> on the ND2 atom (assumes an ASN N-linked glycosylation, for now)
     Can work with PDB numbers (must have chain!) or Pose numbers for the glycosylation sites
     PDB number example: 123B. Or can give a list [ 123A, 123B ]
@@ -616,7 +600,7 @@ def glycosylate_working_pose( input_pose, glyco_file, glyco_sites ):
     :param glyco_file: str( /path/to/glyco.iupac file )
     :param glyco_sites: PDB numbers list( [ 123A, 123B ] ) or Pose numbers list( [ 35, 78 ] )
     :return: glycosylated Pose
-    '''
+    """
     # imports
     import re, sys
     from rosetta.core.pose.carbohydrates import glycosylate_pose_by_file
@@ -679,16 +663,16 @@ def glycosylate_working_pose( input_pose, glyco_file, glyco_sites ):
 
 
 def get_chains( input_pose, residue_range = None ):
-    '''
+    """
     Get a list of the chain ID's in the Pose. Can get the chain ID's associated with specific residues in <residue_range>
     :param input_pose: Pose
     :return: list( chains ) such as [ 'A', 'B', 'C' ]
-    '''
+    """
     chains = []
 
     # if no residue_range was given, replace it with all the residues in the input_pose
     if residue_range is None:
-        residue_range = range( 1, input_pose.n_residue() + 1 )
+        residue_range = range( 1, input_pose.size() + 1 )
 
     for res_num in residue_range:
         # example output of input_pose.pdb_info().pose2pdb( 45 ) is "245 B ", so strip whitespace and get the second item in the output
@@ -702,12 +686,12 @@ def get_chains( input_pose, residue_range = None ):
 
 
 def calc_mean_degrees( data ):
-    '''
+    """
     Given a list of <data> in degrees from -180 to 180, return the mean
     Since I can't use NumPy on Jazz
     :param data: list( data points )
     :return: float( mean )
-    '''
+    """
     '''
     # imports
     Found from https://rosettacode.org/wiki/Averages/Mean_angle
@@ -720,12 +704,12 @@ def calc_mean_degrees( data ):
 
 
 def calc_stddev_degrees( data ):
-    '''
+    """
     Given a list of <data> in degrees from -180 to 180, return the sample standard deviation
     Since I can't use NumPy on Jazz
     :param data: list( data points )
     :return: float( standard deviation )
-    '''
+    """
     # imports
     from math import sqrt
 
@@ -744,58 +728,3 @@ def calc_stddev_degrees( data ):
     '''
 
     return stddev
-
-
-def make_RotamerTrialsMover( moveable_residues, sf, input_pose, pack_radius = None ):
-    '''
-    Given a list of <moveable_residues>, get all additional residues within <pack_radius> Angstroms around them in <input_pose> and return a RotamerTrialsMover that will pack these residues
-    If no <pack_radius> is given, then only residues in <moveable_residues> will be allowed to pack
-    :param moveable_residues: list( Pose numbers )
-    :param sf: ScoreFunction
-    :param input_pose: Pose
-    :param pack_radius: int( or float( radius in Angstroms to pack around the <moveable_residues>. Uses nbr_atom to determine residues in proximity ) ) Default = None which means that only residues in <moveable_residues> get packed
-    :return: RotamerTrialsMover
-    '''
-    # imports
-    from rosetta import standard_packer_task, RotamerTrialsMover
-
-
-    # copy over the input_pose
-    pose = input_pose.clone()
-
-    # make the PackRotamersMover from the passed MoveMap
-    # default of standard_packer_task is to set packing for residues to True
-    task = standard_packer_task( pose )
-    task.or_include_current( True )
-    task.restrict_to_repacking()
-
-    # if a pack_radius was not given, then everything gets packed. So the task does not need to be adjusted as the default option is packing True for all
-    # otherwise, if a pack_radius was given, turn off repacking for residues outside the pack_radius
-    if pack_radius is not None:
-        # get all the protein residues within pack_radius of the moveable_residues
-        # inclue_passed_res_nums means that the function will return a list of residues that includes all numbers in moveable_residues
-        # I am adding them in myself for clarity, so this setting is set to off
-        nearby_protein_residues = get_res_nums_within_radius( moveable_residues, pose, 
-                                                              radius = pack_radius, 
-                                                              include_passed_res_nums = False )
-
-        # create a list of residue numbers that can be packed
-        # meaning, the moveable carbohydrate residues and the residues around them
-        packable_residues = [ res_num for res_num in moveable_residues ]
-        packable_residues.extend( nearby_protein_residues )
-        packable_residues = list( set( packable_residues ) )
-
-        # turn off packing for all residues that are NOT packable
-        # i.e. for all residues in the pose, turn OFF packing if they are NOT in the packable_residues list
-        [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in range( 1, pose.n_residue() + 1 ) if res_num not in packable_residues ]
-
-    # otherwise, only residues specified by moveable_residues should be allowed to be packed
-    else:
-        # turn off repacking for all residues in the pose that are NOT in moveable_residues
-        # no pack_radius was given, so all residues not specified in moveable_residues should not be packed
-        [ task.nonconst_residue_task( res_num ).prevent_repacking() for res_num in range( 1, pose.n_residue() + 1 ) if res_num not in moveable_residues ]
-
-    # make the pack_rotamers_mover with the given ScoreFunction and created task
-    pack_rotamers_mover = RotamerTrialsMover( sf, task )
-
-    return pack_rotamers_mover

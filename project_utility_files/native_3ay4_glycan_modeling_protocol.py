@@ -23,7 +23,7 @@ class Model3ay4Glycan:
         :param dump_dir: str( /path/to/structure dump directory )
         :param pmm: PyMOL_Mover
         '''
-        # default arguments
+        # protocol name
         self.name = "Model3ay4Glycan"
 
         # required arguments
@@ -554,6 +554,7 @@ class Model3ay4Glycan:
         # create the MonteCarlo object, if needed
         if self.mc is None:
             self.mc = MonteCarlo( working_pose, self.sf, self.kT )
+        self.mc.reset_scorefxn( working_pose, self.sf )
 
 
         ########################################
@@ -614,6 +615,7 @@ class Model3ay4Glycan:
                 # give ramped sf back to MC and MinMover
                 # this is because PyRosetta apparently doesn't do the whole pointer thing with the sf
                 self.mc.score_function( self.sf )
+                self.mc.reset_scorefxn( working_pose, self.sf )
                 self.min_mover.score_function( self.sf )
 
 
@@ -663,12 +665,15 @@ class Model3ay4Glycan:
                 # up the counters and send to pymol
                 num_mc_accepts += 1
                 try:
+                    # switching between a name for pymol and for the decoy
+                    # just for clarity
                     if self.pmm_name is not None:
                         working_pose.pdb_info().name( self.pmm_name )
                         self.pmm.apply( working_pose )
                         working_pose.pdb_info().name( self.decoy_name )
                     else:
                         self.pmm.apply( working_pose )
+                # if pymol doesn't work for whatever reason, pass
                 except:
                     pass
             num_mc_checks += 1
